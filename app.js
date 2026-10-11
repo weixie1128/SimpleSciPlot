@@ -3842,8 +3842,8 @@ function startTour(){
     $$('.tour-hl').forEach(e=>e.classList.remove('tour-hl'));
     const st=steps[i];const el=tourFind(st.target);
     bubble.innerHTML='<h4>'+esc(st.title)+'</h4><div>'+esc(st.text)+'</div><div class="tour-nav"><button class="tour-skip" type="button">跳过</button>'+(i>0?'<button type="button" class="tour-prev">上一步</button>':'')+'<button type="button" class="tour-next">'+(i===steps.length-1?'完成':'下一步')+'</button></div>';
-    if(el){el.classList.add('tour-hl');const r=el.getBoundingClientRect();let bx=r.left+r.width/2-150;let by=r.bottom+14;if(by+200>window.innerHeight)by=Math.max(10,r.top-210);bx=Math.max(14,Math.min(window.innerWidth-314,bx));bubble.style.left=bx+'px';bubble.style.top=by+'px'}
-    else{bubble.style.left='50%';bubble.style.top='46%';bubble.style.transform='translate(-50%,-50%)'}
+    if(el){el.classList.add('tour-hl');const r=el.getBoundingClientRect();const bw=Math.min(300,window.innerWidth-28);const estH=Math.min(260,Math.max(140,window.innerHeight*0.4));let bx=r.left+r.width/2-bw/2;bx=Math.max(14,Math.min(window.innerWidth-bw-14,bx));let by=r.bottom+12;if(by+estH>window.innerHeight-12){by=r.top-estH-12}if(by<12)by=12;bubble.style.left=bx+'px';bubble.style.top=by+'px';bubble.style.right='auto';bubble.style.bottom='auto';bubble.style.transform='none'}
+    else{const bw=Math.min(300,window.innerWidth-28);bubble.style.left=(window.innerWidth-bw)/2+'px';bubble.style.top='80px';bubble.style.right='auto';bubble.style.bottom='auto';bubble.style.transform='none'}
     bubble.querySelector('.tour-skip').onclick=close;
     const nx=bubble.querySelector('.tour-next');nx.onclick=()=>{if(i===steps.length-1)close();else{i++;show()}};
     const pv=bubble.querySelector('.tour-prev');if(pv)pv.onclick=()=>{if(i>0){i--;show()}};
