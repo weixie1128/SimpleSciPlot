@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0d6b55">
-  <title>FoodLab Studio · 食品科研数据分析平台</title>
-  <meta name="foodlab-build" content="0.98.7">
-  <script>window.FOODLAB_BUILD="0.98.7";try{if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.update()})})}var k="foodlab_build";if(localStorage.getItem(k)!==window.FOODLAB_BUILD){var doReload=function(){try{localStorage.setItem(k,window.FOODLAB_BUILD)}catch(e){}location.reload();};var jobs=[];if("caches" in window){jobs.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(x){return caches.delete(x)}))}))}if("serviceWorker" in navigator){jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}))}Promise.all(jobs).then(doReload).catch(doReload);}}catch(e){}</script>
-  <link rel="stylesheet" href="styles.css?v=0.98.7">
+  <title>SimpleSciPlot · 简易科研绘图</title>
+  <meta name="foodlab-build" content="0.98.8">
+  <script>window.FOODLAB_BUILD="0.98.8";try{if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.update()})})}var k="foodlab_build";if(localStorage.getItem(k)!==window.FOODLAB_BUILD){var doReload=function(){try{localStorage.setItem(k,window.FOODLAB_BUILD)}catch(e){}location.reload();};var jobs=[];if("caches" in window){jobs.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(x){return caches.delete(x)}))}))}if("serviceWorker" in navigator){jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}))}Promise.all(jobs).then(doReload).catch(doReload);}}catch(e){}</script>
+  <link rel="stylesheet" href="styles.css?v=0.98.8">
 
 <style id="foodlab-v0112-style">
 /* v0.11.7: keep the collapsed property editor discoverable without changing chart styling. */
@@ -48,8 +48,8 @@
 <div class="app-shell v070-shell">
   <aside class="sidebar v070-sidebar">
     <div class="brand">
-      <div class="brand-mark">FL</div>
-      <div><b>FoodLab Studio</b><span>食品科研数据分析平台</span></div>
+      <div class="brand-mark">S</div>
+      <div><b>SimpleSciPlot</b><span>简易科研绘图</span></div>
     </div>
     <div class="project-mini">
       <span>当前项目</span>
@@ -281,10 +281,10 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <!-- v0.15.4: must load before app.js — provides the structuredClone fallback
      and the visible error surface that app.js depends on. -->
-<script src="boot-guard-v0154.js?v=0.98.7"></script>
-<script src="app.js?v=0.98.7"></script>
-<script src="chart-fixes.js?v=0.98.7"></script>
-<script src="template-fixes.js?v=0.98.7"></script>
+<script src="boot-guard-v0154.js?v=0.98.8"></script>
+<script src="app.js?v=0.98.8"></script>
+<script src="chart-fixes.js?v=0.98.8"></script>
+<script src="template-fixes.js?v=0.98.8"></script>
 <script>
 'use strict';
 
@@ -947,7 +947,7 @@
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     ws['!cols'] = [{wch:18},{wch:18},{wch:18},{wch:18}];
     const guide = XLSX.utils.aoa_to_sheet([
-      ['FoodLab 实验图中文矩阵模板'],
+      ['实验图中文矩阵模板'],
       ['填写说明','第一列填变量1（组别/时间/浓度），后面每列是一个平行测定值'],
       ['列名规则','列名带编号即独立平行（平行1、平行2…）；多组时写“组名-编号”，如 处理A-1、处理A-2'],
       ['重复识别','同一个列名出现两次自动合并为重复测定，不增加样本量'],
@@ -958,7 +958,8 @@
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     XLSX.utils.book_append_sheet(wb, guide, 'Instructions');
     const type = state.workflow?.chartType || 'chart';
-    XLSX.writeFile(wb, `FoodLab_${type}_simple_template.xlsx`);
+    const flm={bar:'分组柱状图_GroupedBar',line:'折线图_LineChart',curve:'拟合曲线_CurveFit',stacked:'堆叠柱状图_StackedBar',box:'箱线图_Boxplot',violin:'小提琴图_ViolinPlot',scatter:'散点图_Scatter',kde:'核密度估计_KDE',radar:'雷达图_RadarChart',heatmap:'聚类热图_Heatmap',corr:'相关性气泡图_Corrplot',waterfall3d:'三维瀑布图_3D_Waterfall',pca:'PCA主成分_PCA',hca:'层次聚类_HCA',oplsda:'OPLS-DA',plsda:'PLS-DA'};
+    XLSX.writeFile(wb, (flm[type]||type)+'_模板.xlsx');
     toast('中文矩阵模板已生成：第一列变量1，列名带编号为平行');
   }
 
@@ -968,7 +969,7 @@
     const rows = [headers, ...demoX.map(x => [x,'','',''])];
     const csv = '\ufeff' + rows.map(r => r.map(v => typeof csvCell === 'function' ? csvCell(v) : String(v ?? '')).join(',')).join('\r\n');
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-    download(blob, `FoodLab_${state.workflow?.chartType || 'chart'}_simple_template.csv`);
+    download(blob, (typeof chartFileLabel==='function'?chartFileLabel(state.workflow?.chartType||'chart'):(state.workflow?.chartType||'chart'))+'_模板.csv');
     toast('中文矩阵 CSV 已生成：第一列变量1，列名带编号为平行');
   }
 
@@ -1365,12 +1366,12 @@
     ws['!cols'] = headers.map(h=>({wch:/^因素[:：]/i.test(h)?19:20}));
     XLSX.utils.book_append_sheet(wb, guide, '填写说明');
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    XLSX.writeFile(wb, `FoodLab_${type}_${REGRESSION_TYPES.has(type)?'regression':'multivariate'}_template.xlsx`);
+    XLSX.writeFile(wb, `${type}_模板.xlsx`);
     toast(REGRESSION_TYPES.has(type)?`${type==='oplsr'?'OPLS-R':'PLS-R'} 多因素模板已生成：因素不限数量；因变量 1 列；变量列作为 X`:'多变量多因素模板已生成：因素列与分析变量列通过标题前缀自动区分');
   }
   function downloadMvCsv() {
     const type=state.workflow.chartType,headers = mvTemplateHeaders(type);
-    download(new Blob(['\ufeff'+headers.join(',')+'\r\n'], {type:'text/csv;charset=utf-8'}), `FoodLab_${type}_${REGRESSION_TYPES.has(type)?'regression':'multivariate'}_template.csv`);
+    download(new Blob(['\ufeff'+headers.join(',')+'\r\n'], {type:'text/csv;charset=utf-8'}), `${type}_模板.csv`);
     toast('CSV 模板已生成：保留“因素: / 变量: / 因变量:”前缀即可自动识别列角色');
   }
 
@@ -3455,13 +3456,13 @@
     guide['!cols'] = [{wch:18},{wch:100}];
     XLSX.utils.book_append_sheet(wb, ws, 'Data');
     XLSX.utils.book_append_sheet(wb, guide, 'Instructions');
-    XLSX.writeFile(wb, 'FoodLab_instrument_spectrum_XY_blocks.xlsx');
+    XLSX.writeFile(wb, '光谱信号图_Spectrum_XY模板.xlsx');
     toast('光谱 / 仪器图 XY 块模板已生成');
   }
   function downloadSpectrumCsv() {
     const rows = [spectrumTemplateHeaders(), ...spectrumTemplateBodyRows()];
     const csv = '\ufeff' + rows.map(r => r.map(v => typeof csvCell === 'function' ? csvCell(v) : String(v ?? '')).join(',')).join('\r\n');
-    download(new Blob([csv], {type:'text/csv;charset=utf-8'}), 'FoodLab_instrument_spectrum_XY_blocks.csv');
+    download(new Blob([csv], {type:'text/csv;charset=utf-8'}), '光谱信号图_Spectrum_XY模板.csv');
     toast('光谱 / 仪器图 XY 块 CSV 模板已生成');
   }
   ['downloadTemplateXlsx','downloadGalleryXlsx'].forEach(fn => {
@@ -4465,8 +4466,8 @@
   function thermalTemplateRows(){return Array.from({length:8},()=>['','','','','','']);}
   function thermalTemplateHeaders(){return['X_CK','CK','X_T1','T1','X_T2','T2'];}
   function thermalTemplateGuide(){return[['FoodLab Studio 热分析共用模板'],['DSC / TGA','两者使用完全相同的成对 XY 块：X_CK | CK | X_T1 | T1 ...。导入后选择 DSC 或 TGA；如果表头含 DSC/TGA/Heat flow/Weight，系统可辅助识别。'],['DTG','DTG 是 TGA 的派生处理。导入 TGA 后可在 Chart Studio 中选择“仅 DTG”或“TGA + DTG”，无需额外制作 DTG 模板。'],['兼容已有仪器导出','旧版 Temp/TGA/DTG 三列一组仍可导入，但新版模板不再要求它。'],['X 轴','Temperature/Temp/°C 会识别为温度；Time/min/s/h 会识别为时间；无法判断时保留真实表头。'],['样本编号','不需要 SampleID。'],['空值','未测量数据留空。']];}
-  function downloadThermalXlsx(){if(!window.XLSX){toast('Excel 组件未加载，请刷新页面或下载 CSV');return;}const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([thermalTemplateHeaders(),...thermalTemplateRows()]);ws['!cols']=Array(6).fill({wch:16});const guide=XLSX.utils.aoa_to_sheet(thermalTemplateGuide());guide['!cols']=[{wch:20},{wch:104}];XLSX.utils.book_append_sheet(wb,ws,'Data');XLSX.utils.book_append_sheet(wb,guide,'Instructions');XLSX.writeFile(wb,'FoodLab_thermal_template.xlsx');toast('热分析模板已生成');}
-  function downloadThermalCsv(){const rows=[thermalTemplateHeaders(),...thermalTemplateRows()],csv='\ufeff'+rows.map(r=>r.map(v=>typeof csvCell==='function'?csvCell(v):String(v??'')).join(',')).join('\r\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8'});download(blob,'FoodLab_thermal_template.csv');toast('热分析 CSV 模板已生成');}
+  function downloadThermalXlsx(){if(!window.XLSX){toast('Excel 组件未加载，请刷新页面或下载 CSV');return;}const wb=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet([thermalTemplateHeaders(),...thermalTemplateRows()]);ws['!cols']=Array(6).fill({wch:16});const guide=XLSX.utils.aoa_to_sheet(thermalTemplateGuide());guide['!cols']=[{wch:20},{wch:104}];XLSX.utils.book_append_sheet(wb,ws,'Data');XLSX.utils.book_append_sheet(wb,guide,'Instructions');XLSX.writeFile(wb,'热分析模板_Thermal.xlsx');toast('热分析模板已生成');}
+  function downloadThermalCsv(){const rows=[thermalTemplateHeaders(),...thermalTemplateRows()],csv='\ufeff'+rows.map(r=>r.map(v=>typeof csvCell==='function'?csvCell(v):String(v??'')).join(',')).join('\r\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8'});download(blob,'热分析模板_Thermal.csv');toast('热分析 CSV 模板已生成');}
   async function thReadRows(file){const lower=file.name.toLowerCase();if(lower.endsWith('.csv')||lower.endsWith('.tsv'))return parseDelimited(await file.text());if(!window.XLSX)throw new Error('Excel 组件未加载');const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),sheet=wb.Sheets[wb.SheetNames.includes('Data')?'Data':wb.SheetNames[0]];return XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true,blankrows:false});}
   function registerThermalChart(){PLAN_CHART_META.thermal={group:'光谱与仪器',icon:'♨',purpose:'绘制论文常见 DSC 与 TGA 热分析结果，并由 TGA 派生 DTG/Tmax',analysis:'共用成对 XY 模板、DSC Endo/Exo、TGA 失重阶段、TGA→DTG 求导、TGA+DTG 双 Y 轴',advice:'DSC 与 TGA 使用相同数据结构；DTG 作为 TGA 的非破坏性派生结果生成',schema:'{{file}} → 成对 X/Y → 选择 DSC 或 TGA → 可选 TGA→DTG'};if(Array.isArray(PLAN_GROUP_ORDER)&&!PLAN_GROUP_ORDER.includes('光谱与仪器'))PLAN_GROUP_ORDER.push('光谱与仪器');if(typeof goalRecommendedIds!=='undefined'&&Array.isArray(goalRecommendedIds.instrument)&&!goalRecommendedIds.instrument.includes('thermal'))goalRecommendedIds.instrument.push('thermal');try{if(typeof renderPlanSelector==='function')renderPlanSelector();}catch(_){}}
   registerThermalChart();
