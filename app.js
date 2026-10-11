@@ -3636,7 +3636,7 @@ function composeThumbSrc(item){return item.kind==='image'?item.src:svgDataUri(it
 function renderComposeItemList(){
   const box=$('#composeItemList'),items=state.figureBoard.items;if(!items.length){box.innerHTML='<div class="empty-state">尚未加入图表或图片</div>';return}
   box.innerHTML=items.map((item,i)=>`<div class="compose-item ${i===state.figureBoard.selected?'active':''}" data-compose-select="${i}"><div class="compose-thumb"><img alt="${escAttr(item.title)}" src="${composeThumbSrc(item)}"></div><div class="compose-item-meta"><label>面板标签<input data-compose-label="${i}" value="${escAttr(item.label||indexLetter(i).toUpperCase())}" maxlength="8"></label><label>跨列<select data-compose-colspan="${i}">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${(Number(item.colspan)||1)===n?'selected':''}>${n}</option>`).join('')}</select></label><b>${esc(item.title)}</b><small>${item.kind==='image'?'本地图片':'SVG 图表'} · ${item.width} × ${item.height}</small></div><div class="compose-item-actions"><button data-compose-up="${i}" ${i===0?'disabled':''}>↑</button><button data-compose-down="${i}" ${i===items.length-1?'disabled':''}>↓</button><button data-compose-remove="${i}" class="danger">×</button></div></div>`).join('');
-  $$('[data-compose-select]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('button,input'))return;state.figureBoard.selected=Number(el.dataset.composeSelect);renderComposeItemList()}));
+  $$('[data-compose-select]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('button,input,select,label'))return;state.figureBoard.selected=Number(el.dataset.composeSelect);renderComposeItemList()}));
   $$('[data-compose-label]').forEach(el=>el.addEventListener('input',()=>{items[Number(el.dataset.composeLabel)].label=el.value;renderComposePreviewOnly()}));
   $$('[data-compose-colspan]').forEach(el=>el.addEventListener('change',()=>{const it=items[Number(el.dataset.composeColspan)];if(!it)return;it.colspan=Math.max(1,Math.min(Number(el.value)||1,state.figureBoard.columns||2));ensureComposeGridCapacity();renderComposeWorkspace()}));
   $$('[data-compose-up]').forEach(el=>el.addEventListener('click',()=>moveComposeItem(Number(el.dataset.composeUp),-1)));
@@ -3700,7 +3700,7 @@ function trimSvgWhitespace(svg,pad=8){
     const re=/(?:<|\s)((?:rect|circle|line|text|path|image|ellipse|polygon|polyline))([^>]*?)(?:\/>|>)/gi;let m;
     while((m=re.exec(String(svg)))){
       const tag=m[1],a=m[2];
-      if(tag==='rect'){const rw=Number((a.match(/width="([\d.\-]+)"/)||[])[1]||0),rh=Number((a.match(/height="([\d.\-]+)"/)||[])[1]||0);if(rw>0&&rh>0&&Math.abs(rw-vw)<.5&&Math.abs(rh-vh)<.5)continue}
+      if(tag==='rect'){if(/data-object="background"/.test(a))continue;const rw=Number((a.match(/width="([\d.\-]+)"/)||[])[1]||0),rh=Number((a.match(/height="([\d.\-]+)"/)||[])[1]||0);if(rw>0&&rh>0&&Math.abs(rw-vw)<.5&&Math.abs(rh-vh)<.5)continue}
       const xs=[...(a.match(/(?:^|\s)(?:x|cx|x1|x2)="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
       const ys=[...(a.match(/(?:^|\s)(?:y|cy|y1|y2)="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
       const ws=[...(a.match(/(?:^|\s)width="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
