@@ -3797,8 +3797,38 @@ const TOUR_STEPS={
     {target:'#exportComposeSvg,#exportComposePng',title:'④ 导出整图',text:'满意后导出整版拼图，直接是论文图版。'}
   ]
 };
-function tourCss(){if($('#tourCss'))return;const c=document.createElement('style');c.id='tourCss';c.textContent='#tourFab{position:fixed;left:18px;bottom:18px;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#6aa6ff,#5b8def);color:#fff;border:none;font-size:22px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(91,141,239,.5);z-index:9998;transition:transform .15s}#tourFab:hover{transform:scale(1.1)}.tour-mask{position:fixed;inset:0;background:rgba(20,28,38,.55);z-index:9999;pointer-events:none}.tour-hl{outline:3px solid #ffd166;outline-offset:3px;border-radius:8px;position:relative;z-index:10000!important;transition:all .2s}.tour-bubble{position:fixed;z-index:10001;max-width:300px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28);font-size:13px;line-height:1.65;color:#2a3340}.tour-bubble h4{margin:0 0 6px;font-size:14px;color:#3a6fd8}.tour-bubble .tour-nav{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}.tour-bubble button{padding:5px 12px;border-radius:6px;border:1px solid #c9d2d8;background:#f4f7f9;cursor:pointer;font-size:12px}.tour-bubble .tour-next{background:#5b8def;color:#fff;border-color:#5b8def}.tour-bubble .tour-skip{color:#8a969c}';document.head.appendChild(c)}
-function ensureTourFab(){tourCss();if($('#tourFab'))return;const b=document.createElement('button');b.id='tourFab';b.textContent='?';b.title='查看本页使用说明';b.onclick=startTour;document.body.appendChild(b)}
+function tourCss(){if($('#tourCss'))return;const c=document.createElement('style');c.id='tourCss';c.textContent='#tourFab{margin-left:10px;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#6aa6ff,#5b8def);color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;vertical-align:middle;line-height:1;padding:0;box-shadow:0 2px 8px rgba(91,141,239,.4)}#tourFab:hover{transform:scale(1.15)}#settingSearchWrap{position:relative;margin-left:14px;display:inline-block;vertical-align:middle}#settingSearch{padding:5px 10px;border:1px solid #c9d2d8;border-radius:14px;font-size:12px;width:150px;outline:none}#settingSearch:focus{border-color:#5b8def}#settingSearchDrop{position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid #e0e6ea;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:260px;overflow-y:auto;min-width:220px;z-index:50;display:none}#settingSearchDrop button{display:block;width:100%;text-align:left;padding:7px 12px;border:none;background:none;cursor:pointer;font-size:12px;color:#2a3340}#settingSearchDrop button:hover{background:#eef4ff}#settingSearchDrop button small{color:#8a969c;margin-left:6px}.tour-mask{position:fixed;inset:0;background:rgba(20,28,38,.55);z-index:9999;pointer-events:none}.tour-hl{outline:3px solid #ffd166;outline-offset:3px;border-radius:8px;position:relative;z-index:10000!important;transition:all .2s}.tour-bubble{position:fixed;z-index:10001;max-width:300px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28);font-size:13px;line-height:1.65;color:#2a3340}.tour-bubble h4{margin:0 0 6px;font-size:14px;color:#3a6fd8}.tour-bubble .tour-nav{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}.tour-bubble button{padding:5px 12px;border-radius:6px;border:1px solid #c9d2d8;background:#f4f7f9;cursor:pointer;font-size:12px}.tour-bubble .tour-next{background:#5b8def;color:#fff;border-color:#5b8def}.tour-bubble .tour-skip{color:#8a969c}';document.head.appendChild(c)}
+function ensureTourFab(){tourCss();const foot=document.querySelector('.sidebar-foot');if(foot&&!$('#tourFab')){const b=document.createElement('button');b.id='tourFab';b.textContent='?';b.title='查看本页使用说明';b.onclick=startTour;foot.appendChild(b)}ensureSettingSearch()}
+const SETTING_INDEX=[
+ {id:'title',label:'图题',kw:'图题 标题 title 大字'},
+ {id:'subtitle',label:'副标题',kw:'副标题 副标 subtitle'},
+ {id:'typography',label:'字体与字号',kw:'字体 字号 字重 英文 中文 font typography'},
+ {id:'canvas',label:'画布与导出',kw:'画布 尺寸 宽度 高度 dpi 清晰度 比例 导出 紧凑 svg png'},
+ {id:'axis-x',label:'X轴与横标题',kw:'X轴 横坐标 标题 刻度 数字 倾斜 axis-x x轴'},
+ {id:'axis-y',label:'Y轴与纵标题',kw:'Y轴 纵坐标 标题 刻度 数字 axis-y y轴'},
+ {id:'legend',label:'图例内容',kw:'图例 legend 位置 列数'},
+ {id:'legend-frame',label:'图例边框',kw:'图例边框 边框 阴影'},
+ {id:'frame',label:'图片边框',kw:'边框 框线 frame'},
+ {id:'background',label:'背景与网格',kw:'背景 底色 网格 横网格 纵网格 background'},
+ {id:'palette',label:'配色参数',kw:'配色 颜色 色板 hex 保存配色 palette'},
+ {id:'style',label:'图片参数',kw:'图参数 保存参数 导入参数 style'},
+ {id:'methodnote',label:'方法说明',kw:'方法说明 材料与方法 论文文案 method'},
+ {id:'error',label:'误差棒',kw:'误差棒 误差 sd sem ci 标准差 标准误 error'},
+ {id:'letters',label:'显著性字母',kw:'显著性 字母 多重比较 duncan tukey letters 差异'},
+ {id:'series',label:'系列颜色与样式',kw:'系列 颜色 线宽 标记 点 形状 折线'}
+];
+function ensureSettingSearch(){const titleEl=$('#studioContextTitle');if(!titleEl||$('#settingSearchWrap'))return;
+  const wrap=document.createElement('span');wrap.id='settingSearchWrap';
+  wrap.innerHTML='<input id="settingSearch" type="text" placeholder="搜索设置…" autocomplete="off"><div id="settingSearchDrop"></div>';
+  titleEl.parentElement.appendChild(wrap);
+  const input=$('#settingSearch'),drop=$('#settingSearchDrop');
+  input.addEventListener('input',()=>{const q=input.value.trim().toLowerCase();if(!q){drop.style.display='none';return}
+    const hits=SETTING_INDEX.filter(x=>x.label.toLowerCase().includes(q)||x.kw.toLowerCase().includes(q));
+    drop.innerHTML=hits.length?hits.map(h=>'<button type="button" data-setting-id="'+h.id+'">'+h.label+'</button>').join(''):'<button type="button" disabled>无匹配</button>';
+    drop.style.display='block'});
+  drop.addEventListener('click',e=>{const b=e.target.closest('button[data-setting-id]');if(!b)return;state.chart.selected=b.dataset.settingId;renderLayers();renderProperties();drop.style.display='none';input.value=''});
+  document.addEventListener('click',e=>{if(!wrap.contains(e.target))drop.style.display='none'});
+}
 function tourFind(sel){if(!sel)return null;for(const s of sel.split(',').map(x=>x.trim())){const el=$(s);if(el&&el.offsetParent!==null)return el}return null}
 function startTour(){
   const steps=TOUR_STEPS[state.view]||[];
