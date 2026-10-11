@@ -230,6 +230,7 @@ function init(){
   renderDesignPreview();
   renderDataPreview();
   showView('plan');
+  ensureTourFab();
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v='+(window.FOODLAB_BUILD||'0.96.0')).catch(()=>{});
 }
 
@@ -3764,5 +3765,61 @@ function composeSvgMarkup(interactive=true){
 function exportComposeSvg(){const markup=composeSvgMarkup(false);if(!markup){toast('请先加入至少一张图或图片');return}download(new Blob([markup],{type:'image/svg+xml;charset=utf-8'}),`${safeFile(state.design.experimentName)}_论文拼图.svg`)}
 function exportComposePng(){const markup=composeSvgMarkup(false);if(!markup){toast('请先加入至少一张图或图片');return}const b=state.figureBoard,scale=Math.max(1,Number(b.dpi||300)/96),url=URL.createObjectURL(new Blob([markup],{type:'image/svg+xml'})),img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=Math.round(b.width*scale);c.height=Math.round((b.computedHeight||b.height)*scale);const ctx=c.getContext('2d');ctx.fillStyle=b.background;ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);c.toBlob(blob=>download(blob,`${safeFile(state.design.experimentName)}_论文拼图_${b.dpi}dpi.png`),'image/png');URL.revokeObjectURL(url)};img.onerror=()=>{URL.revokeObjectURL(url);toast('拼图导出失败，请检查导入图片格式')};img.src=url}
 
+
+// ===== 页面导览（左下角"?"）=====
+const TOUR_STEPS={
+  plan:[
+    {target:'.goal-tabs,[data-goal-tab]',title:'① 选研究目的',text:'先点一个你要解决的问题（如组间比较、时间趋势），系统会据此推荐合适的图和数据模板。'},
+    {target:'#chartSearch,.chart-grid,.goal-grid,[data-route-chart]',title:'② 选图类型',text:'在卡片里挑一个图，点一下就定下来；搜索框可以快速筛。'},
+    {target:'#nextStepBtn',title:'③ 下一步',text:'选好图后点这里，进入「数据模板与导入」。'}
+  ],
+  data:[
+    {target:'#downloadCurrentXlsx,#downloadCurrentCsv',title:'① 下载模板',text:'先下载和当前图配套的 Excel 模板，按里面的列名填数据，不要自己改表头。'},
+    {target:'#fileInput,[data-drop],.drop-zone,#dataFile',title:'② 导入数据',text:'把填好的 Excel 拖进来，或点这里选择文件。同名自动算一组，A-1/A-2 是平行，同名列重复=重复测定。'},
+    {target:'#nextStepBtn',title:'③ 下一步',text:'导入成功后点这里，进入「初步分析」。'}
+  ],
+  statistics:[
+    {target:'.stat-table,#descriptTable,table',title:'① 描述统计',text:'这里自动算出每组的均值、标准差、样本量，不用自己在 Excel 里算。'},
+    {target:'.test-result,.check-result,#normalityResult',title:'② 自动检验',text:'系统自动做正态性/方差齐性判断，决定用 Duncan 还是 Games-Howell，你不用记。'},
+    {target:'.warning-banner,.data-warning',title:'③ 数据提醒',text:'有异常数据会在这里黄色提醒，先处理再作图。'},
+    {target:'#goChart,#nextStepBtn',title:'④ 进入作图',text:'确认数据没问题，点这里进 Chart Studio 开始调图。'}
+  ],
+  chart:[
+    {target:'#view-chart .object-tree,#objectTree,[data-layer-id]',title:'① 左侧对象树',text:'想改图哪部分，就点这里：图题、坐标轴、图例、背景……点中哪个，右边就出哪个的设置。'},
+    {target:'#paperSvg,.chart-canvas,#chartCanvas',title:'② 中间画布',text:'图画在这里。图题、坐标轴、图例可以直接用鼠标拖动位置。'},
+    {target:'#propertyEditor',title:'③ 右侧属性面板',text:'选中对象后，在这里调颜色、字号、粗细、显著性字母、误差棒等。'},
+    {target:'#view-chart .property-section:has(#paletteFile),#view-chart',title:'④ 配色与参数',text:'左侧树里有「配色参数」「图片参数」，可以存一套配色和图设置，下次直接套用。'},
+    {target:'#exportSvgBtn,#exportPngBtn,.export-buttons,[data-export]',title:'⑤ 导出',text:'调好后点这里导出。SVG 是矢量图，PNG 选 300 dpi 直接贴论文。'}
+  ],
+  compose:[
+    {target:'#addToCompose,.add-compose,[data-add-compose]',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
+    {target:'#composeCanvas,.compose-board,#composeSvg',title:'② 拼图画布',text:'多图自动排列，A/B/C/D 面板标签自动加。'},
+    {target:'#composeGap,[data-compose-gap]',title:'③ 调间距',text:'在这里调图与图之间的空白大小，紧凑导出会自动裁白边。'},
+    {target:'#exportComposeSvg,#exportComposePng',title:'④ 导出整图',text:'满意后导出整版拼图，直接是论文图版。'}
+  ]
+};
+function tourCss(){if($('#tourCss'))return;const c=document.createElement('style');c.id='tourCss';c.textContent='#tourFab{position:fixed;left:18px;bottom:18px;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#6aa6ff,#5b8def);color:#fff;border:none;font-size:22px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(91,141,239,.5);z-index:9998;transition:transform .15s}#tourFab:hover{transform:scale(1.1)}.tour-mask{position:fixed;inset:0;background:rgba(20,28,38,.55);z-index:9999;pointer-events:none}.tour-hl{outline:3px solid #ffd166;outline-offset:3px;border-radius:8px;position:relative;z-index:10000!important;transition:all .2s}.tour-bubble{position:fixed;z-index:10001;max-width:300px;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28);font-size:13px;line-height:1.65;color:#2a3340}.tour-bubble h4{margin:0 0 6px;font-size:14px;color:#3a6fd8}.tour-bubble .tour-nav{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}.tour-bubble button{padding:5px 12px;border-radius:6px;border:1px solid #c9d2d8;background:#f4f7f9;cursor:pointer;font-size:12px}.tour-bubble .tour-next{background:#5b8def;color:#fff;border-color:#5b8def}.tour-bubble .tour-skip{color:#8a969c}';document.head.appendChild(c)}
+function ensureTourFab(){tourCss();if($('#tourFab'))return;const b=document.createElement('button');b.id='tourFab';b.textContent='?';b.title='查看本页使用说明';b.onclick=startTour;document.body.appendChild(b)}
+function tourFind(sel){if(!sel)return null;for(const s of sel.split(',').map(x=>x.trim())){const el=$(s);if(el&&el.offsetParent!==null)return el}return null}
+function startTour(){
+  const steps=TOUR_STEPS[state.view]||[];
+  if(!steps.length){toast('本页暂无使用说明');return}
+  let i=0;
+  const old=$('.tour-mask');if(old)old.remove();const oldB=$('.tour-bubble');if(oldB)oldB.remove();$$('.tour-hl').forEach(e=>e.classList.remove('tour-hl'));
+  const mask=document.createElement('div');mask.className='tour-mask';document.body.appendChild(mask);
+  const bubble=document.createElement('div');bubble.className='tour-bubble';document.body.appendChild(bubble);
+  function close(){mask.remove();bubble.remove();$$('.tour-hl').forEach(e=>e.classList.remove('tour-hl'))}
+  function show(){
+    $$('.tour-hl').forEach(e=>e.classList.remove('tour-hl'));
+    const st=steps[i];const el=tourFind(st.target);
+    bubble.innerHTML='<h4>'+esc(st.title)+'</h4><div>'+esc(st.text)+'</div><div class="tour-nav"><button class="tour-skip" type="button">跳过</button>'+(i>0?'<button type="button" class="tour-prev">上一步</button>':'')+'<button type="button" class="tour-next">'+(i===steps.length-1?'完成':'下一步')+'</button></div>';
+    if(el){el.classList.add('tour-hl');const r=el.getBoundingClientRect();let bx=r.left+r.width/2-150;let by=r.bottom+14;if(by+160>window.innerHeight)by=Math.max(120,r.top-170);bx=Math.max(14,Math.min(window.innerWidth-314,bx));bubble.style.left=bx+'px';bubble.style.top=by+'px'}
+    else{bubble.style.left='50%';bubble.style.top='46%';bubble.style.transform='translate(-50%,-50%)'}
+    bubble.querySelector('.tour-skip').onclick=close;
+    const nx=bubble.querySelector('.tour-next');nx.onclick=()=>{if(i===steps.length-1)close();else{i++;show()}};
+    const pv=bubble.querySelector('.tour-prev');if(pv)pv.onclick=()=>{if(i>0){i--;show()}};
+  }
+  show();
+}
 
 init();
