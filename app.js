@@ -2194,6 +2194,7 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
 }
 function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
   const s=state.chart.settings,model=getChartModel(),xCfg=experimentXAxisConfig(xvals,M,plotW),y=yValueMap(b,plotH,M.t),xStep=plotW/xvals.length,axisY=M.t+plotH;let out='';
+  if(s.plotBgVisible)out+='<rect x="'+M.l+'" y="'+M.t+'" width="'+plotW+'" height="'+plotH+'" fill="'+(s.plotBg||'#f5f7f8')+'"/>';
   const yTicks=chartYTicks(b),axes=renderNormalAxes(W,H,M,plotW,plotH,xvals,xStep,yTicks,y,axisY);
   if(isLineLike()){
     gs.forEach((g,gi)=>{
@@ -2216,7 +2217,6 @@ function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
 
 function renderNormalAxes(W,H,M,plotW,plotH,xvals,xStep,yTicks,y,axisY){
   const s=state.chart.settings;let out='';
-  if(s.plotBgVisible)out+='<rect x="'+M.l+'" y="'+M.t+'" width="'+plotW+'" height="'+plotH+'" fill="'+(s.plotBg||'#f5f7f8')+'"/>';
   out+=`<g data-object="axis-y" class="chart-object" stroke="${s.axisColor}" stroke-width="${s.axisWidth}" fill="none"><path d="M${M.l},${M.t} V${axisY}"/>`;
   if(s.showYTicks)yTicks.forEach(v=>{const yy=y(v);out+=`<line x1="${M.l-s.tickLength}" x2="${M.l}" y1="${yy}" y2="${yy}"/>`});out+='</g>';
   if(s.gridEnabled)out+='<g stroke="'+(s.gridColor||'#e3e7eb')+'" stroke-width="'+(s.gridWidth||1)+'">'+yTicks.map(v=>{const yy=y(v);return '<line x1="'+M.l+'" x2="'+(M.l+plotW)+'" y1="'+yy+'" y2="'+yy+'"/>'}).join('')+'</g>';
