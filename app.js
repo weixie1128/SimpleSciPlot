@@ -3771,18 +3771,17 @@ const TOUR_STEPS={
   plan:[
     {target:'.goal-tabs,[data-goal-tab]',title:'① 选研究目的',text:'先点一个你要解决的问题（如组间比较、时间趋势），系统会据此推荐合适的图和数据模板。'},
     {target:'#chartSearch,.chart-grid,.goal-grid,[data-route-chart]',title:'② 选图类型',text:'在卡片里挑一个图，点一下就定下来；搜索框可以快速筛。'},
-    {target:'#nextStepBtn',title:'③ 下一步',text:'选好图后点这里，进入「数据模板与导入」。'}
+    {target:'[data-open="data"]',title:'③ 下一步',text:'选好图后，点这个绿色按钮进入「数据模板与导入」。'}
   ],
   data:[
-    {target:'#downloadCurrentXlsx,#downloadCurrentCsv',title:'① 下载模板',text:'先下载和当前图配套的 Excel 模板，按里面的列名填数据，不要自己改表头。'},
+    {target:'#downloadCurrentXlsx,#downloadCurrentCsv',title:'① 下载模板',text:'先下载和当前图配套的 Excel 模板，按照模板规则填写即可。'},
     {target:'#fileInput,[data-drop],.drop-zone,#dataFile',title:'② 导入数据',text:'把填好的 Excel 拖进来，或点这里选择文件。同名自动算一组，A-1/A-2 是平行，同名列重复=重复测定。'},
     {target:'#nextStepBtn',title:'③ 下一步',text:'导入成功后点这里，进入「初步分析」。'}
   ],
   statistics:[
     {target:'.stat-table,#descriptTable,table',title:'① 描述统计',text:'这里自动算出每组的均值、标准差、样本量，不用自己在 Excel 里算。'},
-    {target:'.test-result,.check-result,#normalityResult',title:'② 自动检验',text:'系统自动做正态性/方差齐性判断，决定用 Duncan 还是 Games-Howell，你不用记。'},
-    {target:'.warning-banner,.data-warning',title:'③ 数据提醒',text:'有异常数据会在这里黄色提醒，先处理再作图。'},
-    {target:'#goChart,#nextStepBtn',title:'④ 进入作图',text:'确认数据没问题，点这里进 Chart Studio 开始调图。'}
+    {target:'.warning-banner,.data-warning',title:'② 数据提醒',text:'有异常数据会在这里黄色提醒，先处理再作图。'},
+    {target:'#goChart,#nextStepBtn',title:'③ 进入作图',text:'确认数据没问题，点这里进 Chart Studio 开始调图。'}
   ],
   chart:[
     {target:'#view-chart .object-tree,#objectTree,[data-layer-id]',title:'① 左侧对象树',text:'想改图哪部分，就点这里：图题、坐标轴、图例、背景……点中哪个，右边就出哪个的设置。'},
