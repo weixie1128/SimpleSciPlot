@@ -1,5 +1,5 @@
-const CACHE='foodlab-studio-0.99.7';
-const ASSETS=['./','./index.html','./styles.css?v=0.99.7','./boot-guard-v0154.js?v=0.99.7','./app.js?v=0.99.7','./chart-fixes.js?v=0.99.7','./template-fixes.js?v=0.99.7'];
+const CACHE='foodlab-studio-0.99.8';
+const ASSETS=['./','./index.html','./styles.css?v=0.99.8','./boot-guard-v0154.js?v=0.99.8','./app.js?v=0.99.8','./chart-fixes.js?v=0.99.8','./template-fixes.js?v=0.99.8'];
 const same=q=>new URL(q.url).origin===self.location.origin;
 async function put(q,r){if(!r||!r.ok||r.type==='opaque')return;try{await(await caches.open(CACHE)).put(q,r.clone())}catch(e){}}
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await Promise.allSettled(ASSETS.map(a=>c.add(a)));await self.skipWaiting()})())});
