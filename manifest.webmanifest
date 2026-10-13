@@ -1,6 +1,6 @@
 {
-  "name": "食品实验数据分析平台 v0.2.1",
-  "short_name": "FoodLab",
+  "name": "SimpleSciPlot · 简易科研绘图",
+  "short_name": "SimpleSciPlot",
   "description": "自由实验设计、可填写动态模板、统计分析和期刊风格图表。",
   "start_url": "./index.html",
   "scope": "./",
