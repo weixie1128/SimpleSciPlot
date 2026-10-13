@@ -1361,7 +1361,7 @@ function genericAnnotationSvg(ann,interactive=true){
     const mx=(ann.x1+ann.x2)/2,my=(ann.y1+ann.y2)/2;
     const txt=ann.text?`<text data-ann-label x="${mx}" y="${my-8}" text-anchor="middle" font-family="${escAttr(annotationFontStack(ann))}" font-size="${ann.fontSize}" font-weight="${ann.fontWeight}" fill="${ann.color}">${esc(ann.text)}</text>`:'';
     const handles=interactive?`${arrowEndpointHandleMarkup({id:ann.id,x:ann.x1,y:ann.y1,endpoint:'start'})}${arrowEndpointHandleMarkup({id:ann.id,x:ann.x2,y:ann.y2,endpoint:'end'})}`:'';
-    return `<g ${objAttr} class="${cls}"><line class="annotation-hit-line" data-ann-hit x1="${ann.x1}" y1="${ann.y1}" x2="${ann.x2}" y2="${ann.y2}"/><line data-ann-line x1="${ann.x1}" y1="${ann.y1}" x2="${ann.x2}" y2="${ann.y2}" stroke="${ann.color}" stroke-width="${ann.width}" ${ann.dash?`stroke-dasharray="${ann.dash}"`:''}/>${head}${txt}${handles}</g>`;
+    return `<g ${objAttr} class="${cls}"><line class="annotation-hit-line" data-ann-hit="1" x1="${ann.x1}" y1="${ann.y1}" x2="${ann.x2}" y2="${ann.y2}"/><line data-ann-line="1" x1="${ann.x1}" y1="${ann.y1}" x2="${ann.x2}" y2="${ann.y2}" stroke="${ann.color}" stroke-width="${ann.width}" ${ann.dash?`stroke-dasharray="${ann.dash}"`:''}/>${head}${txt}${handles}</g>`;
   }
   return'';
 }
@@ -3615,7 +3615,7 @@ function composeAnnotationSvg(ann,interactive=true){
   const mx=(x1+x2)/2,my=(y1+y2)/2,handles=interactive?`${arrowEndpointHandleMarkup({id:ann.id,x:x1,y:y1,endpoint:'start',compose:true})}${arrowEndpointHandleMarkup({id:ann.id,x:x2,y:y2,endpoint:'end',compose:true})}`:'';
   let tail='';
   if(!interactive&&ann.arrowEnd!==false){const ang=Math.atan2(y2-y1,x2-x1),ah=9*wd;const px=x2-ah*Math.cos(ang-Math.PI/6),py=y2-ah*Math.sin(ang-Math.PI/6),qx=x2-ah*Math.cos(ang+Math.PI/6),qy=y2-ah*Math.sin(ang+Math.PI/6);tail=`<polygon points="${x2},${y2} ${px},${py} ${qx},${qy}" fill="${col}"/>`}
-  return `<g data-compose-annotation="${ann.id}" class="compose-annotation"><line class="annotation-hit-line" data-compose-arrow-hit x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line data-compose-arrow-line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${wd}" ${ann.dash?`stroke-dasharray="${ann.dash}"`:''} ${interactive&&ann.arrowEnd!==false?'marker-end="url(#composeArrowHead)"':''}/>${tail}${ann.text?`<text data-compose-arrow-label x="${mx}" y="${my-8}" text-anchor="middle" font-family="${escAttr(ann.fontFamily)},sans-serif" font-size="${ann.fontSize}" fill="${col}">${esc(ann.text)}</text>`:''}${handles}</g>`
+  return `<g data-compose-annotation="${ann.id}" class="compose-annotation"><line class="annotation-hit-line" data-compose-arrow-hit="1" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line data-compose-arrow-line="1" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${wd}" ${ann.dash?`stroke-dasharray="${ann.dash}"`:''} ${interactive&&ann.arrowEnd!==false?'marker-end="url(#composeArrowHead)"':''}/>${tail}${ann.text?`<text data-compose-arrow-label="1" x="${mx}" y="${my-8}" text-anchor="middle" font-family="${escAttr(ann.fontFamily)},sans-serif" font-size="${ann.fontSize}" fill="${col}">${esc(ann.text)}</text>`:''}${handles}</g>`
 }
 function updateComposeArrowDom(group,ann){
   group.querySelectorAll('[data-compose-arrow-line],[data-compose-arrow-hit]').forEach(line=>{line.setAttribute('x1',ann.x1);line.setAttribute('y1',ann.y1);line.setAttribute('x2',ann.x2);line.setAttribute('y2',ann.y2)});
