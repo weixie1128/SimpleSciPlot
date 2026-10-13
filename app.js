@@ -2659,7 +2659,10 @@ function exportPng(){
 
 function saveProject(){
   const payload={version:'0.9.5',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
-  localStorage.setItem('foodlab-project',JSON.stringify(payload));download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);toast('项目已保存为 JSON，并同步保存在当前浏览器')
+  let localSaved=true;
+  try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
+  download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
+  toast(localSaved?'项目已保存为 JSON，并同步保存在当前浏览器':'项目 JSON 已导出；浏览器本地存储不可用（配额已满或无痕模式），本次未同步到本机')
 }
 function paletteTools(){var st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
   return '<div class="subhead">配色与参数管理</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">'

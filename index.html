@@ -2815,19 +2815,17 @@
     };
   }
 
-  /* ---------- KDE: same X/Y range behavior ---------- */
-  if (typeof galleryKde === 'function') {
-    galleryKde = function foodlabGalleryKdeV0115(W,H) {
-      const s=state.gallery.settings,p=galleryPlotBox(W,H),groups=[...new Set(state.gallery.rows.map(r=>r.Group))],all=state.gallery.rows.map(r=>r.Value),auto=paddedRange(all,.08,false);
-      ensurePlotRangeState();
-      const sx=state.gallery.settings,mode=sx.plotXRangeMode||'auto';let xmin=auto.min,xmax=auto.max;
-      if(mode==='manual'){const a=(sx.plotXMin==null||sx.plotXMin==='')?NaN:Number(sx.plotXMin),b=(sx.plotXMax==null||sx.plotXMax==='')?NaN:Number(sx.plotXMax);if(Number.isFinite(a))xmin=a;if(Number.isFinite(b))xmax=b;if(!(xmax>xmin))xmax=xmin+1;}
-      const curves=groups.map(g=>kdeFor(state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value),xmin,xmax,140,s.bandwidth)),ymax=Math.max(1e-12,...curves.flatMap(c=>c.map(q=>q[1]))),xr=resolveGalleryNumericRange('x',[xmin,xmax],{pad:0}),yr=resolveGalleryNumericRange('y',[0,ymax],{pad:.06,includeZero:true,floorZero:true}),yb=(typeof galleryBrokenY==='function')?galleryBrokenY(yr.min,yr.max,p):null,yMap=yb?yb.map:scaleLinear(yr.min,yr.max,p.t+p.h,p.t),yTicks=yb?yb.ticks:yr.ticks,xMap=scaleLinear(xr.min,xr.max,p.l,p.l+p.w);
-      let out=commonAxes(W,H,p,xr.ticks,yTicks,v=>xMap(Number(v)),v=>yMap(Number(v)))+galleryLegend(groups)+clipOpen(p,'galleryKdeClip');
-      curves.forEach((curve,i)=>{const st=getGallerySeriesStyle(i),d=curve.map((q,j)=>(j?'L':'M')+xMap(q[0])+','+yMap(q[1])).join(' '),yZero=yMap(0);out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${st.opacity>0?`<path d="${d} L${xMap(xmax)},${yZero} L${xMap(xmin)},${yZero} Z" fill="${st.color}" fill-opacity="${st.opacity*.32}"/>`:''}<path d="${d}" fill="none" stroke="${st.color}" stroke-width="${st.lineWidth}"/></g>`});
-      return out+'</g>';
-    };
-  }
+  /* ---------- KDE: renderer lives ONLY in chart-fixes.js ---------- */
+  /* v1.0.1: this block used to override galleryKde here
+     (foodlabGalleryKdeV0115). On every page load that override clobbered
+     the full-featured patchedGalleryKde from chart-fixes.js, silently
+     dropping the 图形形式 (curve / histogram+KDE / ridgeline), 线型, fill
+     and rug controls — the panel edited settings the renderer never read.
+     The override has been REMOVED: galleryKde is now the single
+     authoritative renderer in chart-fixes.js, which already honours the
+     X/Y numeric-range controls via resolveGalleryNumericRange and the
+     broken-axis helper galleryBrokenY. Do NOT re-add a galleryKde
+     override in this block — fix chart-fixes.js instead. */
 
   /* ---------- Box / violin: Y range and plot clipping ---------- */
   if (typeof galleryBox === 'function') {
