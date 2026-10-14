@@ -153,12 +153,15 @@ const EXPERIMENT_CHARTS=['bar','line','curve','waterfall'];
 const WORKFLOW_GOAL_DEFAULTS={compare:'bar',trend:'line',dist:'box',relation:'scatter',multi:'radar',composition:'stacked'};
 function isExperimentChart(type){return EXPERIMENT_CHARTS.includes(type)}
 function setWorkflowChart(type,{keepData=false}={}){
+  const nextMode=isExperimentChart(type)?'experiment':'gallery';
+  // 重复点击同一个图形时不重建、不清空数据：否则频繁点击会反复重绘并丢掉已导入的数据。
+  const unchanged=state.workflow.chartType===type&&state.workflow.mode===nextMode;
   state.workflow.chartType=type;
-  state.workflow.mode=isExperimentChart(type)?'experiment':'gallery';
+  state.workflow.mode=nextMode;
   state.chart.mode=state.workflow.mode;
-  if(state.workflow.mode==='experiment'){state.chart.type=type;if((type==='line'||type==='curve')&&!keepData)state.design.factorALevelMode='auto';}
-  else{state.gallery.type=type;resetGallerySettings()}
-  if(!keepData){
+  if(state.workflow.mode==='experiment'){state.chart.type=type;if((type==='line'||type==='curve')&&!keepData&&!unchanged)state.design.factorALevelMode='auto';}
+  else{state.gallery.type=type;if(!unchanged)resetGallerySettings()}
+  if(!keepData&&!unchanged){
     if(state.workflow.mode==='experiment'){state.rawData=[];state.analysisRows=[];state.descriptive=[];state.analysis=null}
     else{state.gallery.rows=[];state.gallery.analysis=null;state.gallery.sourceName=''}
   }
@@ -378,14 +381,28 @@ function renderPlanSelector(){
   $$('[data-plan-chart]').forEach(btn=>btn.addEventListener('click',()=>{
     const type=btn.dataset.planChart;
     setWorkflowChart(type);
-    renderPlanSelector();renderDesignPreview();renderDataPreview();syncStepLabels();
+    // 只切换高亮，不重建整个图形网格：重建会让高频点击时反复重排，
+    // 还会因为卡片被替换导致后续点击落空（表现为"卡住、点其他图形没反应"）。
+    $$('[data-plan-chart]').forEach(b=>b.classList.toggle('active',b.dataset.planChart===type));
+    updatePlanChartDetail();
+    schedulePlanSideRender();
   }));
+  updatePlanChartDetail();
+  const count=$('#planSupportedCount');if(count)count.textContent=`${Object.keys(PLAN_CHART_META).length} 种图`;
+  const search=$('#chartSearch');if(search&&document.activeElement!==search)search.value=state.workflow.search||'';
+}
+function updatePlanChartDetail(){
   const meta=PLAN_CHART_META[state.workflow.chartType]||PLAN_CHART_META.bar;
   const set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
   set('#planChartIcon',meta.icon);set('#planChartTitle',workflowChartLabel(state.workflow.chartType));set('#planPurposeText',meta.purpose);set('#planSchemaText',meta.schema);set('#planAnalysisText',meta.analysis);set('#planAdviceText',meta.advice);
   set('#topCurrentChart',workflowChartLabel(state.workflow.chartType));set('#sidebarChartName',workflowChartLabel(state.workflow.chartType));
-  const count=$('#planSupportedCount');if(count)count.textContent=`${Object.keys(PLAN_CHART_META).length} 种图`;
-  const search=$('#chartSearch');if(search&&document.activeElement!==search)search.value=state.workflow.search||'';
+}
+// 把相邻的多次点击合并到同一帧渲染，避免连点时把重绘任务层层堆叠。
+let planSideRenderPending=false;
+function schedulePlanSideRender(){
+  if(planSideRenderPending)return;planSideRenderPending=true;
+  const run=()=>{planSideRenderPending=false;renderDesignPreview();renderDataPreview();syncStepLabels()};
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(run);else setTimeout(run,0);
 }
 
 function bindDesign(){
@@ -486,7 +503,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.2.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.3.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1730,13 +1747,31 @@ function gSeriesRange(index,key,label,min,max,step){return gSeriesWrap(index,key
 function gSeriesSelect(index,key,label,opts){return gSeriesWrap(index,key,label,`<select data-gseries-setting="${index}:${key}">${opts.map(([v,n])=>`<option value="${v}" ${String(getGallerySeriesStyle(index)[key])===String(v)?'selected':''}>${n}</option>`).join('')}</select>`)}
 function galleryPaletteBlock(){
   const groups=galleryStudioSeriesNames();if(!groups.length)return'';
-  return `<div class="palette-list">${groups.slice(0,12).map((g,i)=>`<label class="palette-item"><input type="color" data-gpalette="${i}" value="${getGallerySeriesStyle(i).color}"><span>${esc(g)}</span></label>`).join('')}</div>`;
+  // 光谱/热分析的曲线颜色由各自模块的 groupStyles 持有，这里要回读真实颜色
+  const colorAt=i=>{
+    const type=state.gallery.type;
+    if(type==='spectrum'||type==='thermal'){
+      const store=(state.spectrum?.settings?.groupStyles)||(state.thermal?.settings?.groupStyles)||{};
+      const own=store[groups[i]];
+      if(own&&own.color)return own.color;
+    }
+    return getGallerySeriesStyle(i).color;
+  };
+  return `<div class="palette-list">${groups.slice(0,12).map((g,i)=>`<label class="palette-item"><input type="color" data-gpalette="${i}" value="${colorAt(i)}"><span>${esc(g)}</span></label>`).join('')}</div>`;
 }
 function galleryStudioSeriesNames(){
   const rows=state.gallery.rows,type=state.gallery.type;
+  // 光谱图与热分析图各自持有曲线（series），配色面板要按真实曲线列出
+  if(type==='spectrum'){const ser=state.spectrum?.data?.series;return ser&&ser.length?ser.map(x=>String(x.name)):[]}
+  if(type==='thermal'){const all=[...(state.thermal?.data?.leftSeries||[]),...(state.thermal?.data?.importedDtgSeries||[]),...(state.thermal?.data?.rightSeries||[])];return [...new Set(all.map(x=>x.group||x.name).filter(Boolean))]}
   if(['hist','kde','box','violin','scatter','bubble','radar'].includes(type))return [...new Set(rows.map(r=>r.Group||'Series'))];
   if(['stacked','pie'].includes(type))return [...new Set(rows.map(r=>r.Component||'Component'))];
   if(type==='heatmap')return [];return [];
+}
+// 配色/图参数变更后，光谱与热分析模块缓存的首屏颜色需要一并失效，否则调色板改动看不出效果。
+function clearModuleSeriesStyles(){
+  try{if(state.spectrum?.settings&&state.spectrum.settings.groupStyles)state.spectrum.settings.groupStyles={}}catch(_e){}
+  try{if(state.thermal?.settings&&state.thermal.settings.groupStyles)state.thermal.settings.groupStyles={}}catch(_e){}
 }
 function galleryBuildMethodNote(){
   const stat=galleryMethodNoteText();
@@ -1763,16 +1798,16 @@ function galleryExportPalette(){var colors=state.gallery.palette.filter(function
   download(new Blob([JSON.stringify({type:'foodlab-palette',name:name,colors:colors},null,2)],{type:'application/json'}),safeFile(name)+'_配色.json');toast('配色已保存，并记住为下次默认')}
 async function galleryImportPalette(file){try{var obj=JSON.parse(await readAsText(file));var colors=Array.isArray(obj)?obj:obj.colors;if(!Array.isArray(colors)||!colors.length)throw new Error('格式不对');
     colors=colors.filter(function(c){return typeof c==='string'}).map(function(c){return /^#/.test(c)?c:'#'+c});if(!colors.length)throw new Error('没有颜色');
-    state.gallery.palette=colors;state.gallery.seriesStyles={};rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('配色已导入')}
+    state.gallery.palette=colors;state.gallery.seriesStyles={};clearModuleSeriesStyles();rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('配色已导入')}
   catch(err){toast('导入失败：'+(err.message||'格式错误'))}}
 function galleryApplyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
-  state.gallery.palette=colors;state.gallery.seriesStyles={};rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
+  state.gallery.palette=colors;state.gallery.seriesStyles={};clearModuleSeriesStyles();rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
 function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:1,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s)};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-gallery-style'||!obj.settings)throw new Error('不是图参数文件');
     Object.assign(state.gallery.settings,obj.settings);if(Array.isArray(obj.palette)&&obj.palette.length){state.gallery.palette=obj.palette}
-    state.gallery.seriesStyles={};ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
+    state.gallery.seriesStyles={};clearModuleSeriesStyles();ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
 function galleryPropGroup(items){return items.join('')}
 function gColor(k,l){return gWrap(l,k,`<input data-gsetting="${k}" type="color" value="${state.gallery.settings[k]}">`)}
@@ -2708,7 +2743,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.2.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.3.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
