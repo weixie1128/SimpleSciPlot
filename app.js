@@ -503,7 +503,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.3.4'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.3.5'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2735,19 +2735,46 @@ function cleanAnnotationEditorArtifacts(root){root.querySelectorAll('.annotation
 // v1.3.4: 导出与拼图共用的“留白”取值与 viewBox 解析工具。
 function exportPaddingValue(){const v=Number(state.chart.settings.exportPadding);return Number.isFinite(v)&&v>=0?v:8;}
 function parseSvgViewBox(str){const m=String(str).match(/<svg[^>]*viewBox="([^"]+)"/);if(!m)return null;const p=m[1].trim().split(/[\s,]+/).map(Number);return p.length===4&&p.every(Number.isFinite)?p:null;}
-function exportSvg(){const svg=$('#paperSvg');if(!svg)return;const copy=cleanAnnotationEditorArtifacts(svg.cloneNode(true));copy.setAttribute('xmlns','http://www.w3.org/2000/svg');if(state.chart.settings.tightExport!==false){try{const pad=exportPaddingValue();if(state.chart.mode==='gallery'){const trimmed=trimSvgWhitespace(new XMLSerializer().serializeToString(copy),pad),vb=parseSvgViewBox(trimmed);if(vb)copy.setAttribute('viewBox',vb.join(' '))}else{const br=svg.querySelector('rect[data-object="background"]');const prev=br?br.getAttribute('display'):null;if(br)br.setAttribute('display','none');const bb=svg.getBBox();if(br)br.setAttribute('display',prev||'');copy.setAttribute('viewBox',(bb.x-pad)+' '+(bb.y-pad)+' '+(bb.width+2*pad)+' '+(bb.height+2*pad))}}catch(_e){}}const name=state.chart.mode==='gallery'?workflowChartLabel(state.workflow.chartType):state.design.metricName;download(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml;charset=utf-8'}),`${safeFile(state.design.experimentName)}_${safeFile(name)}.svg`)}
+// v1.3.5: 用真实渲染的 getBBox 计算内容紧致包围盒。旧的正则扫描无法处理 <g transform>，
+// 会把带坐标轴留白的图表裁偏——这正是“图表导出/加入拼图后不居中”的根因。
+// 先临时移除整幅背景矩形（否则 bbox 会等于整张画布），测得后再原位插回。
+function computeSvgContentBox(svg,pad){
+  try{
+    if(!svg||typeof svg.getBBox!=='function')return null;
+    const bgs=[...svg.querySelectorAll('[data-object="background"],[data-gobject="background"]')];
+    const removed=bgs.map(el=>({el,parent:el.parentNode,next:el.nextSibling}));
+    removed.forEach(x=>x.parent&&x.parent.removeChild(x.el));
+    let bb;try{bb=svg.getBBox()}finally{removed.forEach(x=>{if(x.parent)x.parent.insertBefore(x.el,x.next)})}
+    if(!bb||!Number.isFinite(bb.x)||!Number.isFinite(bb.y)||!(bb.width>0)||!(bb.height>0))return null;
+    const p=Math.max(0,Number(pad)||0);
+    return [Math.floor(bb.x-p),Math.floor(bb.y-p),Math.ceil(bb.width+2*p),Math.ceil(bb.height+2*p)];
+  }catch(_e){return null}
+}
+// 从字符串形式的 SVG 计算同样的包围盒：临时挂到屏幕外容器以触发渲染测量。
+function computeSvgContentBoxFromString(str,pad){
+  let holder=null;
+  try{
+    const doc=new DOMParser().parseFromString(String(str),'image/svg+xml'),root=doc.documentElement;
+    if(!root||root.nodeName.toLowerCase()!=='svg'||doc.querySelector('parsererror'))return null;
+    holder=document.createElement('div');holder.setAttribute('aria-hidden','true');
+    holder.style.cssText='position:absolute;left:-99999px;top:-99999px;width:0;height:0;overflow:hidden;pointer-events:none';
+    document.body.appendChild(holder);holder.appendChild(document.importNode(root,true));
+    return computeSvgContentBox(holder.querySelector('svg'),pad);
+  }catch(_e){return null}finally{if(holder&&holder.parentNode)holder.parentNode.removeChild(holder)}
+}
+function exportSvg(){const svg=$('#paperSvg');if(!svg)return;const copy=cleanAnnotationEditorArtifacts(svg.cloneNode(true));copy.setAttribute('xmlns','http://www.w3.org/2000/svg');if(state.chart.settings.tightExport!==false){try{const vb=computeSvgContentBox(svg,exportPaddingValue());if(vb)copy.setAttribute('viewBox',vb.join(' '))}catch(_e){}}const name=state.chart.mode==='gallery'?workflowChartLabel(state.workflow.chartType):state.design.metricName;download(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml;charset=utf-8'}),`${safeFile(state.design.experimentName)}_${safeFile(name)}.svg`)}
 function exportPng(){
   const svg=$('#paperSvg');if(!svg)return;
   const galleryMode=state.chart.mode==='gallery',W=galleryMode?Number(state.gallery.settings.width):chartDimensions().W,H=galleryMode?Number(state.gallery.settings.height):chartDimensions().H,dpi=galleryMode?Number(state.gallery.settings.dpi||300):Number(state.chart.settings.pngDpi||300),scale=dpi/96;
   let cw=W,ch=H;const copy=cleanAnnotationEditorArtifacts(svg.cloneNode(true));
-  if(state.chart.settings.tightExport!==false){try{const pad=exportPaddingValue();if(galleryMode){const trimmed=trimSvgWhitespace(new XMLSerializer().serializeToString(copy),pad),vb=parseSvgViewBox(trimmed);if(vb){cw=vb[2];ch=vb[3];copy.setAttribute('viewBox',vb.join(' '))}}else{const br=svg.querySelector('rect[data-object="background"]');const prev=br?br.getAttribute('display'):null;if(br)br.setAttribute('display','none');const bb=svg.getBBox();if(br)br.setAttribute('display',prev||'');cw=bb.width+2*pad;ch=bb.height+2*pad;copy.setAttribute('viewBox',(bb.x-pad)+' '+(bb.y-pad)+' '+cw+' '+ch)}}catch(_e){}}
+  if(state.chart.settings.tightExport!==false){try{const vb=computeSvgContentBox(svg,exportPaddingValue());if(vb){cw=vb[2];ch=vb[3];copy.setAttribute('viewBox',vb.join(' '))}}catch(_e){}}
   copy.setAttribute('width',cw);copy.setAttribute('height',ch);
   const xml=new XMLSerializer().serializeToString(copy),blob=new Blob([xml],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),img=new Image();
   img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=Math.round(cw*scale);canvas.height=Math.round(ch*scale);const ctx=canvas.getContext('2d');ctx.fillStyle=galleryMode?state.gallery.settings.background:state.chart.settings.background;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);const name=galleryMode?workflowChartLabel(state.workflow.chartType):state.design.metricName;canvas.toBlob(b=>download(b,`${safeFile(state.design.experimentName)}_${safeFile(name)}_${dpi}dpi.png`),'image/png');URL.revokeObjectURL(url)};img.src=url;
 }
 
 function saveProject(){
-  const payload={version:'1.3.4',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.3.5',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -3665,14 +3692,16 @@ function ensureComposeGridCapacity(){
   const b=state.figureBoard;b.columns=clamp(Number(b.columns)||2,1,6);b.rows=b.rows||2;
 }
 function addFigureItem(item){
-  const b=state.figureBoard;item.label=item.label||indexLetter(b.items.length).toUpperCase();item.id=item.id||`panel_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;b.items.push(item);b.selected=b.items.length-1;ensureComposeGridCapacity();
+  const b=state.figureBoard;item.label=item.label||indexLetter(b.items.length).toUpperCase();item.id=item.id||`panel_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;if(b.freeLayout)item.free=item.free||composeDefaultFreeRect();b.items.push(item);b.selected=b.items.length-1;ensureComposeGridCapacity();
 }
 function addCurrentChartToFigure(openAfter=false){
   const svg=currentChartSvgElement();if(!svg){toast('当前没有可加入的图');return}
-  const clone=cleanChartSvgClone(svg),vb=svg.viewBox?.baseVal,w=vb?.width||Number(svg.getAttribute('width'))||980,h=vb?.height||Number(svg.getAttribute('height'))||660;
-  let svgStr=new XMLSerializer().serializeToString(clone),iw=w,ih=h;
-  if(state.figureBoard.trimWhitespace!==false){try{svgStr=trimSvgWhitespace(svgStr,exportPaddingValue());const cb=parseSvgViewBox(svgStr);if(cb){iw=cb[2];ih=cb[3]}}catch(_e){}}
-  addFigureItem({title:workflowChartLabel(state.workflow.chartType),type:state.workflow.chartType,kind:'svg',width:iw,height:ih,svg:svgStr});
+  const vb=svg.viewBox?.baseVal,w=vb?.width||Number(svg.getAttribute('width'))||980,h=vb?.height||Number(svg.getAttribute('height'))||660;
+  let crop=null;
+  if(state.figureBoard.trimWhitespace!==false)crop=computeSvgContentBox(svg,exportPaddingValue());
+  const clone=cleanChartSvgClone(svg);
+  if(crop)clone.setAttribute('viewBox',crop.join(' '));
+  addFigureItem({title:workflowChartLabel(state.workflow.chartType),type:state.workflow.chartType,kind:'svg',width:crop?crop[2]:w,height:crop?crop[3]:h,svg:new XMLSerializer().serializeToString(clone),crop});
   toast(`已加入拼图：${state.figureBoard.items.at(-1).label} · ${workflowChartLabel(state.workflow.chartType)}`);if(openAfter)showView('compose');else renderComposeWorkspace();
 }
 function readAsText(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(new Error(`无法读取 ${file.name}`));r.readAsText(file)})}
@@ -3683,7 +3712,9 @@ function parseImportedSvg(text,name){
   root.querySelectorAll('script,foreignObject').forEach(x=>x.remove());
   const vb=(root.getAttribute('viewBox')||'').trim().split(/[ ,]+/).map(Number),width=vb.length===4&&Number.isFinite(vb[2])?vb[2]:parseFloat(root.getAttribute('width'))||980,height=vb.length===4&&Number.isFinite(vb[3])?vb[3]:parseFloat(root.getAttribute('height'))||660;
   if(!root.getAttribute('viewBox'))root.setAttribute('viewBox',`0 0 ${width} ${height}`);root.removeAttribute('id');
-  return {kind:'svg',title:name.replace(/\.svg$/i,''),type:'imported-svg',width,height,svg:new XMLSerializer().serializeToString(root)};
+  let svg=new XMLSerializer().serializeToString(root),w=width,h=height,crop=null;
+  if(state.figureBoard.trimWhitespace!==false){const box=computeSvgContentBoxFromString(svg,exportPaddingValue());if(box){crop=box;w=box[2];h=box[3];svg=svg.replace(/viewBox="[^"]*"/,`viewBox="${box.join(' ')}"`)}}
+  return {kind:'svg',title:name.replace(/\.svg$/i,''),type:'imported-svg',width:w,height:h,svg,crop};
 }
 async function importComposeImages(files){
   let added=0;
@@ -3721,15 +3752,43 @@ function updateComposeArrowDom(group,ann){
 }
 function bindComposeAnnotationInteractions(){
   const svg=$('#composeSvg');if(!svg)return;
+  const pointOf=ev=>{const s=$('#composeSvg');return s?svgPoint(s,ev):{x:ev.clientX,y:ev.clientY}};
+  // v1.3.5: 统一用 window 监听指针事件，避免拖动过程中重绘 DOM 导致监听丢失。
+  const drag=(startEv,onMove,onEnd)=>{
+    startEv.preventDefault();
+    const move=ev=>{ev.preventDefault();onMove(pointOf(ev))};
+    const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);onEnd()};
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+  };
+  // 箭头端点手柄
   svg.querySelectorAll('[data-compose-arrow-handle]').forEach(handle=>handle.addEventListener('pointerdown',e=>{
     e.preventDefault();e.stopPropagation();const id=handle.dataset.composeAnnotationId,ann=state.figureBoard.annotations.find(a=>a.id===id);if(!ann)return;state.figureBoard.selectedAnnotation=id;
-    const endpoint=handle.dataset.composeArrowHandle,group=handle.closest('[data-compose-annotation]');handle.setPointerCapture(e.pointerId);handle.classList.add('is-dragging');
-    const move=ev=>{const p=svgPoint(svg,ev);if(endpoint==='start'){ann.x1=p.x;ann.y1=p.y}else{ann.x2=p.x;ann.y2=p.y}updateComposeArrowDom(group,ann)};
-    const endDrag=()=>{handle.classList.remove('is-dragging');handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',endDrag);handle.removeEventListener('pointercancel',endDrag);renderComposeWorkspace()};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',endDrag);handle.addEventListener('pointercancel',endDrag);
+    const endpoint=handle.dataset.composeArrowHandle,group=handle.closest('[data-compose-annotation]');handle.classList.add('is-dragging');
+    drag(e,p=>{if(endpoint==='start'){ann.x1=p.x;ann.y1=p.y}else{ann.x2=p.x;ann.y2=p.y}updateComposeArrowDom(group,ann)},()=>renderComposeWorkspace());
   }));
+  // v1.3.5: 拖动面板本体即可移动（首次拖动会把网格布局冻结为自由排版）
+  svg.querySelectorAll('rect[data-compose-panel]').forEach(hit=>hit.addEventListener('pointerdown',e=>{
+    if(e.target.closest('[data-compose-label-drag]')||e.target.closest('[data-compose-resize]'))return;
+    const i=Number(hit.dataset.composePanel),item=state.figureBoard.items[i];if(!item)return;
+    state.figureBoard.selected=i;const start=pointOf(e);ensureComposeFreeLayout();const f0={x:item.free.x,y:item.free.y};
+    drag(e,p=>{item.free.x=Math.round(f0.x+(p.x-start.x));item.free.y=Math.max(0,Math.round(f0.y+(p.y-start.y)));renderComposePreviewOnly()},()=>renderComposeWorkspace());
+  }));
+  // v1.3.5: 拖动右下角手柄缩放面板尺寸
+  svg.querySelectorAll('[data-compose-resize]').forEach(hd=>hd.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();const i=Number(hd.dataset.composeResize),item=state.figureBoard.items[i];if(!item)return;state.figureBoard.selected=i;const start=pointOf(e);ensureComposeFreeLayout();const f0={w:item.free.w,h:item.free.h};
+    drag(e,p=>{item.free.w=clamp(Math.round(f0.w+(p.x-start.x)),60,5000);item.free.h=clamp(Math.round(f0.h+(p.y-start.y)),60,5000);renderComposePreviewOnly()},()=>renderComposeWorkspace());
+  }));
+  // v1.3.5: 拖动 A/B/C/D 标签自由定位（不再受内缩数值范围限制）
+  svg.querySelectorAll('[data-compose-label-drag]').forEach(hd=>hd.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();const i=Number(hd.dataset.composeLabelDrag),item=state.figureBoard.items[i];if(!item)return;state.figureBoard.selected=i;const start=pointOf(e),d0={x:Number(item.labelDx)||0,y:Number(item.labelDy)||0};
+    drag(e,p=>{item.labelDx=Math.round(d0.x+(p.x-start.x));item.labelDy=Math.round(d0.y+(p.y-start.y));renderComposePreviewOnly()},()=>renderComposeWorkspace());
+  }));
+  // 拼图标注：选中与整体拖动
   $$('[data-compose-annotation]').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();state.figureBoard.selectedAnnotation=el.dataset.composeAnnotation;renderComposeSettings();$$('[data-compose-annotation]').forEach(x=>x.classList.toggle('compose-annotation-selected',x===el))});
-    el.addEventListener('pointerdown',e=>{if(e.target.closest('[data-compose-arrow-handle]'))return;e.preventDefault();e.stopPropagation();const ann=state.figureBoard.annotations.find(a=>a.id===el.dataset.composeAnnotation);if(!ann)return;state.figureBoard.selectedAnnotation=ann.id;const start=svgPoint(svg,e),snap=structuredClone(ann);el.setPointerCapture(e.pointerId);const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;if(ann.type==='text'){ann.x=snap.x+dx;ann.y=snap.y+dy;el.setAttribute('transform',`translate(${ann.x} ${ann.y})`)}else{ann.x1=snap.x1+dx;ann.y1=snap.y1+dy;ann.x2=snap.x2+dx;ann.y2=snap.y2+dy;el.setAttribute('transform',`translate(${dx} ${dy})`)}};const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);renderComposeWorkspace()};el.addEventListener('pointermove',move);el.addEventListener('pointerup',up)});
+    el.addEventListener('pointerdown',e=>{if(e.target.closest('[data-compose-arrow-handle]'))return;e.stopPropagation();const ann=state.figureBoard.annotations.find(a=>a.id===el.dataset.composeAnnotation);if(!ann)return;state.figureBoard.selectedAnnotation=ann.id;const start=pointOf(e),snap=structuredClone(ann);
+      drag(e,p=>{const dx=p.x-start.x,dy=p.y-start.y;if(ann.type==='text'){ann.x=snap.x+dx;ann.y=snap.y+dy}else{ann.x1=snap.x1+dx;ann.y1=snap.y1+dy;ann.x2=snap.x2+dx;ann.y2=snap.y2+dy}renderComposePreviewOnly()},()=>renderComposeWorkspace());
+    });
   });
   svg.addEventListener('click',function composePanelSelect(e){const hit=e.target.closest&&e.target.closest('[data-compose-panel]');if(hit){state.figureBoard.selected=Number(hit.dataset.composePanel);renderComposeItemList();renderComposeSettings();renderComposePreviewOnly()}});
 }
@@ -3754,13 +3813,13 @@ function renderComposeSettings(){
   const b=state.figureBoard;b.labelFont=b.labelFont||'Arial';b.rows=b.rows||Math.max(1,Math.ceil(b.items.length/(b.columns||2)));
   const fonts=[['Arial','Arial'],['Times New Roman','Times New Roman'],['Calibri','Calibri'],['Helvetica','Helvetica'],['Georgia','Georgia'],['Microsoft YaHei','微软雅黑'],['SimSun','宋体'],['SimHei','黑体']];
   if(!$('#composeGroupStyle')){const st=document.createElement('style');st.id='composeGroupStyle';st.textContent='.compose-group{border:1px solid #e6ebed;border-radius:9px;margin-bottom:9px;overflow:hidden;background:#fff}.compose-group summary{cursor:pointer;font-weight:600;font-size:13px;padding:9px 11px;background:#f7f9f8;border-bottom:1px solid #edf1f0;list-style:none;display:flex;justify-content:space-between;align-items:center;margin:0}.compose-group summary::-webkit-details-marker{display:none}.compose-group summary::after{content:"▾";color:#8a969c;transition:transform .15s}.compose-group:not([open]) summary::after{transform:rotate(-90deg)}.compose-group>div{padding:10px 11px}.compose-group .field{margin-bottom:10px}.compose-group .small-note{color:#8a969c;font-size:11px;line-height:1.5;margin-top:6px}';document.head.appendChild(st)}
-  const sel=b.items[b.selected];const selHtml=sel?`<div class="field"><label><span>宽度</span><output>${Number(sel.colspan)||1}</output></label><select id="composePanelColspan">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${(Number(sel.colspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="field"><label><span>高度</span><output>${Number(sel.rowspan)||1}</output></label><select id="composePanelRowspan">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(Number(sel.rowspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="small-note">在画布上点击任意图即可选中；改完自动重排对称。</div>`:'<div class="small-note">在画布上点击任意图即可选中后编辑尺寸。</div>';
-  const html=composeGroup('画布与布局',`${composeSelect('columns','列数',[[1,'1 列'],[2,'2 列'],[3,'3 列'],[4,'4 列'],[5,'5 列'],[6,'6 列']])}${composeNumber('width','总宽度',800,5000,10)}${composeRange('gap','面板间距',0,200,1)}${composeNumber('padding','外边距',0,160,1)}${composeCheck('trimWhitespace','裁剪面板白边（自动去掉图周围空白）')}${composeNumber('height','总高度（不足时自动扩展）',600,5000,10)}${composeSelect('dpi','PNG 清晰度',[[96,'96 dpi'],[150,'150 dpi'],[300,'300 dpi'],[600,'600 dpi']])}${composeColor('background','背景颜色')}`,true)
+  const sel=b.items[b.selected];const selHtml=sel?`<div class="field"><label><span>宽度</span><output>${Number(sel.colspan)||1}</output></label><select id="composePanelColspan">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${(Number(sel.colspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="field"><label><span>高度</span><output>${Number(sel.rowspan)||1}</output></label><select id="composePanelRowspan">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(Number(sel.rowspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="small-note">在画布上点击任意图即可选中；直接拖动面板可自由移动，拖动右下角蓝色手柄可缩放——首次拖动后自动切换为自由排版。</div>`:'<div class="small-note">在画布上点击任意图即可选中后编辑尺寸。</div>';
+  const html=composeGroup('画布与布局',`${composeSelect('columns','列数',[[1,'1 列'],[2,'2 列'],[3,'3 列'],[4,'4 列'],[5,'5 列'],[6,'6 列']])}${composeNumber('width','总宽度',800,5000,10)}${composeRange('gap','面板间距',0,200,1)}${composeNumber('padding','外边距',0,160,1)}${composeCheck('trimWhitespace','裁剪面板白边（自动去掉图周围空白）')}${composeNumber('height','总高度（不足时自动扩展）',600,5000,10)}${composeSelect('dpi','PNG 清晰度',[[96,'96 dpi'],[150,'150 dpi'],[300,'300 dpi'],[600,'600 dpi']])}${composeColor('background','背景颜色')}${b.freeLayout?'<button id="composeAutoLayout" class="ghost wide" type="button">恢复自动网格排列</button><div class="small-note">当前为自由排版：面板可任意拖动、缩放。</div>':''}`,true)
   +composeGroup('选中面板',selHtml,true)
-  +composeGroup('面板标签',`${composeCheck('labelEnabled','显示 A、B、C、D 标签')}${composeSelect('labelFont','字体',fonts)}${composeRange('labelSize','字号',12,72,1)}${composeSelect('labelWeight','字重',[[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']])}${composeColor('labelColor','颜色')}${composeSelect('labelPosition','位置',[['top-left','左上角'],['top-right','右上角'],['outside-top-left','面板外左上']])}${composeNumber('labelInsetX','水平内缩',-40,80,1)}${composeNumber('labelInsetY','垂直内缩',-40,80,1)}`,false)
+  +composeGroup('面板标签',`${composeCheck('labelEnabled','显示 A、B、C、D 标签')}${composeSelect('labelFont','字体',fonts)}${composeRange('labelSize','字号',12,72,1)}${composeSelect('labelWeight','字重',[[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']])}${composeColor('labelColor','颜色')}${composeSelect('labelPosition','位置',[['top-left','左上角'],['top-right','右上角'],['outside-top-left','面板外左上']])}${composeNumber('labelInsetX','水平内缩',-40,80,1)}${composeNumber('labelInsetY','垂直内缩',-40,80,1)}<div class="small-note">显示标签后可直接在画布上拖动 A、B、C、D 到任意位置，无需再用内缩微调。</div>`,false)
   +composeGroup('面板边框',`${composeCheck('panelBorder','显示面板边框')}${composeRange('panelBorderWidth','边框粗细',.5,6,.1)}${composeColor('panelBorderColor','边框颜色')}`,false)
   +composeGroup('拼图文字与箭头',composeAnnotationSettingsHtml(fonts),false);
-  $('#composeSettings').innerHTML=html;$$('[data-compose-setting]').forEach(el=>{const fn=()=>{const k=el.dataset.composeSetting;let v=el.type==='checkbox'?el.checked:el.value;if(['number','range'].includes(el.type)||['columns','rows','dpi'].includes(k))v=Number(v);state.figureBoard[k]=v;if(k==='columns'||k==='rows')ensureComposeGridCapacity();renderComposePreviewOnly();const out=el.closest('.field')?.querySelector('output');if(out)out.textContent=state.figureBoard[k]};el.addEventListener('input',fn);el.addEventListener('change',fn)});$('#composePanelColspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.colspan=Math.max(1,Math.min(Number(e.target.value)||1,state.figureBoard.columns||2));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.colspan});$('#composePanelRowspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.rowspan=Math.max(1,Math.min(Number(e.target.value)||1,5));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.rowspan});bindComposeAnnotationInputs();
+  $('#composeSettings').innerHTML=html;$$('[data-compose-setting]').forEach(el=>{const fn=()=>{const k=el.dataset.composeSetting;let v=el.type==='checkbox'?el.checked:el.value;if(['number','range'].includes(el.type)||['columns','rows','dpi'].includes(k))v=Number(v);state.figureBoard[k]=v;if(k==='columns'||k==='rows')ensureComposeGridCapacity();renderComposePreviewOnly();const out=el.closest('.field')?.querySelector('output');if(out)out.textContent=state.figureBoard[k]};el.addEventListener('input',fn);el.addEventListener('change',fn)});$('#composePanelColspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.colspan=Math.max(1,Math.min(Number(e.target.value)||1,state.figureBoard.columns||2));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.colspan});$('#composePanelRowspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.rowspan=Math.max(1,Math.min(Number(e.target.value)||1,5));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.rowspan});bindComposeAnnotationInputs();$('#composeAutoLayout')?.addEventListener('click',()=>{const fb=state.figureBoard;fb.freeLayout=false;fb.items.forEach(it=>{delete it.free});renderComposeWorkspace()});
 }
 function composeAnnotationSettingsHtml(fonts){
   const b=state.figureBoard,ann=selectedComposeAnnotation(),list=b.annotations.map((a,i)=>`<button type="button" class="compose-ann-chip ${a.id===b.selectedAnnotation?'active':''}" data-compose-ann-select="${a.id}">${annotationTypeLabel(a.type)} ${i+1}</button>`).join('');
@@ -3795,39 +3854,17 @@ function svgDataUri(svg){return `data:image/svg+xml;charset=utf-8,${encodeURICom
 function prefixSvgIds(text,prefix){let out=String(text);const ids=[];out=out.replace(/\bid="([^"]+)"/g,(m,id)=>{ids.push(id);return `id="${prefix}${id}"`});ids.forEach(id=>{const escId=id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp(`url\\(#${escId}\\)`,'g'),`url(#${prefix}${id})`).replace(new RegExp(`(["'])#${escId}(["'])`,'g'),`$1#${prefix}${id}$2`)});return out}
 function svgInner(text){const m=String(text).match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);return m?m[1]:text}
 function svgRootPresentation(text){try{const doc=new DOMParser().parseFromString(String(text),'image/svg+xml'),root=doc.documentElement;return{style:root.getAttribute('style')||'',fontFamily:root.getAttribute('font-family')||'',fontWeight:root.getAttribute('font-weight')||''}}catch{return{style:'',fontFamily:'',fontWeight:''}}}
+// v1.3.5: 旧实现用正则扫描形状坐标，忽略 <g transform>，会把带留白的图表裁偏；
+// 现改为委托真实 getBBox 测量，保持“传入字符串→返回新字符串”的原有接口。
 function trimSvgWhitespace(svg,pad=8){
-  try{
-    const vbm=String(svg).match(/<svg[^>]*viewBox="([^"]+)"/);if(!vbm)return svg;
-    const p=vbm[1].trim().split(/[\s,]+/).map(Number);if(p.length<4||p.some(x=>!Number.isFinite(x)))return svg;
-    const vw=p[2],vh=p[3];if(!vw||!vh)return svg;
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity,found=false;
-    const re=/(?:<|\s)((?:rect|circle|line|text|path|image|ellipse|polygon|polyline))([^>]*?)(?:\/>|>)/gi;let m;
-    while((m=re.exec(String(svg)))){
-      const tag=m[1],a=m[2];
-      if(tag==='rect'){if(/data-object="background"/.test(a))continue;const rw=Number((a.match(/width="([\d.\-]+)"/)||[])[1]||0),rh=Number((a.match(/height="([\d.\-]+)"/)||[])[1]||0);if(rw>0&&rh>0&&Math.abs(rw-vw)<.5&&Math.abs(rh-vh)<.5)continue}
-      const xs=[...(a.match(/(?:^|\s)(?:x|cx|x1|x2)="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
-      const ys=[...(a.match(/(?:^|\s)(?:y|cy|y1|y2)="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
-      const ws=[...(a.match(/(?:^|\s)width="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
-      const hs=[...(a.match(/(?:^|\s)height="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
-      const rs=[...(a.match(/(?:^|\s)r="([\d.\-]+)"/g)||[])].map(s=>Number(s.replace(/^.*="|"$/g,''))).filter(Number.isFinite);
-      const d=(a.match(/d="([^"]+)"/)||[])[1]||'';
-      const dn=[...d.matchAll(/-?\d+(?:\.\d+)?/g)].map(mm=>Number(mm[0])).filter(Number.isFinite);
-      if(xs.length&&ws.length){const rx=xs[0]??0,rw2=ws[0]??0;minX=Math.min(minX,rx);maxX=Math.max(maxX,rx+rw2);minY=Math.min(minY,...ys);maxY=Math.max(maxY,...ys)}
-      if(ys.length&&hs.length){const ry=ys[0]??0,rh2=hs[0]??0;minY=Math.min(minY,ry);maxY=Math.max(maxY,ry+rh2);minX=Math.min(minX,...xs);maxX=Math.max(maxX,...xs)}
-      if(xs.length&&!ws.length){minX=Math.min(minX,...xs);maxX=Math.max(maxX,...xs)}
-      if(ys.length&&!hs.length){minY=Math.min(minY,...ys);maxY=Math.max(maxY,...ys)}
-      if(rs.length&&xs.length&&ys.length){minX=Math.min(minX,...xs.map((x,i)=>x-(rs[i]||0)));maxX=Math.max(maxX,...xs.map((x,i)=>x+(rs[i]||0)));minY=Math.min(minY,...ys.map((y,i)=>y-(rs[i]||0)));maxY=Math.max(maxY,...ys.map((y,i)=>y+(rs[i]||0)))}
-      if(dn.length>=4){const dxs=dn.filter((_,i)=>i%2===0),dys=dn.filter((_,i)=>i%2===1);minX=Math.min(minX,...dxs);maxX=Math.max(maxX,...dxs);minY=Math.min(minY,...dys);maxY=Math.max(maxY,...dys)}
-      if(xs.length||ys.length||ws.length||hs.length||rs.length||dn.length)found=true;
-    }
-    if(!found||!Number.isFinite(minX))return svg;
-    const cx=Math.max(0,Math.floor(minX-pad)),cy=Math.max(0,Math.floor(minY-pad)),cw=Math.min(vw,Math.ceil(maxX-minX+pad*2)),ch=Math.min(vh,Math.ceil(maxY-minY+pad*2));
-    if(cw<vw*.2||ch<vh*.2)return svg;
-    return String(svg).replace(/viewBox="[^"]*"/,`viewBox="${cx} ${cy} ${cw} ${ch}"`);
-  }catch(e){return svg}
+  const box=computeSvgContentBoxFromString(svg,pad);
+  if(!box)return svg;
+  return String(svg).replace(/viewBox="[^"]*"/,`viewBox="${box.join(' ')}"`);
 }
-function composeSvgMarkup(interactive=true){
-  const b=state.figureBoard,items=b.items;if(!items.length&&!b.annotations.length)return'';ensureComposeGridCapacity();const W=clamp(Number(b.width)||1600,800,5000),H=clamp(Number(b.height)||1200,600,5000),cols=clamp(Number(b.columns)||2,1,6),gap=Math.max(0,Number(b.gap)||0),pad=Math.max(0,Number(b.padding)||0),cellW=(W-pad*2-gap*(cols-1))/cols;
+// v1.3.5: 网格自动排列——返回每张图的绝对矩形（自由排版关闭时的默认布局）。
+function composeGridRects(){
+  const b=state.figureBoard,items=b.items;
+  const W=clamp(Number(b.width)||1600,800,5000),H=clamp(Number(b.height)||1200,600,5000),cols=clamp(Number(b.columns)||2,1,6),gap=Math.max(0,Number(b.gap)||0),pad=Math.max(0,Number(b.padding)||0),cellW=(W-pad*2-gap*(cols-1))/cols;
   // 贪心网格：按顺序放置，支持跨列/跨行
   const grid={},pos=[];
   items.forEach((item,i)=>{
@@ -3843,7 +3880,7 @@ function composeSvgMarkup(interactive=true){
   // 行高自适应：每个面板按自身宽高比分摊到所占行
   const rowH=new Array(rowCount).fill(0);
   pos.forEach(p=>{const item=items[p.i],w=cellW*p.sc+gap*(p.sc-1);
-    const natH=item.kind==='image'?(item.height&&item.width?w*Number(item.height)/Number(item.width):w*.6):(item.height&&item.width?w*Number(item.height)/Number(item.width):w*.6);
+    const natH=(item.height&&item.width)?w*Number(item.height)/Number(item.width):w*.6;
     const per=Math.max(60,natH/p.sr);
     for(let r=p.r;r<p.r+p.sr;r++)rowH[r]=Math.max(rowH[r]||0,per)});
   const contentH=rowH.reduce((s,h)=>s+h,0)+gap*(rowCount-1);
@@ -3852,16 +3889,59 @@ function composeSvgMarkup(interactive=true){
   const yOf=new Array(rowCount).fill(0);{let acc=yStart;for(let r=0;r<rowCount;r++){yOf[r]=acc;acc+=rowH[r]+gap}}
   const xOf=c=>pad+c*(cellW+gap);
   b.computedHeight=Hf;b.computedRows=rowCount;
+  const rects=pos.map(p=>{const w=cellW*p.sc+gap*(p.sc-1);let h=rowH[p.r]+gap*(p.sr-1);for(let r=p.r+1;r<p.r+p.sr;r++)h+=rowH[r];return{i:p.i,x:xOf(p.c),y:yOf[p.r],w,h}});
+  return {W,Hf,rects,cellW};
+}
+// v1.3.5: 自由排版——面板被拖动/缩放后，直接使用记录下来的绝对矩形。
+function composeFreeRects(){
+  const b=state.figureBoard,items=b.items;
+  const W=clamp(Number(b.width)||1600,800,5000),H=clamp(Number(b.height)||1200,600,5000),pad=Math.max(0,Number(b.padding)||0);
+  let maxY=H;
+  const rects=items.map((item,i)=>{const f=item.free||{},w=clamp(Number(f.w)||400,60,W),h=clamp(Number(f.h)||300,60,5000),x=clamp(Number(f.x)||0,0,Math.max(0,W-60)),y=Math.max(0,Number(f.y)||0);maxY=Math.max(maxY,y+h);return{i,x,y,w,h}});
+  b.computedHeight=Math.ceil(maxY+pad);b.computedRows=1;
+  return {W,Hf:b.computedHeight,rects,cellW:rects.length?rects[0].w:400};
+}
+function composeLayoutRects(){const b=state.figureBoard;return (b.freeLayout&&b.items.length)?composeFreeRects():composeGridRects()}
+// 首次拖动/缩放时，把当前网格布局冻结成绝对矩形，之后进入自由排版。
+function ensureComposeFreeLayout(){
+  const b=state.figureBoard,items=b.items;if(!items.length){b.freeLayout=true;return}
+  if(b.freeLayout&&items.every(it=>it.free))return;
+  const {rects,cellW}=composeGridRects(),byIdx={};rects.forEach(r=>byIdx[r.i]=r);
+  items.forEach((it,i)=>{const r=byIdx[i]||{x:0,y:i*260,w:cellW,h:cellW*.6};it.free={x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.w),h:Math.round(r.h)}});
+  b.freeLayout=true;
+}
+// 自由排版下新增面板的默认落点：放在现有面板下方。
+function composeDefaultFreeRect(){
+  const b=state.figureBoard,W=clamp(Number(b.width)||1600,800,5000),pad=Math.max(0,Number(b.padding)||0),gap=Math.max(0,Number(b.gap)||0);
+  const maxB=b.items.reduce((m,it)=>Math.max(m,(it.free?(Number(it.free.y)||0)+(Number(it.free.h)||0):0)),0);
+  const w=Math.round((W-pad*2-gap)/2)||400;
+  return {x:pad,y:maxB?maxB+gap:pad,w,h:Math.round(w*.6)};
+}
+function composeSvgMarkup(interactive=true){
+  const b=state.figureBoard,items=b.items;if(!items.length&&!b.annotations.length)return'';ensureComposeGridCapacity();
+  const lay=composeLayoutRects(),W=lay.W,Hf=lay.Hf;
   let body=`<rect width="${W}" height="${Hf}" fill="${b.background}"/>`;
   const selectedI=b.selected;
-  pos.forEach(p=>{
-    const item=items[p.i],x=xOf(p.c),y=yOf[p.r],w=cellW*p.sc+gap*(p.sc-1);
-    let ph=rowH[p.r]+gap*(p.sr-1);for(let r=p.r+1;r<p.r+p.sr;r++)ph+=rowH[r];
-    if(item.kind==='image'){body+=`<image x="${x}" y="${y}" width="${w}" height="${ph}" href="${escAttr(item.src)}" preserveAspectRatio="xMidYMid meet"${interactive?` data-compose-panel="${p.i}" style="cursor:pointer"`:''}/>`}
-    else{const srcSvg=b.trimWhitespace!==false?trimSvgWhitespace(item.svg,exportPaddingValue()):item.svg,vbx=parseSvgViewBox(srcSvg)||[0,0,item.width,item.height],prefix=`p${p.i}_`,prefixed=prefixSvgIds(srcSvg,prefix),inner=svgInner(prefixed),pres=svgRootPresentation(srcSvg),style=pres.style?` style="${escAttr(pres.style)}"`:'',ff=pres.fontFamily?` font-family="${escAttr(pres.fontFamily)}"`:'',fw=pres.fontWeight?` font-weight="${escAttr(pres.fontWeight)}"`:'';body+=`<svg x="${x}" y="${y}" width="${w}" height="${ph}" viewBox="${vbx.join(' ')}" preserveAspectRatio="xMidYMid meet"${style}${ff}${fw}${interactive?` data-compose-panel="${p.i}" style="cursor:pointer"`:''}>${inner}</svg>`}
-    if(interactive&&(b.panelBorder||p.i===selectedI)){const col=p.i===selectedI?'#2f6fed':'#c9d0d4',bw=p.i===selectedI?2.5:(Number(b.panelBorderWidth)||1);body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="none" stroke="${col}" stroke-width="${bw}"/>`}
-    if(b.labelEnabled){let lx=x+b.labelInsetX,ly=y+b.labelSize+b.labelInsetY,anchor='start';if(b.labelPosition==='top-right'){lx=x+w-b.labelInsetX;anchor='end'}else if(b.labelPosition==='outside-top-left'){lx=x-b.labelInsetX;ly=y-b.labelInsetY}body+=`<text x="${lx}" y="${ly}" text-anchor="${anchor}" font-family="${escAttr(b.labelFont||'Arial')},sans-serif" font-size="${b.labelSize}" font-weight="${b.labelWeight}" fill="${b.labelColor}">${esc(item.label||indexLetter(p.i).toUpperCase())}</text>`}
-    if(interactive)body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="rgba(0,0,0,0)" pointer-events="all" data-compose-panel="${p.i}" style="cursor:pointer"/>`;
+  lay.rects.forEach(r=>{
+    const i=r.i,x=r.x,y=r.y,w=r.w,ph=r.h,item=items[i];if(!item)return;
+    if(item.kind==='image'){body+=`<image x="${x}" y="${y}" width="${w}" height="${ph}" href="${escAttr(item.src)}" preserveAspectRatio="xMidYMid meet"${interactive?` data-compose-panel="${i}" style="cursor:pointer"`:''}/>`}
+    else{
+      const src=item.svg;let crop=(item.crop&&item.crop.length===4)?item.crop:null;
+      // v1.3.5: 兼容旧存档——没有 crop 的项先按真实内容测量一次并缓存，自动纠正旧裁剪。
+      if(!crop&&b.trimWhitespace!==false){const box=computeSvgContentBoxFromString(src,exportPaddingValue());if(box){item.crop=box;item.width=box[2];item.height=box[3]}crop=item.crop||null}
+      const vbx=crop||parseSvgViewBox(src)||[0,0,item.width||w,item.height||ph],prefix=`p${i}_`,prefixed=prefixSvgIds(src,prefix),inner=svgInner(prefixed),pres=svgRootPresentation(src),style=pres.style?` style="${escAttr(pres.style)}"`:'',ff=pres.fontFamily?` font-family="${escAttr(pres.fontFamily)}"`:'',fw=pres.fontWeight?` font-weight="${escAttr(pres.fontWeight)}"`:'';
+      body+=`<svg x="${x}" y="${y}" width="${w}" height="${ph}" viewBox="${vbx.join(' ')}" preserveAspectRatio="xMidYMid meet"${style}${ff}${fw}${interactive?` data-compose-panel="${i}" style="cursor:pointer"`:''}>${inner}</svg>`
+    }
+    if(interactive&&(b.panelBorder||i===selectedI)){const col=i===selectedI?'#2f6fed':'#c9d0d4',bw=i===selectedI?2.5:(Number(b.panelBorderWidth)||1);body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="none" stroke="${col}" stroke-width="${bw}" pointer-events="none"/>`}
+    if(interactive)body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="rgba(0,0,0,0)" pointer-events="all" data-compose-panel="${i}" style="cursor:pointer"/>`;
+    if(b.labelEnabled){
+      let blx=x+Number(b.labelInsetX||0),bly=y+(Number(b.labelSize)||32)+Number(b.labelInsetY||0),anchor='start';
+      if(b.labelPosition==='top-right'){blx=x+w-Number(b.labelInsetX||0);anchor='end'}else if(b.labelPosition==='outside-top-left'){blx=x-Number(b.labelInsetX||0);bly=y-Number(b.labelInsetY||0)}
+      const lx=blx+(Number(item.labelDx)||0),ly=bly+(Number(item.labelDy)||0),fs=Number(b.labelSize)||32,txt=String(item.label||indexLetter(i).toUpperCase());
+      body+=`<text x="${lx}" y="${ly}" text-anchor="${anchor}" font-family="${escAttr(b.labelFont||'Arial')},sans-serif" font-size="${fs}" font-weight="${b.labelWeight}" fill="${b.labelColor}" pointer-events="none">${esc(txt)}</text>`;
+      if(interactive){const ew=Math.max(18,fs*.74*txt.length+12),ex=anchor==='end'?lx-ew:lx-6;body+=`<rect x="${ex}" y="${ly-fs}" width="${ew+12}" height="${fs*1.4}" fill="rgba(0,0,0,0)" data-compose-label-drag="${i}" style="cursor:move;touch-action:none"/>`}
+    }
+    if(interactive&&i===selectedI)body+=`<rect x="${x+w-22}" y="${y+ph-22}" width="22" height="22" rx="4" fill="#2f6fed" fill-opacity=".92" stroke="#ffffff" stroke-width="2" data-compose-resize="${i}" style="cursor:nwse-resize;touch-action:none"/>`;
   });
   body+=(b.annotations||[]).map(a=>composeAnnotationSvg(a,interactive)).join('');
   return `<svg id="composeSvg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Hf}" viewBox="0 0 ${W} ${Hf}" style="background:${b.background}">${body}</svg>`;
