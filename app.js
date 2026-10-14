@@ -115,6 +115,7 @@ const defaultGallerySettings = {
   fontEnglish:'Arial',fontChinese:'Microsoft YaHei',globalFontWeight:400,xTickSize:12,yTickSize:12,xTickWeight:400,yTickWeight:400,xTickColor:'#20262b',yTickColor:'#20262b',
   axisWidth:1.35,axisColor:'#20262b',tickLength:6,showXTicks:true,showYTicks:true,
   frameMode:'box',frameWidth:1.15,frameColor:'#20262b',background:'#ffffff',
+  plotBgVisible:false,plotBg:'#f5f7f8',gridEnabled:false,gridVertical:false,gridColor:'#e3e7eb',gridWidth:1,
   legend:true,legendX:120,legendY:62,legendFontSize:12,legendWeight:400,legendOrientation:'horizontal',legendColumns:3,
   legendFrameStyle:'none',legendFrameX:108,legendFrameY:50,legendFrameWidthBox:260,legendFrameHeightBox:62,legendFrameAutoSize:true,
   legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameFill:'#ffffff',legendFrameRadius:3,
@@ -485,7 +486,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.1.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.2.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1645,7 +1646,7 @@ function galleryBasePropertyHtml(id){
   if(id==='frame')return gallerySection('图片边框',[gSelect('frameMode','边框形式',[['lb','仅左、下轴'],['lbr','左、下、右三边'],['box','完整四边框'],['none','不显示边框']]),gRange('frameWidth','边框粗细',.5,6,.1),gColor('frameColor','边框颜色')]);
   if(id==='legend'){if(state.gallery.type==='heatmap')return gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','数字字号',8,30,1),gOrientationButtons('heatmapColorBarOrientation','排列方向')])+galleryDragHint('色带图例');return gallerySection('图例内容',[gCheck('legend','显示图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','字号',8,36,1),gSelect('legendWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗']]),gOrientationButtons('legendOrientation','排列方向'),gRange('legendColumns','横向列数',1,6,1)])+galleryDragHint('图例内容');}
   if(id==='legend-frame')return gallerySection('图例边框',[gSelect('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),gNumber('legendFrameX','水平位置',0,1800,1),gNumber('legendFrameY','垂直位置',0,1200,1),gCheck('legendFrameAutoSize','自动适应图例大小'),gNumber('legendFrameWidthBox','边框宽度',20,900,1),gNumber('legendFrameHeightBox','边框高度',20,600,1),gRange('legendFrameWidth','线条粗细',.5,5,.1),gColor('legendFrameColor','边框颜色'),gColor('legendFrameFill','底色'),gRange('legendFrameRadius','圆角',0,20,1)])+gallerySection('阴影',[gCheck('legendShadow','显示阴影'),gRange('legendShadowX','水平偏移',-10,14,1),gRange('legendShadowY','垂直偏移',-10,14,1),gRange('legendShadowBlur','模糊程度',0,12,.5),gRange('legendShadowOpacity','透明度',0,.7,.05)])+galleryDragHint('图例边框');
-  if(id==='background')return gallerySection('背景',[gColor('background','背景颜色')]);
+  if(id==='background')return gallerySection('背景',[gColor('background','整体背景颜色'),gCheck('plotBgVisible','显示绘图区底色'),gColor('plotBg','绘图区底色'),gCheck('gridEnabled','显示横网格线'),gCheck('gridVertical','显示纵网格线'),gColor('gridColor','网格线颜色'),gRange('gridWidth','网格线粗细',.3,3,.1)])+`<div class="hint">整体背景作用于整张图；绘图区底色与网格线只在 X/Y 轴围成的框内。</div>`;
   if(id==='palette')return gallerySection('全部系列配色',[galleryPaletteBlock()||'<div class="hint">当前图形没有逐系列配色；热图的色阶请在左侧「色阶与数值」里设置。</div>'])+galleryPaletteButtons();
   if(id==='style')return galleryStyleButtons();
   if(id==='methodnote'){const note=s.methodNoteCopy||galleryBuildMethodNote();return '<div class="subhead">方法说明（可编辑、可复制到论文）</div><textarea id="galleryMethodNoteArea" style="width:100%;min-height:220px;font-size:13px;line-height:1.7;padding:10px;border:1px solid #c9d2d8;border-radius:6px;resize:vertical;box-sizing:border-box" placeholder="自动生成方法说明...">'+esc(note)+'</textarea><div style="display:flex;gap:6px;margin-top:8px"><button type="button" id="galleryRegenMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">重新自动生成</button><button type="button" id="galleryCopyMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复制全部</button></div><div class="hint">这段文字不画到图上，供你复制进论文「材料与方法」；直接在框里改字，点空白处自动保存。</div>';}
@@ -2707,7 +2708,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.1.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.2.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -3281,6 +3282,9 @@ function commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,axisLog){
   const s=state.gallery.settings,axis=s.axisColor||'#20262b',frame=s.frameColor||axis,sw=s.axisWidth||1.2,fw=s.frameWidth||sw;
   const xTitleX=s.xTitleX??(p.l+p.w/2),xTitleY=s.xTitleY??(H-24),yTitleX=s.yTitleX??28,yTitleY=s.yTitleY??(p.t+p.h/2),xTick=s.xTickSize||12,yTick=s.yTickSize||12;
   let out='';
+  if(s.plotBgVisible)out+=`<rect data-gobject="plotbg" x="${p.l}" y="${p.t}" width="${p.w}" height="${p.h}" fill="${s.plotBg||'#f5f7f8'}"/>`;
+  if(s.gridEnabled)out+=`<g stroke="${s.gridColor||'#e3e7eb'}" stroke-width="${s.gridWidth||1}">${yTicks.map(v=>{const yy=yMap(v);return `<line x1="${p.l}" x2="${p.l+p.w}" y1="${yy}" y2="${yy}"/>`}).join('')}</g>`;
+  if(s.gridVertical)out+=`<g stroke="${s.gridColor||'#e3e7eb'}" stroke-width="${s.gridWidth||1}">${xTicks.map((v,i)=>{const xx=xMap(v,i);return `<line x1="${xx}" x2="${xx}" y1="${p.t}" y2="${p.t+p.h}"/>`}).join('')}</g>`;
   if(s.frameMode!=='none'){
     out+=`<g data-gobject="axis-y" class="chart-object" fill="none" stroke="${axis}" stroke-width="${sw}"><path d="M${p.l},${p.t} V${p.t+p.h}"/></g><g data-gobject="axis-x" class="chart-object" fill="none" stroke="${axis}" stroke-width="${sw}"><path d="M${p.l},${p.t+p.h} H${p.l+p.w}"/></g>`;
     if(s.frameMode==='lbr'||s.frameMode==='box')out+=`<g data-gobject="frame" class="chart-object" fill="none" stroke="${frame}" stroke-width="${fw}"><path d="M${p.l+p.w},${p.t} V${p.t+p.h}"/></g>`;
@@ -3377,7 +3381,7 @@ function galleryHistogram(W,H){
   const s=state.gallery.settings,p=galleryPlotBox(W,H),rows=state.gallery.rows,groups=[...new Set(rows.map(r=>r.Group))],vals=rows.map(r=>r.Value),min=Math.min(...vals),max=Math.max(...vals),bins=Math.max(4,Math.round(s.bins)),step=(max-min||1)/bins,counts=groups.map(g=>Array(bins).fill(0));
   rows.forEach(r=>{const gi=groups.indexOf(r.Group),bi=Math.min(bins-1,Math.max(0,Math.floor((r.Value-min)/(step||1))));counts[gi][bi]++});
   const ymax=Math.max(1,...counts.flat()),xMap=scaleLinear(min,max,p.l,p.l+p.w),yb=galleryBrokenY(0,ymax,p),yMap=yb?yb.map:scaleLinear(0,ymax,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(0,ymax,null,5),xTicks=makeTicks(min,max,null,6);let out=commonAxes(W,H,p,xTicks,yTicks,v=>xMap(v),yMap)+galleryLegend(groups);
-  counts.forEach((arr,gi)=>{const st=getGallerySeriesStyle(gi);let body='';arr.forEach((n,i)=>{const x=xMap(min+i*step),w=Math.max(1,xMap(min+(i+1)*step)-x-1);body+=`<rect x="${x}" y="${yMap(n)}" width="${w}" height="${p.t+p.h-yMap(n)}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`});out+=`<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`});return out;
+  const nGroups=groups.length,groupRatio=.92;counts.forEach((arr,gi)=>{const st=getGallerySeriesStyle(gi);let body='';arr.forEach((n,i)=>{const binL=xMap(min+i*step),binR=xMap(min+(i+1)*step),binW=binR-binL,slotW=binW/nGroups,w=Math.max(1,slotW*groupRatio),x=binL+gi*slotW+(slotW-w)/2;body+=`<rect x="${x}" y="${yMap(n)}" width="${w}" height="${p.t+p.h-yMap(n)}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`});out+=`<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`});return out;
 }
 function kdeFor(values,min,max,points=100,bw=0){const n=values.length,sd=sampleSd(values),h=bw>0?bw:Math.max(1e-9,1.06*(sd||((max-min)/6)||1)*Math.pow(n,-.2)),arr=[];for(let i=0;i<points;i++){const x=min+(max-min)*i/(points-1),d=values.reduce((sum,v)=>sum+Math.exp(-.5*((x-v)/h)**2),0)/(n*h*Math.sqrt(2*Math.PI));arr.push([x,d])}return arr}
 function galleryKde(W,H){
