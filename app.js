@@ -199,7 +199,7 @@ const state = {
   figureBoard:{
     items:[],columns:2,rows:2,width:1600,height:1200,gap:24,padding:34,dpi:300,background:'#ffffff',trimWhitespace:true,
     labelEnabled:true,labelFont:'Arial',labelSize:32,labelWeight:700,labelColor:'#111111',labelPosition:'top-left',labelInsetX:8,labelInsetY:10,
-    panelBorder:false,panelBorderWidth:1,panelBorderColor:'#c9d0d4',selected:0,annotations:[],selectedAnnotation:null
+    auxGrid:true,auxGridSize:50,freeLayout:false,selected:0,annotations:[],selectedAnnotation:null
   }
 };
 
@@ -503,7 +503,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.3.5'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.4.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2774,7 +2774,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.3.5',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.4.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -3760,6 +3760,8 @@ function bindComposeAnnotationInteractions(){
     const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);onEnd()};
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
   };
+  // v1.4.0: 辅助网格吸附——开启辅助网格后，面板移动/缩放按网格取整。
+  const snapV=v=>{if(!state.figureBoard.auxGrid)return Math.round(v);const gs=Math.max(5,Number(state.figureBoard.auxGridSize)||50);return Math.round(v/gs)*gs};
   // 箭头端点手柄
   svg.querySelectorAll('[data-compose-arrow-handle]').forEach(handle=>handle.addEventListener('pointerdown',e=>{
     e.preventDefault();e.stopPropagation();const id=handle.dataset.composeAnnotationId,ann=state.figureBoard.annotations.find(a=>a.id===id);if(!ann)return;state.figureBoard.selectedAnnotation=id;
@@ -3771,12 +3773,12 @@ function bindComposeAnnotationInteractions(){
     if(e.target.closest('[data-compose-label-drag]')||e.target.closest('[data-compose-resize]'))return;
     const i=Number(hit.dataset.composePanel),item=state.figureBoard.items[i];if(!item)return;
     state.figureBoard.selected=i;const start=pointOf(e);ensureComposeFreeLayout();const f0={x:item.free.x,y:item.free.y};
-    drag(e,p=>{item.free.x=Math.round(f0.x+(p.x-start.x));item.free.y=Math.max(0,Math.round(f0.y+(p.y-start.y)));renderComposePreviewOnly()},()=>renderComposeWorkspace());
+    drag(e,p=>{item.free.x=Math.max(0,snapV(f0.x+(p.x-start.x)));item.free.y=Math.max(0,snapV(f0.y+(p.y-start.y)));renderComposePreviewOnly()},()=>renderComposeWorkspace());
   }));
   // v1.3.5: 拖动右下角手柄缩放面板尺寸
   svg.querySelectorAll('[data-compose-resize]').forEach(hd=>hd.addEventListener('pointerdown',e=>{
     e.preventDefault();e.stopPropagation();const i=Number(hd.dataset.composeResize),item=state.figureBoard.items[i];if(!item)return;state.figureBoard.selected=i;const start=pointOf(e);ensureComposeFreeLayout();const f0={w:item.free.w,h:item.free.h};
-    drag(e,p=>{item.free.w=clamp(Math.round(f0.w+(p.x-start.x)),60,5000);item.free.h=clamp(Math.round(f0.h+(p.y-start.y)),60,5000);renderComposePreviewOnly()},()=>renderComposeWorkspace());
+    drag(e,p=>{item.free.w=clamp(snapV(f0.w+(p.x-start.x)),60,5000);item.free.h=clamp(snapV(f0.h+(p.y-start.y)),60,5000);renderComposePreviewOnly()},()=>renderComposeWorkspace());
   }));
   // v1.3.5: 拖动 A/B/C/D 标签自由定位（不再受内缩数值范围限制）
   svg.querySelectorAll('[data-compose-label-drag]').forEach(hd=>hd.addEventListener('pointerdown',e=>{
@@ -3810,16 +3812,15 @@ function moveComposeItem(i,delta){const items=state.figureBoard.items,j=i+delta;
 function renderComposePreviewOnly(){const stage=$('#composeStage');if(stage){stage.innerHTML=composeSvgMarkup()||'';bindComposeAnnotationInteractions()}const b=state.figureBoard;const meta=$('#composeCanvasMeta');if(meta)meta.textContent=`${b.columns} 列 × ${b.computedRows||b.rows||2} 行 · ${b.width} × ${b.computedHeight||b.height} px · ${b.dpi} dpi`}
 function composeGroup(title,inner,open){return `<details class="compose-group" ${open?'open':''}><summary>${title}</summary>${inner}</details>`}
 function renderComposeSettings(){
-  const b=state.figureBoard;b.labelFont=b.labelFont||'Arial';b.rows=b.rows||Math.max(1,Math.ceil(b.items.length/(b.columns||2)));
+  const b=state.figureBoard;b.labelFont=b.labelFont||'Arial';b.rows=b.rows||Math.max(1,Math.ceil(b.items.length/(b.columns||2)));b.auxGrid=b.auxGrid!==false;b.auxGridSize=Math.max(5,Number(b.auxGridSize)||50);
   const fonts=[['Arial','Arial'],['Times New Roman','Times New Roman'],['Calibri','Calibri'],['Helvetica','Helvetica'],['Georgia','Georgia'],['Microsoft YaHei','微软雅黑'],['SimSun','宋体'],['SimHei','黑体']];
   if(!$('#composeGroupStyle')){const st=document.createElement('style');st.id='composeGroupStyle';st.textContent='.compose-group{border:1px solid #e6ebed;border-radius:9px;margin-bottom:9px;overflow:hidden;background:#fff}.compose-group summary{cursor:pointer;font-weight:600;font-size:13px;padding:9px 11px;background:#f7f9f8;border-bottom:1px solid #edf1f0;list-style:none;display:flex;justify-content:space-between;align-items:center;margin:0}.compose-group summary::-webkit-details-marker{display:none}.compose-group summary::after{content:"▾";color:#8a969c;transition:transform .15s}.compose-group:not([open]) summary::after{transform:rotate(-90deg)}.compose-group>div{padding:10px 11px}.compose-group .field{margin-bottom:10px}.compose-group .small-note{color:#8a969c;font-size:11px;line-height:1.5;margin-top:6px}';document.head.appendChild(st)}
-  const sel=b.items[b.selected];const selHtml=sel?`<div class="field"><label><span>宽度</span><output>${Number(sel.colspan)||1}</output></label><select id="composePanelColspan">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${(Number(sel.colspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="field"><label><span>高度</span><output>${Number(sel.rowspan)||1}</output></label><select id="composePanelRowspan">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(Number(sel.rowspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="small-note">在画布上点击任意图即可选中；直接拖动面板可自由移动，拖动右下角蓝色手柄可缩放——首次拖动后自动切换为自由排版。</div>`:'<div class="small-note">在画布上点击任意图即可选中后编辑尺寸。</div>';
-  const html=composeGroup('画布与布局',`${composeSelect('columns','列数',[[1,'1 列'],[2,'2 列'],[3,'3 列'],[4,'4 列'],[5,'5 列'],[6,'6 列']])}${composeNumber('width','总宽度',800,5000,10)}${composeRange('gap','面板间距',0,200,1)}${composeNumber('padding','外边距',0,160,1)}${composeCheck('trimWhitespace','裁剪面板白边（自动去掉图周围空白）')}${composeNumber('height','总高度（不足时自动扩展）',600,5000,10)}${composeSelect('dpi','PNG 清晰度',[[96,'96 dpi'],[150,'150 dpi'],[300,'300 dpi'],[600,'600 dpi']])}${composeColor('background','背景颜色')}${b.freeLayout?'<button id="composeAutoLayout" class="ghost wide" type="button">恢复自动网格排列</button><div class="small-note">当前为自由排版：面板可任意拖动、缩放。</div>':''}`,true)
+  const sel=b.items[b.selected];const selHtml=sel?`<div class="field"><label><span>宽度</span><output>${Number(sel.colspan)||1}</output></label><select id="composePanelColspan">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${(Number(sel.colspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="field"><label><span>高度</span><output>${Number(sel.rowspan)||1}</output></label><select id="composePanelRowspan">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(Number(sel.rowspan)||1)===n?'selected':''}>${n} 格</option>`).join('')}</select></div><div class="small-note">点击画布上的图可选中；拖动面板自由移动，拖动右下角蓝色手柄缩放——首次拖动后自动切换为自由排版。开启辅助网格后，选中面板右下角会显示“宽 × 高（格）”。</div>`:'<div class="small-note">在画布上点击任意图即可选中后编辑尺寸。</div>';
+  const html=composeGroup('画布与布局',`${composeSelect('columns','列数',[[1,'1 列'],[2,'2 列'],[3,'3 列'],[4,'4 列'],[5,'5 列'],[6,'6 列']])}${composeNumber('width','总宽度',800,5000,10)}${composeRange('gap','面板间距',0,200,1)}${composeNumber('padding','外边距',0,160,1)}${composeCheck('trimWhitespace','裁剪面板白边（自动去掉图周围空白）')}${composeNumber('height','总高度（不足时自动扩展）',600,5000,10)}${composeSelect('dpi','PNG 清晰度',[[96,'96 dpi'],[150,'150 dpi'],[300,'300 dpi'],[600,'600 dpi']])}${composeColor('background','背景颜色')}${composeCheck('auxGrid','辅助网格线（拖动/缩放自动吸附，仅编辑时显示，不导出）')}${composeNumber('auxGridSize','网格大小（px）',10,200,5)}${b.freeLayout?'<button id="composeAutoLayout" class="ghost wide" type="button">恢复自动网格排列</button><div class="small-note">当前为自由排版：面板可任意拖动、缩放并自动吸附网格；修改列数或间距会重新按网格排列全部面板。</div>':''}`,true)
   +composeGroup('选中面板',selHtml,true)
   +composeGroup('面板标签',`${composeCheck('labelEnabled','显示 A、B、C、D 标签')}${composeSelect('labelFont','字体',fonts)}${composeRange('labelSize','字号',12,72,1)}${composeSelect('labelWeight','字重',[[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']])}${composeColor('labelColor','颜色')}${composeSelect('labelPosition','位置',[['top-left','左上角'],['top-right','右上角'],['outside-top-left','面板外左上']])}${composeNumber('labelInsetX','水平内缩',-40,80,1)}${composeNumber('labelInsetY','垂直内缩',-40,80,1)}<div class="small-note">显示标签后可直接在画布上拖动 A、B、C、D 到任意位置，无需再用内缩微调。</div>`,false)
-  +composeGroup('面板边框',`${composeCheck('panelBorder','显示面板边框')}${composeRange('panelBorderWidth','边框粗细',.5,6,.1)}${composeColor('panelBorderColor','边框颜色')}`,false)
   +composeGroup('拼图文字与箭头',composeAnnotationSettingsHtml(fonts),false);
-  $('#composeSettings').innerHTML=html;$$('[data-compose-setting]').forEach(el=>{const fn=()=>{const k=el.dataset.composeSetting;let v=el.type==='checkbox'?el.checked:el.value;if(['number','range'].includes(el.type)||['columns','rows','dpi'].includes(k))v=Number(v);state.figureBoard[k]=v;if(k==='columns'||k==='rows')ensureComposeGridCapacity();renderComposePreviewOnly();const out=el.closest('.field')?.querySelector('output');if(out)out.textContent=state.figureBoard[k]};el.addEventListener('input',fn);el.addEventListener('change',fn)});$('#composePanelColspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.colspan=Math.max(1,Math.min(Number(e.target.value)||1,state.figureBoard.columns||2));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.colspan});$('#composePanelRowspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.rowspan=Math.max(1,Math.min(Number(e.target.value)||1,5));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.rowspan});bindComposeAnnotationInputs();$('#composeAutoLayout')?.addEventListener('click',()=>{const fb=state.figureBoard;fb.freeLayout=false;fb.items.forEach(it=>{delete it.free});renderComposeWorkspace()});
+  $('#composeSettings').innerHTML=html;$$('[data-compose-setting]').forEach(el=>{const fn=ev=>{const k=el.dataset.composeSetting;let v=el.type==='checkbox'?el.checked:el.value;if(['number','range'].includes(el.type)||['columns','rows','dpi'].includes(k))v=Number(v);state.figureBoard[k]=v;if(k==='columns'||k==='rows')ensureComposeGridCapacity();if((k==='columns'||k==='gap')&&state.figureBoard.freeLayout&&state.figureBoard.items.length&&ev.type==='change'){state.figureBoard.freeLayout=false;state.figureBoard.items.forEach(it=>{delete it.free});renderComposeWorkspace();toast('已按新设置重新网格排列');return}renderComposePreviewOnly();const out=el.closest('.field')?.querySelector('output');if(out)out.textContent=state.figureBoard[k]};el.addEventListener('input',fn);el.addEventListener('change',fn)});$('#composePanelColspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.colspan=Math.max(1,Math.min(Number(e.target.value)||1,state.figureBoard.columns||2));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.colspan});$('#composePanelRowspan')?.addEventListener('change',e=>{const it=state.figureBoard.items[state.figureBoard.selected];if(!it)return;it.rowspan=Math.max(1,Math.min(Number(e.target.value)||1,5));renderComposePreviewOnly();const out=e.target.closest('.field')?.querySelector('output');if(out)out.textContent=it.rowspan});bindComposeAnnotationInputs();$('#composeAutoLayout')?.addEventListener('click',()=>{const fb=state.figureBoard;fb.freeLayout=false;fb.items.forEach(it=>{delete it.free});renderComposeWorkspace()});
 }
 function composeAnnotationSettingsHtml(fonts){
   const b=state.figureBoard,ann=selectedComposeAnnotation(),list=b.annotations.map((a,i)=>`<button type="button" class="compose-ann-chip ${a.id===b.selectedAnnotation?'active':''}" data-compose-ann-select="${a.id}">${annotationTypeLabel(a.type)} ${i+1}</button>`).join('');
@@ -3921,6 +3922,8 @@ function composeSvgMarkup(interactive=true){
   const b=state.figureBoard,items=b.items;if(!items.length&&!b.annotations.length)return'';ensureComposeGridCapacity();
   const lay=composeLayoutRects(),W=lay.W,Hf=lay.Hf;
   let body=`<rect width="${W}" height="${Hf}" fill="${b.background}"/>`;
+  // v1.4.0: 辅助网格线——仅编辑态显示、不导出；拖动/缩放时按网格吸附。
+  if(interactive&&b.auxGrid){const gs=Math.max(5,Number(b.auxGridSize)||50);let g='';for(let gx=gs;gx<W;gx+=gs)g+=`<line x1="${gx}" y1="0" x2="${gx}" y2="${Hf}"/>`;for(let gy=gs;gy<Hf;gy+=gs)g+=`<line x1="0" y1="${gy}" x2="${W}" y2="${gy}"/>`;if(g)body+=`<g data-aux-grid="1" stroke="#808080" stroke-opacity=".35" stroke-width="1" pointer-events="none">${g}</g>`}
   const selectedI=b.selected;
   lay.rects.forEach(r=>{
     const i=r.i,x=r.x,y=r.y,w=r.w,ph=r.h,item=items[i];if(!item)return;
@@ -3932,7 +3935,7 @@ function composeSvgMarkup(interactive=true){
       const vbx=crop||parseSvgViewBox(src)||[0,0,item.width||w,item.height||ph],prefix=`p${i}_`,prefixed=prefixSvgIds(src,prefix),inner=svgInner(prefixed),pres=svgRootPresentation(src),style=pres.style?` style="${escAttr(pres.style)}"`:'',ff=pres.fontFamily?` font-family="${escAttr(pres.fontFamily)}"`:'',fw=pres.fontWeight?` font-weight="${escAttr(pres.fontWeight)}"`:'';
       body+=`<svg x="${x}" y="${y}" width="${w}" height="${ph}" viewBox="${vbx.join(' ')}" preserveAspectRatio="xMidYMid meet"${style}${ff}${fw}${interactive?` data-compose-panel="${i}" style="cursor:pointer"`:''}>${inner}</svg>`
     }
-    if(interactive&&(b.panelBorder||i===selectedI)){const col=i===selectedI?'#2f6fed':'#c9d0d4',bw=i===selectedI?2.5:(Number(b.panelBorderWidth)||1);body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="none" stroke="${col}" stroke-width="${bw}" pointer-events="none"/>`}
+    if(interactive&&i===selectedI)body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="none" stroke="#2f6fed" stroke-width="2.5" pointer-events="none"/>`
     if(interactive)body+=`<rect x="${x}" y="${y}" width="${w}" height="${ph}" fill="rgba(0,0,0,0)" pointer-events="all" data-compose-panel="${i}" style="cursor:pointer"/>`;
     if(b.labelEnabled){
       let blx=x+Number(b.labelInsetX||0),bly=y+(Number(b.labelSize)||32)+Number(b.labelInsetY||0),anchor='start';
@@ -3942,6 +3945,8 @@ function composeSvgMarkup(interactive=true){
       if(interactive){const ew=Math.max(18,fs*.74*txt.length+12),ex=anchor==='end'?lx-ew:lx-6;body+=`<rect x="${ex}" y="${ly-fs}" width="${ew+12}" height="${fs*1.4}" fill="rgba(0,0,0,0)" data-compose-label-drag="${i}" style="cursor:move;touch-action:none"/>`}
     }
     if(interactive&&i===selectedI)body+=`<rect x="${x+w-22}" y="${y+ph-22}" width="22" height="22" rx="4" fill="#2f6fed" fill-opacity=".92" stroke="#ffffff" stroke-width="2" data-compose-resize="${i}" style="cursor:nwse-resize;touch-action:none"/>`;
+    // v1.4.0: 选中面板右下角实时显示“宽 × 高（格）”
+    if(interactive&&i===selectedI&&b.auxGrid){const gs=Math.max(5,Number(b.auxGridSize)||50);body+=`<text x="${x+w-26}" y="${y+ph-28}" text-anchor="end" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#2f6fed" pointer-events="none">${Math.max(1,Math.round(w/gs))} × ${Math.max(1,Math.round(ph/gs))} 格</text>`}
   });
   body+=(b.annotations||[]).map(a=>composeAnnotationSvg(a,interactive)).join('');
   return `<svg id="composeSvg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${Hf}" viewBox="0 0 ${W} ${Hf}" style="background:${b.background}">${body}</svg>`;
