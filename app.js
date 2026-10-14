@@ -485,7 +485,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.0.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.1.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1563,7 +1563,7 @@ function galleryStudioLayers(){
   const type=state.gallery.type,layers=[['section','基础对象'],['title','图题','base'],['subtitle','副标题','base'],['typography','中英文字体','base'],['canvas','画布与清晰度','base']];
   if(galleryHasLegend(type)){if(type==='heatmap')layers.push(['legend','色带图例','base']);else layers.push(['legend','图例内容','base'],['legend-frame','图例边框','base']);}
   if(galleryHasAxes(type))layers.push(['axis-y','Y 轴与纵标题','base'],['axis-x','X 轴与横标题','base'],['frame','图片边框','base']);
-  layers.push(['background','背景','base'],['section','数据对象']);
+  layers.push(['background','背景','base'],['palette','配色参数','base'],['style','图片参数','base'],['methodnote','方法说明','base'],['section','数据对象']);
   galleryStudioSeriesNames().forEach((g,i)=>layers.push([`series:${i}`,`数据系列 · ${g}`,'series']));
   gallerySpecificLayerIds(type).forEach(([id,name])=>layers.push([id,name,'special']));
   if(state.gallery.annotations.length){layers.push(['section','标注对象']);state.gallery.annotations.forEach((a,i)=>layers.push([`annotation:${a.id}`,`${annotationTypeLabel(a.type)} ${i+1}`,'special']))}
@@ -1646,11 +1646,14 @@ function galleryBasePropertyHtml(id){
   if(id==='legend'){if(state.gallery.type==='heatmap')return gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','数字字号',8,30,1),gOrientationButtons('heatmapColorBarOrientation','排列方向')])+galleryDragHint('色带图例');return gallerySection('图例内容',[gCheck('legend','显示图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','字号',8,36,1),gSelect('legendWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗']]),gOrientationButtons('legendOrientation','排列方向'),gRange('legendColumns','横向列数',1,6,1)])+galleryDragHint('图例内容');}
   if(id==='legend-frame')return gallerySection('图例边框',[gSelect('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),gNumber('legendFrameX','水平位置',0,1800,1),gNumber('legendFrameY','垂直位置',0,1200,1),gCheck('legendFrameAutoSize','自动适应图例大小'),gNumber('legendFrameWidthBox','边框宽度',20,900,1),gNumber('legendFrameHeightBox','边框高度',20,600,1),gRange('legendFrameWidth','线条粗细',.5,5,.1),gColor('legendFrameColor','边框颜色'),gColor('legendFrameFill','底色'),gRange('legendFrameRadius','圆角',0,20,1)])+gallerySection('阴影',[gCheck('legendShadow','显示阴影'),gRange('legendShadowX','水平偏移',-10,14,1),gRange('legendShadowY','垂直偏移',-10,14,1),gRange('legendShadowBlur','模糊程度',0,12,.5),gRange('legendShadowOpacity','透明度',0,.7,.05)])+galleryDragHint('图例边框');
   if(id==='background')return gallerySection('背景',[gColor('background','背景颜色')]);
+  if(id==='palette')return gallerySection('全部系列配色',[galleryPaletteBlock()||'<div class="hint">当前图形没有逐系列配色；热图的色阶请在左侧「色阶与数值」里设置。</div>'])+galleryPaletteButtons();
+  if(id==='style')return galleryStyleButtons();
+  if(id==='methodnote'){const note=s.methodNoteCopy||galleryBuildMethodNote();return '<div class="subhead">方法说明（可编辑、可复制到论文）</div><textarea id="galleryMethodNoteArea" style="width:100%;min-height:220px;font-size:13px;line-height:1.7;padding:10px;border:1px solid #c9d2d8;border-radius:6px;resize:vertical;box-sizing:border-box" placeholder="自动生成方法说明...">'+esc(note)+'</textarea><div style="display:flex;gap:6px;margin-top:8px"><button type="button" id="galleryRegenMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">重新自动生成</button><button type="button" id="galleryCopyMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复制全部</button></div><div class="hint">这段文字不画到图上，供你复制进论文「材料与方法」；直接在框里改字，点空白处自动保存。</div>';}
   return'';
 }
 function renderGalleryStudioProperties(){
   const def=galleryDef(),id=state.gallery.selected;let name='',html='',scope='基础';
-  const baseNames={title:'图题',subtitle:'副标题',typography:'中英文字体',canvas:'画布与清晰度','axis-x':'X 轴与横标题','axis-y':'Y 轴与纵标题',frame:'图片边框',legend:'图例内容','legend-frame':'图例边框',background:'背景'};
+  const baseNames={title:'图题',subtitle:'副标题',typography:'中英文字体',canvas:'画布与清晰度','axis-x':'X 轴与横标题','axis-y':'Y 轴与纵标题',frame:'图片边框',legend:'图例内容','legend-frame':'图例边框',background:'背景',palette:'配色参数',style:'图片参数',methodnote:'方法说明'};
   if(baseNames[id]){name=baseNames[id];html=galleryBasePropertyHtml(id)}
   else if(id.startsWith('annotation:')){const ann=annotationById(id.split(':')[1]);name=ann?`标注 · ${annotationTypeLabel(ann.type)}`:'标注';html=ann?annotationPropertyHtml(ann):'';scope='图形专属'}
   else if(id==='series'){const names=galleryStudioSeriesNames(),idx=clamp(state.gallery.selectedSeries,0,Math.max(0,names.length-1));name=`数据系列 · ${names[idx]||'Series'}`;html=gallerySeriesPropertyHtml(def.id,idx);scope='图形专属'}
@@ -1734,6 +1737,42 @@ function galleryStudioSeriesNames(){
   if(['stacked','pie'].includes(type))return [...new Set(rows.map(r=>r.Component||'Component'))];
   if(type==='heatmap')return [];return [];
 }
+function galleryBuildMethodNote(){
+  const stat=galleryMethodNoteText();
+  if(stat)return '图内统计口径：'+stat+'。显著性标记、误差棒与数值标注的具体设置见对应「图形专属」面板。';
+  const type=state.gallery.type;
+  const texts={hist:'直方图用于展示数据的分布形态，分箱数量与柱体样式可在「图形专属」面板中调整。',kde:'核密度估计（KDE）用于展示数据的平滑分布形态；带宽、曲线填充与 rug 设置见「图形专属」面板。',stacked:'堆叠图展示各成分的构成与总量，堆叠方式、误差棒与数值标注设置见「图形专属」面板。',pie:'饼图（圆环图）展示各成分的构成占比，比例标签设置见「图形专属」面板。',radar:'雷达图用于多指标综合比较，数据按指标归一化后绘制；网格、刻度与主题背景设置见「图形专属」面板。'};
+  return texts[type]||'本图基于当前项目数据绘制；绘图参数（配色、坐标轴、字体、图例等）均可在本工作台逐项调整。';
+}
+function galleryPaletteButtons(){var st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
+  return '<div class="subhead">配色管理</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">'
+  +'<button type="button" data-action="gallery-save-palette" style="'+st+'">保存配色</button>'
+  +'<button type="button" data-action="gallery-load-palette" style="'+st+'">导入配色</button>'
+  +'<button type="button" data-action="gallery-paste-hex" style="'+st+'">粘贴HEX</button>'
+  +'<input type="file" id="galleryPaletteFile" accept=".json" style="display:none"></div>'
+  +'<div class="hint">配色保存后会自动记住，下次打开自动套用；粘贴HEX 支持逗号、空格或换行分隔的 #RRGGBB。配色文件与柱状图等图形工作室通用。</div>'}
+function galleryStyleButtons(){var st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
+  return '<div class="subhead">图参数管理</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">'
+  +'<button type="button" data-action="gallery-save-style" style="'+st+'">保存此图参数</button>'
+  +'<button type="button" data-action="gallery-load-style" style="'+st+'">导入图参数</button>'
+  +'<input type="file" id="galleryStyleFile" accept=".json" style="display:none"></div>'
+  +'<div class="hint">把当前图的颜色、坐标、字体、图例等参数存成 JSON，下次画同类图直接导入，不用逐个重调。</div>'}
+function galleryExportPalette(){var colors=state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)});if(!colors.length){toast('当前没有可用颜色');return}
+  var name=prompt('给这套配色起个名字：','我的配色')||'我的配色';rememberPalette(colors);
+  download(new Blob([JSON.stringify({type:'foodlab-palette',name:name,colors:colors},null,2)],{type:'application/json'}),safeFile(name)+'_配色.json');toast('配色已保存，并记住为下次默认')}
+async function galleryImportPalette(file){try{var obj=JSON.parse(await readAsText(file));var colors=Array.isArray(obj)?obj:obj.colors;if(!Array.isArray(colors)||!colors.length)throw new Error('格式不对');
+    colors=colors.filter(function(c){return typeof c==='string'}).map(function(c){return /^#/.test(c)?c:'#'+c});if(!colors.length)throw new Error('没有颜色');
+    state.gallery.palette=colors;state.gallery.seriesStyles={};rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('配色已导入')}
+  catch(err){toast('导入失败：'+(err.message||'格式错误'))}}
+function galleryApplyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
+  if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
+  state.gallery.palette=colors;state.gallery.seriesStyles={};rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
+function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:1,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s)};
+  download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
+async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-gallery-style'||!obj.settings)throw new Error('不是图参数文件');
+    Object.assign(state.gallery.settings,obj.settings);if(Array.isArray(obj.palette)&&obj.palette.length){state.gallery.palette=obj.palette}
+    state.gallery.seriesStyles={};ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
+  catch(err){toast('导入失败：'+(err.message||''))}}
 function galleryPropGroup(items){return items.join('')}
 function gColor(k,l){return gWrap(l,k,`<input data-gsetting="${k}" type="color" value="${state.gallery.settings[k]}">`)}
 function gHeatColor(k,l){const v=state.gallery.settings[k];return `<div class="field heat-color-field"><label><span>${l}</span><output data-gout="${k}">${esc(v)}</output></label><div class="color-pair"><input data-gsetting="${k}" type="color" value="${v}"><input data-gsetting="${k}" data-color-text="${k}" type="text" value="${v}" maxlength="7" spellcheck="false"></div></div>`}
@@ -1775,6 +1814,16 @@ function bindGalleryStudioPropertyInputs(){
   });
   $$('[data-gpalette]').forEach(el=>el.addEventListener('input',()=>{const i=Number(el.dataset.gpalette);state.gallery.palette[i]=el.value;getGallerySeriesStyle(i).color=el.value;renderGalleryStudioCanvas()}));
   $$('[data-gseries-select]').forEach(el=>el.addEventListener('click',()=>{state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gseriesSelect);renderGalleryStudioLayers();renderGalleryStudioProperties();highlightGalleryObject()}));
+  $$('[data-action="gallery-save-palette"]').forEach(b=>b.addEventListener('click',galleryExportPalette));
+  $$('[data-action="gallery-load-palette"]').forEach(b=>b.addEventListener('click',()=>$('#galleryPaletteFile')?.click()));
+  $$('[data-action="gallery-paste-hex"]').forEach(b=>b.addEventListener('click',()=>galleryApplyHexString(prompt('粘贴一行 HEX（逗号分隔，例：#7B95C6,#49C2D9）：')||'')));
+  const gpf=$('#galleryPaletteFile');if(gpf)gpf.onchange=e=>{const f=e.target.files[0];if(f)galleryImportPalette(f);gpf.value=''};
+  $$('[data-action="gallery-save-style"]').forEach(b=>b.addEventListener('click',galleryExportStyle));
+  $$('[data-action="gallery-load-style"]').forEach(b=>b.addEventListener('click',()=>$('#galleryStyleFile')?.click()));
+  const gsf=$('#galleryStyleFile');if(gsf)gsf.onchange=e=>{const f=e.target.files[0];if(f)galleryImportStyle(f);gsf.value=''};
+  const gmna=$('#galleryMethodNoteArea');if(gmna)gmna.oninput=()=>{state.gallery.settings.methodNoteCopy=gmna.value};
+  const grg=$('#galleryRegenMethodNote');if(grg)grg.onclick=()=>{delete state.gallery.settings.methodNoteCopy;renderGalleryStudioProperties()};
+  const gcp=$('#galleryCopyMethodNote');if(gcp)gcp.onclick=()=>{const a=$('#galleryMethodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
 }
 function applyGalleryCanvasPreset(value){
   const s=state.gallery.settings,map={normal:[980,660],small:[760,540],square:[700,700],wide:[1080,620],tall:[820,760]};if(!map[value])return;
@@ -2658,7 +2707,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.0.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.1.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
