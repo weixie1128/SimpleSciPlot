@@ -311,13 +311,53 @@ function syncWorkflowControls(){
   if(goal)goal.value=state.workflow.goal;
   if(chart)chart.value=state.workflow.chartType;
   if(studio)studio.value=state.workflow.chartType;
-  const hint=$('#workflowGoalHint');if(hint){const g=GALLERY_GOALS?.find?.(x=>x.id===state.workflow.goal);hint.textContent=g?.desc||'系统会据此推荐图形和模板。'}
+  const hint=$('#workflowGoalHint');if(hint){const g=GALLERY_GOALS?.find?.(x=>x.id===state.workflow.goal);hint.textContent=g?.desc||'选择研究目的后会自动匹配图形和模板。'}
   const chartHint=$('#workflowChartHint');if(chartHint)chartHint.textContent=`${workflowChartLabel(state.workflow.chartType)}将贯穿模板、初步分析和 Chart Studio。`;
   const schema=currentWorkflowSchema();
   const n=$('#currentTemplateName'),d=$('#currentTemplateDescription');if(n)n.textContent=schema?.name||'当前数据模板';if(d)d.textContent=schema?.description||'';
+  renderSchemaMini(schema);
   $$('.experiment-only').forEach(el=>el.classList.toggle('hidden',state.workflow.mode!=='experiment'));toggleFactorB();toggleTechnicalAggregation();syncFactorLevelMode();syncStepLabels();
   const top=$('#topCurrentChart');if(top)top.textContent=workflowChartLabel(state.workflow.chartType);
   const side=$('#sidebarChartName');if(side)side.textContent=workflowChartLabel(state.workflow.chartType);
+}
+// v1.5.0-preview5：模板卡里的「格式速览」迷你表格，替代纯文字说明。
+// 表头与示例严格对齐各图形真实模板（template-fixes.js previewTemplate / index.html 内联模板），不再用 schema.columns 猜。
+function renderSchemaMini(schema){
+  const box=$('#schemaMini');if(!box)return;
+  const type=state.workflow.chartType,mode=state.workflow.mode;
+  let headers,rows,legend;
+  if(mode==='experiment'){
+    if(type==='bar'){headers=['组别','平行1','平行2','平行3'];rows=[['组A','10','11','10.5'],['组B','14','13.5','14.2']];legend=[['k','第一列＝组别'],['p','带编号列＝独立平行'],['r','同名列＝重复测定合并']]}
+    else if(type==='line'||type==='curve'){headers=['时间/浓度','平行1','平行2','平行3'];rows=[['0天','10','11','10.5'],['5天','14','13.5','14.2']];legend=[['k','第一列＝时间/浓度'],['p','带编号列＝独立平行'],['r','同名列＝重复测定合并']]}
+    else{headers=['X','Y1','Y2','Y3'];rows=[['1','5.42','5.74','5.63'],['2','5.55','5.81','5.70']];legend=[['k','第一列＝X'],['p','每列一个平行测定值']]}
+  }else{
+    const map={
+      hist:{h:['平行号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝平行号/序号'],['p','每列一个数据集或变量']]},
+      kde:{h:['序号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝序号（可省略）'],['p','每列一个 Group']]},
+      box:{h:['序号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝序号（可省略）'],['p','每列一个 Group']]},
+      violin:{h:['序号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝序号（可省略）'],['p','每列一个 Group']]},
+      scatter:{h:['序号','A X','A Y','B X','B Y'],r:[[1,1.00,1.96,4.60,5.04],[2,1.45,2.48,5.05,5.02]],l:[['k','第一列＝序号'],['p','每 Group 一对 XY 列']]},
+      bubble:{h:['序号','A X','A Y','A Size'],r:[[1,1.00,1.96,12],[2,1.45,2.48,13]],l:[['k','第一列＝序号'],['p','每 Group 三列 XY+Size']]},
+      stacked:{h:['类别','A','B','C'],r:[['Moisture',72.4,70.1,68.8],['Protein',18.6,19.1,19.7]],l:[['k','第一列＝组分/类别'],['p','每 Group 一列']]},
+      pie:{h:['类别','A','B','C'],r:[['Moisture',72.4,70.1,68.8],['Protein',18.6,19.1,19.7]],l:[['k','第一列＝组分/类别'],['p','每 Group 一列']]},
+      radar:{h:['指标','A','B','C'],r:[['Color',7.2,7.8,6.9],['Texture',6.8,7.6,6.5]],l:[['k','第一列＝指标'],['p','每 Group 一列']]}
+    };
+    if(type==='heatmap'){
+      const clustered=state.gallery?.settings?.heatmapMode==='clustered';
+      if(clustered){headers=['Feature','A-1','A-2','B-1','B-2'];rows=[['Feature 1',12.6,11.8,5.1,4.8],['Feature 2',3.8,4.1,15.2,14.6]];legend=[['k','第一列＝Feature/指标'],['p','每列一个独立样本'],['r','列名建议 组名-编号']]}
+      else{headers=['Group（可选）','Variable 1','Variable 2','Variable 3'];rows=[['A',72.0,5.55,0.21],['B',69.9,5.76,0.48]];legend=[['k','第一列＝Group（可选）'],['p','每列一个连续变量']]}
+    }else if(map[type]){const m=map[type];headers=m.h;rows=m.r;legend=m.l}
+    else if(['plsda','oplsda','pca','hca','plsr','oplsr'].includes(type)){
+      headers=['因素:处理','变量:pH','变量:TBARS','变量:Color a'];rows=[['A',5.42,0.21,34.0],['B',5.76,0.48,44.8]];legend=[['k','因素: 列＝分组/着色'],['p','变量: 列＝进入矩阵'],['r','因变量: 列＝预测目标（回归）']]
+    }else if(['waterfall','spectrum','thermal'].includes(type)){
+      headers=['X_RF','RF','X_SMF','SMF'];rows=[['400','0.12','400','0.08'],['410','0.15','410','0.11']];legend=[['k','成对 XY 块'],['p','每对＝一条曲线']]
+    }else{box.hidden=true;box.innerHTML='';return}
+  }
+  const maxCols=5,more=headers.length>maxCols;
+  const hShow=more?headers.slice(0,maxCols-1).concat(['…']):headers;
+  const rShow=rows.map(r=>more?r.slice(0,maxCols-1).concat(['…']):r);
+  box.innerHTML=`<div class="schema-mini-table"><table><thead><tr>${hShow.map((h,i)=>`<th${i===0?' class="is-key"':''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rShow.map(r=>`<tr>${r.map((c,i)=>`<td${i===0?' class="is-key"':''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="schema-mini-legend">${legend.map(([cls,txt])=>`<span><i class="${cls}"></i>${txt}</span>`).join('')}</div>`;
+  box.hidden=false;
 }
 
 
@@ -337,6 +377,25 @@ const PLAN_CHART_META={
   pie:{group:'组成与综合评价',icon:'◔',purpose:'展示少量类别在总体中的构成占比',analysis:'总量与各组分百分比',advice:'学术论文谨慎使用；精确比较优先选条形图',schema:'组成数据长表'},
   radar:{group:'组成与综合评价',icon:'✦',purpose:'同步比较多个感官或理化指标的综合表现',analysis:'组别、指标数、组均值和可选 0–1 归一化',advice:'不同量纲指标必须先标准化再比较形状',schema:'雷达图长表'}
 };
+// v1.5.0-preview：选图卡片与已选面板改用真实图形 mini 缩略图（替代 ▥ 字符图标），
+// 既提升信息密度与专业观感，又让用户在点选前就能预判图形长相。全部用 currentColor，由 CSS 控制色调。
+const CHART_THUMB={
+bar:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4"/><g fill="currentColor"><rect x="4" y="15" width="6" height="13.5" rx="1.6"/><rect x="13" y="8" width="6" height="20.5" rx="1.6" opacity=".68"/><rect x="22" y="19" width="6" height="9.5" rx="1.6" opacity=".5"/><rect x="31" y="11.5" width="6" height="17" rx="1.6" opacity=".68"/></g></svg>`,
+line:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4" fill="none"/><path d="M3 25.5L12.5 15.5L21 20L30 8.5L37 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><g fill="currentColor"><circle cx="12.5" cy="15.5" r="2"/><circle cx="21" cy="20" r="2"/><circle cx="30" cy="8.5" r="2"/></g></svg>`,
+curve:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4" fill="none"/><path d="M3 25q7-14 17-13t17-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+waterfall:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 11q8-7 16 0t17 0"/><path d="M3 19q8-7 16 0t17 0" opacity=".6"/><path d="M3 27q8-7 16 0t17 0" opacity=".34"/></g></svg>`,
+hist:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4" fill="none"/><g fill="currentColor"><rect x="3.5" y="21" width="4.7" height="7"/><rect x="8.2" y="16" width="4.7" height="12" opacity=".82"/><rect x="12.9" y="11" width="4.7" height="17" opacity=".82"/><rect x="17.6" y="8" width="4.7" height="20"/><rect x="22.3" y="13" width="4.7" height="15" opacity=".82"/><rect x="27" y="18" width="4.7" height="10" opacity=".82"/><rect x="31.7" y="23" width="4.7" height="5" opacity=".66"/></g></svg>`,
+kde:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M3 27.5q8-25 17-25t17 25" fill="currentColor" fill-opacity=".2"/><path d="M3 27.5q8-25 17-25t17 25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+box:`<svg viewBox="0 0 40 32" aria-hidden="true"><g stroke="currentColor" fill="none" stroke-width="1.7" stroke-linecap="round"><path d="M20 3.5v5M20 21.5v6"/><path d="M16 3.5h8M16 27.5h8"/></g><rect x="12.5" y="8.5" width="15" height="13" rx="1.8" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.7"/><path d="M12.5 15h15" stroke="currentColor" stroke-width="2"/></svg>`,
+violin:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M20 3.5c-6.5 2-9.5 7.5-9.5 12.5S13.5 26.5 20 28.5c6.5-2 9.5-7.5 9.5-12.5S26.5 5.5 20 3.5z" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.6"/><path d="M20 6.5v19" stroke="currentColor" stroke-width="1.4" stroke-opacity=".55"/><circle cx="20" cy="16" r="2.2" fill="currentColor"/></svg>`,
+scatter:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4" fill="none"/><g fill="currentColor"><circle cx="6" cy="24" r="2"/><circle cx="11" cy="19.5" r="2"/><circle cx="15.5" cy="21.5" r="2"/><circle cx="20" cy="14" r="2"/><circle cx="24.5" cy="16.5" r="2"/><circle cx="28" cy="9.5" r="2"/><circle cx="33" cy="12" r="2"/><circle cx="36.5" cy="6" r="2"/></g><path d="M3 27.5L37 5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2.5" stroke-opacity=".5" fill="none"/></svg>`,
+bubble:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.5"><circle cx="11.5" cy="20.5" r="4.5"/><circle cx="22.5" cy="13" r="7"/><circle cx="31.5" cy="21.5" r="3.2"/></g></svg>`,
+heatmap:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="currentColor" fill-opacity=".15"><rect x="3.5" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="12" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="20.5" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="29" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="3.5" y="15" width="7.5" height="6.5" rx="1.2"/><rect x="20.5" y="15" width="7.5" height="6.5" rx="1.2"/><rect x="29" y="15" width="7.5" height="6.5" rx="1.2"/><rect x="3.5" y="23" width="7.5" height="6.5" rx="1.2"/><rect x="12" y="23" width="7.5" height="6.5" rx="1.2"/><rect x="29" y="23" width="7.5" height="6.5" rx="1.2"/></g><g fill="currentColor"><rect x="12" y="15" width="7.5" height="6.5" rx="1.2" opacity=".85"/><rect x="20.5" y="23" width="7.5" height="6.5" rx="1.2" opacity=".62"/><rect x="29" y="7" width="7.5" height="6.5" rx="1.2" opacity=".45"/></g></svg>`,
+stacked:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4" fill="none"/><g fill="currentColor"><rect x="5" y="7.5" width="12" height="6.5" rx="1.4"/><rect x="5" y="14" width="12" height="7" rx="1.4" opacity=".7"/><rect x="5" y="21" width="12" height="7.5" rx="1.4" opacity=".45"/><rect x="23" y="11.5" width="12" height="5.5" rx="1.4"/><rect x="23" y="17" width="12" height="6" rx="1.4" opacity=".7"/><rect x="23" y="23" width="12" height="5.5" rx="1.4" opacity=".45"/></g></svg>`,
+pie:`<svg viewBox="0 0 40 32" aria-hidden="true"><circle cx="20" cy="16" r="11" fill="currentColor" fill-opacity=".16"/><path d="M20 16V5a11 11 0 0 1 8.6 17.9z" fill="currentColor"/><circle cx="20" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-opacity=".45"/></svg>`,
+radar:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-opacity=".32"><path d="M20 5L31.4 13.3L27.1 26.7L12.9 26.7L8.6 13.3z"/><path d="M20 11L25.7 14.1L23.5 20.4L16.5 20.4L14.3 14.1z"/><path d="M20 16v-11M20 16l11.4-2.7M20 16l7.1 10.7M20 16l-7.1 10.7M20 16l-11.4-2.7"/></g><path d="M20 8L28.5 14.6L23.8 22.6L15.2 23.6L11.5 14.8z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`
+};
+function chartThumb(id){return CHART_THUMB[id]||''}
 const PLAN_GROUP_ORDER=['趋势与组间差异','3维','单变量分布','变量关系','组成与综合评价'];
 function goalRecommendedIds(goal){
   const map={compare:['box','bar','violin','line'],trend:['line','curve','bar'],dist:['box','violin','hist','kde'],relation:['scatter','bubble','heatmap'],multi:['radar','heatmap'],composition:['stacked','pie']};
@@ -364,7 +423,7 @@ function renderPlanSelector(){
       renderPlanSelector();renderDesignPreview();renderDataPreview();
     }));
   }
-  const recommended=goalRecommendedIds(state.workflow.goal),q=state.workflow.search||'';
+  const q=state.workflow.search||'';
   holder.innerHTML=PLAN_GROUP_ORDER.map(group=>{
     const ids=Object.keys(PLAN_CHART_META).filter(id=>{
       if(PLAN_CHART_META[id].group!==group)return false;
@@ -374,8 +433,8 @@ function renderPlanSelector(){
     });
     if(!ids.length)return'';
     return `<div class="plan-chart-section"><div class="plan-chart-section-head"><b>${esc(group)}</b><span>${ids.length} 种</span></div><div class="plan-chart-grid">${ids.map(id=>{
-      const m=PLAN_CHART_META[id],active=state.workflow.chartType===id,rec=recommended.includes(id);
-      return `<button class="plan-chart-card ${active?'active':''}" data-plan-chart="${id}"><span class="chart-card-icon">${m.icon}</span><span class="chart-card-copy"><b>${esc(workflowChartLabel(id))}</b><small>${esc(m.purpose)}</small></span>${rec?'<em>推荐</em>':''}<i>${esc(m.schema)}</i></button>`;
+      const m=PLAN_CHART_META[id],active=state.workflow.chartType===id;
+      return `<button class="plan-chart-card ${active?'active':''}" data-plan-chart="${id}"><span class="chart-card-icon">${chartThumb(id)||m.icon}</span><span class="chart-card-copy"><b>${esc(workflowChartLabel(id))}</b><small>${esc(m.purpose)}</small></span><i>${esc(m.schema)}</i></button>`;
     }).join('')}</div></div>`;
   }).join('')||'<div class="empty-state">没有找到匹配图形</div>';
   $$('[data-plan-chart]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -394,7 +453,8 @@ function renderPlanSelector(){
 function updatePlanChartDetail(){
   const meta=PLAN_CHART_META[state.workflow.chartType]||PLAN_CHART_META.bar;
   const set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
-  set('#planChartIcon',meta.icon);set('#planChartTitle',workflowChartLabel(state.workflow.chartType));set('#planPurposeText',meta.purpose);set('#planSchemaText',meta.schema);set('#planAnalysisText',meta.analysis);set('#planAdviceText',meta.advice);
+  const icon=$('#planChartIcon');if(icon)icon.innerHTML=chartThumb(state.workflow.chartType)||esc(meta.icon);
+  set('#planChartTitle',workflowChartLabel(state.workflow.chartType));set('#planPurposeText',meta.purpose);set('#planSchemaText',meta.schema);set('#planAnalysisText',meta.analysis);set('#planAdviceText',meta.advice);
   set('#topCurrentChart',workflowChartLabel(state.workflow.chartType));set('#sidebarChartName',workflowChartLabel(state.workflow.chartType));
 }
 // 把相邻的多次点击合并到同一帧渲染，避免连点时把重绘任务层层堆叠。
@@ -503,7 +563,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.4.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.5.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1600,7 +1660,7 @@ function renderGalleryStudioLayers(){
   }));
 }
 function renderGalleryStudioCanvas(){
-  const stage=$('#chartStage');if(!state.gallery.rows.length){stage.innerHTML='<div class="gallery-empty"><b>等待当前项目数据</b><span>请回到数据导入步骤，使用当前图形模板导入数据。</span></div>';return}
+  const stage=$('#chartStage');if(!state.gallery.rows.length){const ghost=chartThumb(state.workflow.chartType);stage.innerHTML=`<div class="gallery-empty">${ghost?`<div class="gallery-empty-ghost">${ghost}</div>`:''}<b>等待当前项目数据</b><span>请回到数据导入步骤，使用当前图形模板导入数据。</span></div>`;return}
   stage.innerHTML=gallerySvgMarkup('paperSvg',true);bindGalleryStudioObjects();bindGalleryStudioDraggables();highlightGalleryObject();
 }
 function highlightGalleryObject(){
@@ -2774,7 +2834,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.4.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.5.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -3760,7 +3820,7 @@ function bindComposeAnnotationInteractions(){
     const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);onEnd()};
     window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
   };
-  // v1.4.0: 辅助网格吸附——开启辅助网格后，面板移动/缩放按网格取整。
+  // v1.5.0: 辅助网格吸附——开启辅助网格后，面板移动/缩放按网格取整。
   const snapV=v=>{if(!state.figureBoard.auxGrid)return Math.round(v);const gs=Math.max(5,Number(state.figureBoard.auxGridSize)||50);return Math.round(v/gs)*gs};
   // 箭头端点手柄
   svg.querySelectorAll('[data-compose-arrow-handle]').forEach(handle=>handle.addEventListener('pointerdown',e=>{
@@ -3795,7 +3855,7 @@ function bindComposeAnnotationInteractions(){
   svg.addEventListener('click',function composePanelSelect(e){const hit=e.target.closest&&e.target.closest('[data-compose-panel]');if(hit){state.figureBoard.selected=Number(hit.dataset.composePanel);renderComposeItemList();renderComposeSettings();renderComposePreviewOnly()}});
 }
 function renderComposeWorkspace(){
-  if(!$('#composeStage'))return;ensureComposeGridCapacity();renderComposeItemList();renderComposeSettings();const svg=composeSvgMarkup();$('#composeStage').innerHTML=svg||'<div class="gallery-empty"><b>还没有拼图面板</b><span>可加入当前 Chart Studio 图，也可直接导入 PNG、JPG、WebP 或 SVG。</span></div>';bindComposeAnnotationInteractions();const b=state.figureBoard;$('#composeCount').textContent=`${b.items.length} 张`;$('#composeCanvasMeta').textContent=`${b.columns} 列 × ${b.computedRows||b.rows||2} 行 · ${b.width} × ${b.computedHeight||b.height} px · ${b.dpi} dpi`;
+  if(!$('#composeStage'))return;ensureComposeGridCapacity();renderComposeItemList();renderComposeSettings();const svg=composeSvgMarkup();$('#composeStage').innerHTML=svg||'<div class="gallery-empty"><div class="compose-empty-grid"><i>A</i><i>B</i><i>C</i><i>D</i></div><b>还没有拼图面板</b><span>可加入当前 Chart Studio 图，也可直接导入 PNG、JPG、WebP 或 SVG。</span></div>';bindComposeAnnotationInteractions();const b=state.figureBoard;$('#composeCount').textContent=`${b.items.length} 张`;$('#composeCanvasMeta').textContent=`${b.columns} 列 × ${b.computedRows||b.rows||2} 行 · ${b.width} × ${b.computedHeight||b.height} px · ${b.dpi} dpi`;
 }
 function composeThumbSrc(item){return item.kind==='image'?item.src:svgDataUri(item.svg||'')}
 function renderComposeItemList(){
@@ -3922,7 +3982,7 @@ function composeSvgMarkup(interactive=true){
   const b=state.figureBoard,items=b.items;if(!items.length&&!b.annotations.length)return'';ensureComposeGridCapacity();
   const lay=composeLayoutRects(),W=lay.W,Hf=lay.Hf;
   let body=`<rect width="${W}" height="${Hf}" fill="${b.background}"/>`;
-  // v1.4.0: 辅助网格线——仅编辑态显示、不导出；拖动/缩放时按网格吸附。
+  // v1.5.0: 辅助网格线——仅编辑态显示、不导出；拖动/缩放时按网格吸附。
   if(interactive&&b.auxGrid){const gs=Math.max(5,Number(b.auxGridSize)||50);let g='';for(let gx=gs;gx<W;gx+=gs)g+=`<line x1="${gx}" y1="0" x2="${gx}" y2="${Hf}"/>`;for(let gy=gs;gy<Hf;gy+=gs)g+=`<line x1="0" y1="${gy}" x2="${W}" y2="${gy}"/>`;if(g)body+=`<g data-aux-grid="1" stroke="#808080" stroke-opacity=".35" stroke-width="1" pointer-events="none">${g}</g>`}
   const selectedI=b.selected;
   lay.rects.forEach(r=>{
@@ -3945,7 +4005,7 @@ function composeSvgMarkup(interactive=true){
       if(interactive){const ew=Math.max(18,fs*.74*txt.length+12),ex=anchor==='end'?lx-ew:lx-6;body+=`<rect x="${ex}" y="${ly-fs}" width="${ew+12}" height="${fs*1.4}" fill="rgba(0,0,0,0)" data-compose-label-drag="${i}" style="cursor:move;touch-action:none"/>`}
     }
     if(interactive&&i===selectedI)body+=`<rect x="${x+w-22}" y="${y+ph-22}" width="22" height="22" rx="4" fill="#2f6fed" fill-opacity=".92" stroke="#ffffff" stroke-width="2" data-compose-resize="${i}" style="cursor:nwse-resize;touch-action:none"/>`;
-    // v1.4.0: 选中面板右下角实时显示“宽 × 高（格）”
+    // v1.5.0: 选中面板右下角实时显示“宽 × 高（格）”
     if(interactive&&i===selectedI&&b.auxGrid){const gs=Math.max(5,Number(b.auxGridSize)||50);body+=`<text x="${x+w-26}" y="${y+ph-28}" text-anchor="end" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#2f6fed" pointer-events="none">${Math.max(1,Math.round(w/gs))} × ${Math.max(1,Math.round(ph/gs))} 格</text>`}
   });
   body+=(b.annotations||[]).map(a=>composeAnnotationSvg(a,interactive)).join('');

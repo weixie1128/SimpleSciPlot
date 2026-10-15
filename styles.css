@@ -49,7 +49,7 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 .workflow-progress{display:flex;align-items:center;gap:7px;margin:0 0 16px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 4px 15px rgba(27,43,53,.035)}.workflow-progress button{border:0;background:transparent;color:#8a979e;display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:8px;cursor:pointer}.workflow-progress button i{display:grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#eef2f3;font-style:normal;font-size:11px}.workflow-progress button span{font-size:11px;font-weight:700}.workflow-progress button.active{background:var(--accent-soft);color:#075340}.workflow-progress button.active i{background:var(--accent);color:#fff}.workflow-progress em{font-style:normal;color:#c3ccd0}
 .plan-hero{padding:24px 26px;display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:26px;align-items:center;margin-bottom:15px}.plan-hero h2{font-size:27px;margin:8px 0}.plan-hero p{margin:0;max-width:760px;color:var(--muted);line-height:1.65}.plan-selects{display:grid;grid-template-columns:1fr 1fr;gap:10px}.plan-selects label{font-size:11px;font-weight:750;color:#4a5b64}.plan-selects select{display:block;width:100%;margin-top:6px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:10px}
 .plan-layout{display:grid;grid-template-columns:minmax(720px,1fr) 310px;gap:15px;align-items:start}.chart-picker-card{padding:22px}.plan-summary-card{position:sticky;top:12px;padding:22px}.plan-summary-card h2{font-size:22px;margin:8px 0}.plan-summary-card>p{color:var(--muted);font-size:13px;line-height:1.6}.plan-chart-icon{width:52px;height:52px;margin-top:15px;border-radius:14px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:27px}.plan-meta{margin:17px 0}.plan-meta>div{padding:11px 0;border-top:1px solid var(--line)}.plan-meta dt{font-size:10px;color:#829098;margin-bottom:4px}.plan-meta dd{margin:0;font-size:12px;line-height:1.5;color:#334751}.summary-tip{display:block;margin-top:10px;color:#7d898f;line-height:1.5}
-.plan-chart-section+.plan-chart-section{margin-top:21px}.plan-chart-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.plan-chart-section-head b{font-size:14px}.plan-chart-section-head span{font-size:10px;color:var(--muted)}.plan-chart-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.plan-chart-card{position:relative;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;text-align:left;cursor:pointer;display:grid;grid-template-columns:39px minmax(0,1fr);gap:10px;min-height:112px}.plan-chart-card:hover{border-color:#a9cabf;background:#fbfdfc;transform:translateY(-1px)}.plan-chart-card.active{border-color:#58a78f;background:#edf8f4;box-shadow:0 8px 20px rgba(13,107,85,.09)}.chart-card-icon{width:39px;height:39px;border-radius:10px;display:grid;place-items:center;background:#f0f4f4;color:#47615a;font-size:20px}.plan-chart-card.active .chart-card-icon{background:var(--accent);color:#fff}.chart-card-copy{display:flex;flex-direction:column;gap:5px}.chart-card-copy b{font-size:13px}.chart-card-copy small{font-size:10px;color:#738088;line-height:1.45}.plan-chart-card em{position:absolute;top:8px;right:8px;font-style:normal;font-size:9px;padding:3px 6px;border-radius:999px;background:#e8f4f0;color:#0a6a53;font-weight:750}.plan-chart-card i{grid-column:2;font-style:normal;font-size:9px;color:#8b979d}
+.plan-chart-section+.plan-chart-section{margin-top:21px}.plan-chart-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.plan-chart-section-head b{font-size:14px}.plan-chart-section-head span{font-size:10px;color:var(--muted)}.plan-chart-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.plan-chart-card{position:relative;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;text-align:left;cursor:pointer;display:grid;grid-template-columns:39px minmax(0,1fr);gap:10px;min-height:112px}.plan-chart-card:hover{border-color:#a9cabf;background:#fbfdfc;transform:translateY(-1px)}.plan-chart-card.active{border-color:#58a78f;background:#edf8f4;box-shadow:0 8px 20px rgba(13,107,85,.09)}.chart-card-icon{width:39px;height:39px;border-radius:10px;display:grid;place-items:center;background:#f0f4f4;color:#47615a;font-size:20px}.plan-chart-card.active .chart-card-icon{background:var(--accent);color:#fff}.chart-card-copy{display:flex;flex-direction:column;gap:5px}.chart-card-copy b{font-size:13px}.chart-card-copy small{font-size:10px;color:#738088;line-height:1.45}.plan-chart-card i{grid-column:2;font-style:normal;font-size:9px;color:#8b979d}
 .step-header{padding:18px 22px;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between;gap:15px}.step-header h2{margin:4px 0 4px;font-size:21px}.step-header p{margin:0;color:var(--muted);font-size:12px}.schema-summary{padding:14px 15px;margin-bottom:14px;background:#f5faf8;border:1px solid #d7e7e1;border-radius:10px}.schema-summary span{display:block;font-size:10px;color:#71817a}.schema-summary b{display:block;margin:4px 0;font-size:15px;color:#185442}.schema-summary p{margin:0;color:#67777f;font-size:11px;line-height:1.55}.current-template-card.large{padding:18px;margin-bottom:16px}.studio-context{padding:13px 17px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}.studio-context>div{display:flex;flex-direction:column;gap:3px}.studio-context b{font-size:15px}.studio-context small{color:var(--muted)}
 .palette-list{display:grid;grid-template-columns:1fr;gap:6px;margin-top:7px}.palette-item{display:grid!important;grid-template-columns:34px 1fr;align-items:center!important;justify-content:initial!important;gap:8px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:#fafcfc}.palette-item input{width:30px!important;height:28px!important;padding:2px!important;margin:0!important}.palette-item span{font-size:10px;color:#596a72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:1450px){.plan-chart-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.plan-layout{grid-template-columns:minmax(620px,1fr) 285px}.plan-hero{grid-template-columns:1fr 390px}.studio-layout{grid-template-columns:205px minmax(580px,1fr) 275px}}
@@ -87,7 +87,6 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 .plan-chart-card .chart-card-copy b{font-size:12px}
 .plan-chart-card .chart-card-copy small{font-size:9px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .plan-chart-card i{display:none}
-.plan-chart-card em{font-size:8px;padding:2px 5px;top:6px;right:6px}
 .selected-chart-panel{position:sticky;top:10px;padding:18px}
 .selected-chart-top{display:flex;align-items:center;justify-content:space-between}
 .status-dot{font-size:10px;color:#1f745b;background:#e9f6f1;border-radius:999px;padding:4px 7px}
@@ -196,3 +195,498 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 .annotation-drag-tip{border-left:3px solid #f28e2b;background:#fff8ef;color:#65401b;padding:9px 10px;border-radius:6px;line-height:1.55}
 
 .radar-quick-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fbfcfc}.radar-quick-bar.hidden{display:none}.radar-quick-bar>b{color:#0d6b55;font-size:12px;margin-right:3px}.radar-quick-bar label{display:flex;align-items:center;gap:6px;font-size:11px;color:#53636b}.radar-quick-bar select,.radar-quick-bar input[type=number]{height:31px;border:1px solid var(--line);border-radius:7px;background:#fff;padding:4px 7px;font-size:12px}.radar-quick-bar input[type=number]{width:64px}.radar-quick-bar .compact-check{margin:0;padding:0;border:0;background:transparent;display:flex}.radar-quick-bar .compact-check input{width:auto;margin:0}
+
+/* ======================================================================
+   v1.5.0-preview 设计系统化试做（方案A：精修学术绿）
+   范围：全局外壳（侧栏/顶栏/步骤进度/按钮）+ 步骤1「研究目的与图形」整屏
+   方式：仅追加，不改上文任何既有规则；用更高特异性覆盖，便于回滚
+   ====================================================================== */
+:root{
+  /* 灰阶：文本 3 档 + 面层 2 档（替代散落的 #687783/#829098/#8a979e…） */
+  --ink-1:#182830;--ink-2:#4d5f67;--ink-3:#7e8e95;
+  --surface-1:#f6f9f8;--surface-2:#eef3f1;
+  /* 圆角 4 档 */
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-full:999px;
+  /* 字阶（按角色命名）：说明/正文/正文大/卡片标题/页标题/主视觉标题 */
+  --fs-caption:11px;--fs-body:12.5px;--fs-body-lg:14px;--fs-title:17px;--fs-headline:22px;--fs-display:26px;
+  /* 间距 4pt 栅格 */
+  --sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
+  /* 阴影 3 档 + 焦点环 + 动效 */
+  --shadow-sm:0 1px 2px rgba(23,38,46,.06),0 1px 3px rgba(23,38,46,.05);
+  --shadow-md:0 2px 4px rgba(23,38,46,.04),0 10px 26px rgba(23,38,46,.08);
+  --shadow-lg:0 4px 10px rgba(13,107,85,.08),0 18px 40px rgba(13,107,85,.13);
+  --focus-ring:0 0 0 3px rgba(13,107,85,.15);
+  --ease-out:cubic-bezier(.22,.61,.36,1);--t-fast:.16s;--t-med:.28s
+}
+.v070-shell{background:#f4f7f6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.v070-shell ::selection{background:rgba(36,143,115,.18)}
+.v070-shell button:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;border-radius:4px}
+.v070-shell button{-webkit-tap-highlight-color:transparent}
+
+/* —— 侧栏（全局外壳） —— */
+.v070-shell .sidebar.v070-sidebar{background:linear-gradient(180deg,#0f2027 0%,#0c181d 100%);border-right:1px solid rgba(255,255,255,.05)}
+.v070-shell .brand-mark{border-radius:var(--r-md);background:linear-gradient(135deg,#2ba07f,#1c7a60);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 4px 12px rgba(20,122,96,.35)}
+.v070-shell .brand span{color:#8fa6a0}
+.v070-shell .nav-label{color:#6b807a;font-size:var(--fs-caption);margin:18px 12px 7px}
+.v070-shell .workflow-nav .nav-item{border-radius:var(--r-sm);padding:10px 11px;color:#aebfb9;transition:background var(--t-fast) var(--ease-out),color var(--t-fast) var(--ease-out)}
+.v070-shell .workflow-nav .nav-item b{color:inherit}
+.v070-shell .workflow-nav .nav-item small{color:#6f837d}
+.v070-shell .workflow-nav .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.v070-shell .workflow-nav .nav-item.active{background:linear-gradient(92deg,rgba(43,160,127,.28),rgba(43,160,127,.10));color:#fff;box-shadow:inset 2px 0 0 var(--accent-2)}
+.v070-shell .workflow-nav .nav-item.active small{color:#9fcdc0}
+.v070-shell .workflow-nav .nav-item.active .nav-no{background:var(--accent-2);box-shadow:0 2px 8px rgba(43,160,127,.4)}
+.v070-shell .project-mini{border-radius:var(--r-sm);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.07)}
+.v070-shell .sidebar-note{border-radius:var(--r-sm)}
+
+/* —— 顶栏（全局外壳） —— */
+.v070-shell .topbar.v070-topbar{min-height:88px}
+.v070-shell .topbar h1{font-size:var(--fs-headline);font-weight:800;letter-spacing:-.01em;color:var(--ink-1)}
+.v070-shell .topbar p{color:var(--ink-3);font-size:var(--fs-body)}
+.v070-shell .breadcrumb{letter-spacing:.04em}
+.v070-shell .current-choice b{color:var(--ink-1);font-weight:700}
+.v070-shell .current-choice span{color:var(--ink-3)}
+
+/* —— 按钮（全局外壳） —— */
+.v070-shell .primary,.v070-shell .secondary,.v070-shell .ghost{border-radius:10px;padding:10px 16px;font-weight:650;transition:all var(--t-fast) var(--ease-out)}
+.v070-shell .primary{background:linear-gradient(135deg,#118768,var(--accent));border-color:var(--accent);box-shadow:0 2px 8px rgba(13,107,85,.28)}
+.v070-shell .primary:hover{background:linear-gradient(135deg,#0e755a,#095a47);box-shadow:0 4px 14px rgba(13,107,85,.34);transform:translateY(-1px)}
+.v070-shell .primary:active{transform:translateY(0);box-shadow:0 1px 4px rgba(13,107,85,.3)}
+.v070-shell .secondary{box-shadow:var(--shadow-sm)}
+.v070-shell .secondary:hover,.v070-shell .ghost:hover{transform:translateY(-1px)}
+.v070-shell .secondary:active,.v070-shell .primary:active,.v070-shell .ghost:active{transform:translateY(0)}
+
+/* —— 步骤进度条（全局外壳） —— */
+.v070-shell .workflow-progress{border-radius:var(--r-md);box-shadow:var(--shadow-sm);padding:10px 14px;gap:8px}
+.v070-shell .workflow-progress button{border-radius:var(--r-sm);padding:5px 8px;color:var(--ink-3);transition:background var(--t-fast) var(--ease-out),color var(--t-fast) var(--ease-out)}
+.v070-shell .workflow-progress button i{border-radius:7px;font-weight:700}
+.v070-shell .workflow-progress button:hover{background:var(--surface-2);color:var(--ink-1)}
+.v070-shell .workflow-progress button.active{background:var(--accent-soft);color:#075340}
+.v070-shell .workflow-progress button.active i{box-shadow:0 2px 6px rgba(13,107,85,.35)}
+
+/* —— 步骤1 首页 hero（chart-start） —— */
+#view-plan .card{border-radius:var(--r-lg);box-shadow:var(--shadow-md);border-color:#e3eae7}
+#view-plan .chart-start{padding:var(--sp-5) var(--sp-6);margin-bottom:14px}
+#view-plan .chart-start .eyebrow{font-size:var(--fs-caption);font-weight:800;letter-spacing:.06em}
+#view-plan .chart-start h2{font-size:var(--fs-display);font-weight:800;letter-spacing:-.012em;margin:7px 0 5px;color:var(--ink-1)}
+#view-plan .chart-start p{font-size:var(--fs-body);color:var(--ink-2);line-height:1.6}
+#view-plan .chart-search-box input{border-radius:var(--r-full);padding:10px 16px;background:var(--surface-1);border-color:#e0e8e5;font-size:var(--fs-body);transition:border-color var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out),background var(--t-fast) var(--ease-out)}
+#view-plan .chart-search-box input:hover{border-color:#c3d4cd}
+#view-plan .chart-search-box input:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring);background:#fff}
+#view-plan .project-name-field>label{font-size:var(--fs-caption);font-weight:750;color:var(--ink-2);letter-spacing:.02em}
+#view-plan .project-name-field input{border-radius:var(--r-sm);padding:10px 12px;border-color:#dfe7e4;transition:border-color var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out)}
+#view-plan .project-name-field input:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring)}
+#view-plan .project-name-field small{color:var(--ink-3);font-size:var(--fs-caption)}
+#view-plan .goal-tabs{gap:9px;margin-top:var(--sp-4)}
+#view-plan .goal-tab{border-radius:var(--r-full);padding:8px 15px;font-size:var(--fs-body);font-weight:600;color:var(--ink-2);transition:all var(--t-fast) var(--ease-out)}
+#view-plan .goal-tab:hover{border-color:#a9cabb;background:var(--surface-1);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+#view-plan .goal-tab.active{background:linear-gradient(135deg,#118768,var(--accent));border-color:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(13,107,85,.3)}
+
+/* —— 步骤1 图形库（选图区） —— */
+#view-plan .chart-library-layout{gap:14px}
+#view-plan .compact-head h2{font-size:var(--fs-title);font-weight:800;color:var(--ink-1)}
+#view-plan .compact-head p{color:var(--ink-3);font-size:var(--fs-body)}
+#view-plan .badge{border-radius:var(--r-full);font-weight:700;padding:5px 11px}
+#view-plan .plan-chart-section-head b{font-size:var(--fs-body-lg);font-weight:750;color:var(--ink-1)}
+#view-plan .plan-chart-section-head span{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-plan .plan-chart-grid{gap:10px}
+#view-plan .plan-chart-card{border-radius:var(--r-md);min-height:94px;padding:11px 12px;transition:transform var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out),border-color var(--t-fast) var(--ease-out),background var(--t-fast) var(--ease-out)}
+#view-plan .plan-chart-card:hover{transform:translateY(-2px);border-color:#9cc5b4;background:#fdfefd;box-shadow:var(--shadow-md)}
+#view-plan .plan-chart-card.active{border-color:var(--accent-2);background:linear-gradient(160deg,#eef8f4,#f7fbf9);box-shadow:0 0 0 1px rgba(36,143,115,.35),var(--shadow-md)}
+#view-plan .chart-card-icon{border-radius:var(--r-sm);background:var(--surface-2);color:#4c6b60;transition:background var(--t-fast) var(--ease-out),color var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out)}
+#view-plan .plan-chart-card:hover .chart-card-icon{background:#dcece6}
+#view-plan .plan-chart-card.active .chart-card-icon{background:linear-gradient(135deg,#118768,var(--accent));color:#fff;box-shadow:0 3px 8px rgba(13,107,85,.3)}
+#view-plan .chart-card-copy b{font-size:var(--fs-body);font-weight:700;color:var(--ink-1)}
+#view-plan .chart-card-copy small{font-size:var(--fs-caption);color:var(--ink-3);line-height:1.45}
+
+/* —— 步骤1 右侧「已选图形」面板 —— */
+#view-plan .selected-chart-panel{padding:20px}
+#view-plan .selected-chart-panel .step-tag{font-size:var(--fs-caption);letter-spacing:.05em}
+#view-plan .status-dot{font-size:var(--fs-caption);font-weight:700;padding:4px 9px}
+#view-plan .selected-chart-panel h2{font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--ink-1)}
+#view-plan .selected-chart-panel>p{color:var(--ink-2);font-size:var(--fs-body);line-height:1.6}
+#view-plan .plan-chart-icon{border-radius:var(--r-md);background:linear-gradient(135deg,var(--accent-soft),#f2faf7);color:var(--accent);box-shadow:inset 0 0 0 1px rgba(13,107,85,.14)}
+#view-plan .selected-chart-facts>div{border-radius:var(--r-sm);background:var(--surface-1);border-color:#e4ebe8}
+#view-plan .selected-chart-facts span{font-size:var(--fs-caption);letter-spacing:.05em;color:var(--ink-3);font-weight:650}
+#view-plan .selected-chart-facts b{font-size:var(--fs-body);color:var(--ink-1)}
+#view-plan .chart-help-details summary{font-size:var(--fs-caption);color:var(--ink-2);transition:color var(--t-fast) var(--ease-out)}
+#view-plan .chart-help-details summary:hover{color:var(--accent)}
+#view-plan .chart-help-details p{font-size:var(--fs-body);color:var(--ink-3);line-height:1.65}
+#view-plan .selected-chart-panel .primary.wide{padding:12px;font-weight:700}
+
+/* 动效克制：尊重系统「减弱动态效果」设置 */
+@media (prefers-reduced-motion:reduce){.v070-shell *{transition:none!important;animation:none!important}}
+
+/* ======================================================================
+   v1.5.0-preview2 构成级升级（方向：学术出版级 Editorial Scientific）
+   靠「版式构成 / 图像 / 材质 / 动效韵律」提升观感，而非堆装饰。
+   全部追加实现，不改动上文规则。
+   ====================================================================== */
+
+/* —— 真实图表缩略图：卡片图标位与右侧已选面板 —— */
+#view-plan .plan-chart-card{grid-template-columns:42px minmax(0,1fr);align-items:flex-start}
+#view-plan .chart-card-icon{width:42px;height:36px;border-radius:10px}
+#view-plan .chart-card-icon svg{width:34px;height:27px;display:block}
+#view-plan .plan-chart-icon{padding:2px}
+#view-plan .plan-chart-icon svg{width:36px;height:29px;display:block}
+
+/* —— 首页 hero：深绿墨色横幅（编辑设计语言，与深色侧栏同源） —— */
+#view-plan .chart-start{
+  position:relative;overflow:hidden;padding:30px 34px 26px;margin-bottom:16px;
+  border-color:rgba(255,255,255,.1);
+  background:
+    radial-gradient(120% 150% at 92% -22%,rgba(52,183,146,.5) 0%,rgba(52,183,146,0) 58%),
+    radial-gradient(90% 120% at 2% 122%,rgba(11,84,66,.78) 0%,rgba(11,84,66,0) 62%),
+    linear-gradient(146deg,#10231e 0%,#0d3529 42%,#0d6b55 100%);
+  box-shadow:0 20px 46px rgba(9,42,34,.34),0 2px 6px rgba(9,42,34,.24)
+}
+/* 网格纸纹理：学术图表纸的空间暗示，向右下渐隐 */
+#view-plan .chart-start::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);
+  background-size:32px 32px;
+  -webkit-mask-image:linear-gradient(155deg,rgba(0,0,0,.95),rgba(0,0,0,.22) 52%,transparent 84%);
+  mask-image:linear-gradient(155deg,rgba(0,0,0,.95),rgba(0,0,0,.22) 52%,transparent 84%)
+}
+/* 右下角图表线稿水印：让首页一眼就是「科研绘图」而非通用后台 */
+#view-plan .chart-start::after{
+  content:'';position:absolute;right:-16px;bottom:-30px;width:340px;height:200px;pointer-events:none;opacity:.15;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 330 190' fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M24 168h286M24 168V18'/%3E%3Cpath d='M46 146l46-30 42 16 48-62 44 30 46-56' stroke-width='3'/%3E%3C/svg%3E") no-repeat right bottom/contain
+}
+#view-plan .chart-start-head,#view-plan .chart-start>.field,#view-plan .chart-start>.goal-tabs{position:relative;z-index:1}
+#view-plan .chart-start .eyebrow{color:#7fe0be}
+#view-plan .chart-start h2{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.2)}
+#view-plan .chart-start p{color:rgba(228,244,238,.78)}
+#view-plan .chart-start .field>label{color:rgba(228,244,238,.88)}
+#view-plan .chart-start .project-name-field small{color:rgba(228,244,238,.58)}
+
+/* hero 内的输入控件：玻璃质感，与深绿底融为一体 */
+#view-plan .chart-start .chart-search-box input,
+#view-plan .chart-start .project-name-field input{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff}
+#view-plan .chart-start .chart-search-box input::placeholder,
+#view-plan .chart-start .project-name-field input::placeholder{color:rgba(255,255,255,.46)}
+#view-plan .chart-start .chart-search-box input:hover,
+#view-plan .chart-start .project-name-field input:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.32)}
+#view-plan .chart-start .chart-search-box input:focus,
+#view-plan .chart-start .project-name-field input:focus{background:rgba(255,255,255,.17);border-color:#8fe6c5;box-shadow:0 0 0 3px rgba(143,230,197,.2)}
+
+/* hero 内的研究目的胶囊：反白选中，形成明暗对比锚点 */
+#view-plan .chart-start .goal-tabs{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.13)}
+#view-plan .chart-start .goal-tab{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:rgba(235,248,243,.88)}
+#view-plan .chart-start .goal-tab:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.36);color:#fff;transform:translateY(-1px)}
+#view-plan .chart-start .goal-tab.active{background:#fff;border-color:#fff;color:#0b5240;box-shadow:0 6px 16px rgba(0,0,0,.24)}
+
+/* —— 图形库分组标题：编辑式细规线 + 色标 —— */
+#view-plan .plan-chart-section-head{border-bottom:1px solid #eef3f1;padding-bottom:8px}
+#view-plan .plan-chart-section-head b{position:relative;padding-left:12px}
+#view-plan .plan-chart-section-head b::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,#2ba07f,#0d6b55)}
+
+/* —— 卡片错峰入场：一次编排好的页面加载 —— */
+@keyframes ssp-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+#view-plan .plan-chart-card{animation:ssp-rise .38s var(--ease-out) backwards}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(2){animation-delay:.03s}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(3){animation-delay:.06s}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(4){animation-delay:.09s}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(5){animation-delay:.12s}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(6){animation-delay:.15s}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(7){animation-delay:.18s}
+#view-plan .plan-chart-grid .plan-chart-card:nth-child(n+8){animation-delay:.21s}
+@media (prefers-reduced-motion:reduce){#view-plan .plan-chart-card{animation:none}}
+
+/* ===== v1.5.0-preview 铺开：步骤2-5 页面统一重皮肤 ===== */
+/* 仅追加，不改上文任何既有规则；全部用 #view-* 前缀提升特异性覆盖；首页 #view-plan 不触碰。 */
+
+/* —— 卡片容器：与首页 #view-plan .card 同值，保证同源 —— */
+.card{border-radius:var(--r-lg);box-shadow:var(--shadow-md);border-color:#e3eae7}
+
+/* —— 页面级区块头：绿色渐变竖标 + 编辑式字阶（首页分组标题同手法） —— */
+#view-data .section-head h2,#view-statistics .section-head h2,#view-data .step-header h2,#view-statistics .stats-toolbar h2,#view-compose .compose-header h2{position:relative;padding-left:12px;font-size:var(--fs-headline);font-weight:800;color:var(--ink-1);letter-spacing:-.01em;margin:4px 0 5px}
+#view-data .section-head h2::before,#view-statistics .section-head h2::before,#view-data .step-header h2::before,#view-statistics .stats-toolbar h2::before,#view-compose .compose-header h2::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,#2ba07f,#0d6b55)}
+#view-data .section-head p,#view-statistics .section-head p,#view-data .step-header p,#view-statistics .stats-toolbar p,#view-compose .compose-header p{font-size:var(--fs-body);color:var(--ink-3);line-height:1.55}
+
+/* —— 步骤2：数据模板与导入 —— */
+#view-data .step-header{padding:18px 22px}
+#view-data .step-header .step-tag,#view-statistics .stats-toolbar .step-tag{font-size:var(--fs-caption);font-weight:800;letter-spacing:.05em}
+#view-data .current-template-card,#view-data .current-template-card.large{border-radius:var(--r-md);border-color:#cfe2db;background:var(--surface-1);box-shadow:var(--shadow-sm)}
+#view-data .current-template-card span{font-size:var(--fs-caption);color:var(--ink-2)}
+#view-data .current-template-card b{font-size:var(--fs-body-lg);color:#144f40}
+#view-data .current-template-card small{font-size:var(--fs-caption);color:var(--ink-3);line-height:1.5}
+#view-data .schema-summary{border-radius:var(--r-md);background:var(--surface-1);border-color:#d7e7e1}
+#view-data .schema-summary span{font-size:var(--fs-caption);color:var(--ink-2)}
+#view-data .schema-summary p{font-size:var(--fs-body);color:var(--ink-3)}
+#view-data .form-grid{gap:var(--sp-4)}
+#view-data .field>label{font-size:var(--fs-caption);font-weight:750;color:var(--ink-2)}
+#view-data .drop-zone{border-radius:var(--r-md);border-color:#c3d4cd;background:var(--surface-1);gap:10px}
+#view-data .drop-zone b{font-size:var(--fs-body-lg);color:var(--ink-1)}
+#view-data .drop-zone span{font-size:var(--fs-body);color:var(--ink-3);line-height:1.55}
+#view-data .drop-zone.dragover{border-color:var(--accent-2);background:#edf8f4;box-shadow:var(--focus-ring)}
+#view-data .paste-box textarea{border-radius:var(--r-sm);border-color:#dfe7e4;transition:border-color var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out)}
+#view-data .paste-box textarea:hover{border-color:#c9d6d1}
+#view-data .paste-box textarea:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring);outline:none}
+#view-data .notice{border-radius:var(--r-sm);background:var(--surface-1);color:var(--ink-2);font-size:var(--fs-body)}
+#view-data .validation-panel{border-radius:var(--r-sm);font-size:var(--fs-body)}
+#view-data .validation-panel.neutral{color:var(--ink-2)}
+
+/* —— 表格（步骤2/3）：统一面层、对齐与悬停 —— */
+#view-data .table-wrap,#view-statistics .table-wrap{border-radius:var(--r-md);border-color:#e3eae7}
+#view-data .table-wrap table,#view-statistics .table-wrap table{font-size:var(--fs-body)}
+#view-data .table-wrap th,#view-statistics .table-wrap th{background:var(--surface-1);color:var(--ink-2);font-weight:750}
+#view-data .table-wrap td,#view-statistics .table-wrap td{border-bottom-color:#eef3f1}
+#view-data .table-wrap tbody tr:hover,#view-statistics .table-wrap tbody tr:hover{background:var(--surface-1)}
+
+/* —— 步骤2 内联编辑表格：覆盖 index.html 内联 <style>（前缀提升特异性获胜） —— */
+#view-data .inline-edit-head b{font-size:var(--fs-body-lg);color:var(--ink-1)}
+#view-data .inline-edit-head span,#view-data .inline-edit-tip{color:var(--ink-3);font-size:var(--fs-caption);line-height:1.55}
+#view-data .inline-edit-wrap{border-radius:var(--r-md)}
+#view-data .inline-cell{border-radius:var(--r-sm);border-color:#dfe7e4;font-size:var(--fs-body);transition:border-color var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out),background var(--t-fast) var(--ease-out)}
+#view-data .inline-cell:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring);outline:none}
+#view-data .inline-cell.selected{border-color:var(--accent-2);background:var(--accent-soft)}
+#view-data .inline-del-btn,#view-data .inline-col-del{border-radius:var(--r-sm);border-color:#e2e6ea}
+#view-data .inline-col-name{color:var(--ink-2)}
+
+/* —— 步骤3：初步分析 —— */
+#view-statistics .stats-toolbar{padding:21px 24px}
+#view-statistics .summary-cards{gap:var(--sp-3)}
+#view-statistics .summary-card{border-radius:var(--r-md);border-color:#e3eae7;box-shadow:var(--shadow-sm)}
+#view-statistics .summary-card span{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-statistics .summary-card b{font-size:var(--fs-headline);font-weight:800;color:var(--ink-1)}
+#view-statistics .stats-grid>.card,#view-statistics .interpretation-card{border-radius:var(--r-lg)}
+#view-statistics .interpretation{font-size:var(--fs-body-lg);line-height:1.8;color:var(--ink-2)}
+#view-statistics .interpretation.empty{color:var(--ink-3)}
+#view-statistics .small-note{font-size:var(--fs-caption);color:var(--ink-3)}
+
+/* —— 步骤4：Chart Studio —— */
+#view-chart .studio-context{padding:13px 17px}
+#view-chart .studio-context b{font-size:var(--fs-body-lg);font-weight:750;color:var(--ink-1)}
+#view-chart .studio-context small{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-chart .panel-head h2,#view-compose .panel-head h2{font-size:var(--fs-title);font-weight:750;color:var(--ink-1);letter-spacing:-.01em}
+#view-chart .panel-head small,#view-compose .panel-head small{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-chart .layers-list,#view-compose .compose-item-list{gap:var(--sp-2)}
+#view-chart .layer-item{border-radius:var(--r-sm);transition:background var(--t-fast) var(--ease-out),color var(--t-fast) var(--ease-out)}
+#view-chart .layer-item:hover,#view-chart .layer-item.active{background:var(--accent-soft);color:#075340}
+#view-chart .layer-dot{border-color:#7f918c;border-radius:3px}
+#view-chart .layer-item .layer-tag,#view-chart .layer-item .layer-tag.special{font-size:var(--fs-caption);padding:2px 7px}
+#view-chart .layers-panel .layer-section-label{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-chart .object-property-section>h3{font-size:var(--fs-caption);font-weight:750;color:var(--ink-2)}
+#view-chart .subhead,#view-compose .subhead{font-size:var(--fs-caption);font-weight:750;color:var(--ink-2)}
+#view-chart .property-scope,#view-chart .property-scope.chart-specific{font-size:var(--fs-caption);padding:4px 9px}
+#view-chart .property-editor .field output{color:var(--ink-3)}
+#view-chart .series-picker button{border-radius:var(--r-sm);font-size:var(--fs-caption);color:var(--ink-2);transition:all var(--t-fast) var(--ease-out)}
+#view-chart .series-picker button:hover{border-color:#a9cabb;background:var(--surface-1)}
+#view-chart .palette-item{border-radius:var(--r-sm);background:var(--surface-1)}
+#view-chart .palette-item span{font-size:var(--fs-caption);color:var(--ink-2)}
+#view-chart .segmented{border-radius:var(--r-sm)}
+#view-chart .segmented button,#view-chart .toolbar-actions button{color:var(--ink-2);transition:background var(--t-fast) var(--ease-out),color var(--t-fast) var(--ease-out),border-color var(--t-fast) var(--ease-out)}
+#view-chart .toolbar-actions button{border-radius:var(--r-sm);border-color:#dfe7e4}
+#view-chart .toolbar-actions button:hover{border-color:#a9cabb;background:var(--surface-1)}
+#view-chart .chart-stage{border-radius:var(--r-md);border-color:#eef3f1}
+#view-chart .stage-tip,#view-compose .stage-tip{color:var(--ink-3);font-size:var(--fs-caption)}
+#view-chart .method-badge,#view-compose .method-badge{border-radius:var(--r-sm);background:var(--surface-1);border-color:#dfe8e4;color:var(--ink-2);font-size:var(--fs-caption)}
+#view-chart .method-badge b,#view-compose .method-badge b{color:var(--ink-1)}
+#view-chart .stat-method-note{border-radius:0 var(--r-sm) var(--r-sm) 0;background:var(--surface-1);color:var(--ink-2);font-size:var(--fs-caption)}
+#view-chart .annotation-drag-tip{font-size:var(--fs-caption);line-height:1.55}
+#view-chart .chart-render-loading b{font-size:var(--fs-body-lg);color:var(--ink-1)}
+#view-chart .chart-render-loading small,#view-chart .chart-render-loading{color:var(--ink-3)}
+#view-chart .canvas-status{color:var(--ink-3)}
+#view-chart .quick-format-bar label{font-size:var(--fs-caption);color:var(--ink-2)}
+
+/* —— Chart 输入控件：统一圆角/边框/焦点环 —— */
+#view-chart .quick-format-bar select,#view-chart .quick-format-bar input,#view-chart .studio-chart-select select,#view-chart .template-box select,#view-chart .property-editor input,#view-chart .property-editor select{border-radius:var(--r-sm);border-color:#dfe7e4}
+#view-chart .quick-format-bar select:focus,#view-chart .quick-format-bar input:focus,#view-chart .studio-chart-select select:focus,#view-chart .template-box select:focus,#view-chart .property-editor input:focus,#view-chart .property-editor select:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring);outline:none}
+
+/* —— 论文拼图工作台 —— */
+#view-compose .compose-canvas-toolbar b{font-size:var(--fs-body-lg);font-weight:750;color:var(--ink-1)}
+#view-compose .compose-canvas-toolbar span{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-compose .compose-item{border-radius:var(--r-md);border-color:#e3eae7;transition:transform var(--t-fast) var(--ease-out),box-shadow var(--t-fast) var(--ease-out),border-color var(--t-fast) var(--ease-out),background var(--t-fast) var(--ease-out)}
+#view-compose .compose-item:hover{transform:translateY(-2px);border-color:#bcd8ce;box-shadow:var(--shadow-md)}
+#view-compose .compose-item.active{border-color:var(--accent-2);background:var(--accent-soft)}
+#view-compose .compose-thumb{border-radius:var(--r-sm);border-color:#eef3f1}
+#view-compose .compose-item-meta label{font-size:var(--fs-caption);color:var(--ink-2)}
+#view-compose .compose-item-meta input{border-radius:var(--r-sm);border-color:#dfe7e4}
+#view-compose .compose-item-meta b{font-size:var(--fs-body);color:var(--ink-1)}
+#view-compose .compose-item-meta small{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-compose .compose-item-actions button{border-radius:var(--r-sm);border-color:#dfe7e4}
+#view-compose .compose-ann-chip{border-radius:var(--r-full);border-color:#dfe7e4;font-size:var(--fs-caption);color:var(--ink-2)}
+#view-compose .compose-ann-chip.active{background:var(--accent-soft);border-color:var(--accent-2);color:#075340}
+#view-compose .compose-import-note{font-size:var(--fs-caption);color:var(--ink-3)}
+#view-compose .orientation-buttons button{border-radius:var(--r-sm);border-color:#dfe7e4;color:var(--ink-2);transition:all var(--t-fast) var(--ease-out)}
+#view-compose .orientation-buttons button:hover{border-color:#a9cabb;background:var(--surface-1)}
+#view-compose .compose-settings input,#view-compose .compose-settings select,#view-compose .property-editor input,#view-compose .property-editor select{border-radius:var(--r-sm);border-color:#dfe7e4}
+#view-compose .compose-settings input:focus,#view-compose .compose-settings select:focus,#view-compose .property-editor input:focus,#view-compose .property-editor select:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring);outline:none}
+
+/* —— 空状态与提示文字：统一灰阶与小字消除 —— */
+#view-data .empty-row,#view-statistics .empty-row,#view-chart .empty-row,#view-compose .empty-row{color:var(--ink-3);font-size:var(--fs-body)}
+#view-data .empty-state,#view-statistics .empty-state,#view-chart .empty-state,#view-compose .empty-state{color:var(--ink-3);font-size:var(--fs-body)}
+#view-data .hint,#view-statistics .hint,#view-chart .hint,#view-compose .hint{color:var(--ink-3);font-size:var(--fs-caption);line-height:1.55}
+.gallery-empty{color:var(--ink-3)}
+.gallery-empty span{font-size:var(--fs-body)}
+.gallery-settings input,.gallery-settings select{border-radius:var(--r-sm);border-color:#dfe7e4}
+.gallery-settings input:focus,.gallery-settings select:focus{border-color:var(--accent-2);box-shadow:var(--focus-ring);outline:none}
+.gallery-settings output{color:var(--ink-3)}
+
+/* —— 属性面板「收起」按钮：9px 小字补齐到 caption 档 —— */
+#view-data .panel-collapse-button,#view-statistics .panel-collapse-button,#view-chart .panel-collapse-button,#view-compose .panel-collapse-button{font-size:var(--fs-caption);border-radius:var(--r-sm);border-color:#dfe7e4;color:var(--ink-2);transition:background var(--t-fast) var(--ease-out),border-color var(--t-fast) var(--ease-out)}
+#view-data .panel-collapse-button:hover,#view-statistics .panel-collapse-button:hover,#view-chart .panel-collapse-button:hover,#view-compose .panel-collapse-button:hover{border-color:#a9cabb;background:var(--surface-1)}
+
+/* ===== v1.5.0-preview3 设计感升级：章节扉页 + 切页重放动效 + 统计页样板间 ===== */
+/* 依旧纯追加；母题遍及步骤 2-5，首页 #view-plan 零接触。 */
+/* 思路：令牌收敛只能产出「干净」，设计感来自每页 1-2 个不重复的签名动作与层级对比。 */
+
+/* —— 母题①章节扉页：页头右侧一枚衬线特大幽灵数字（含在卡内，不产生溢出） —— */
+#view-data .step-header,#view-statistics .stats-toolbar,#view-chart .studio-context,#view-compose .compose-header{position:relative}
+#view-data .step-header::after,#view-statistics .stats-toolbar::after,#view-chart .studio-context::after,#view-compose .compose-header::after{
+  position:absolute;top:3px;right:15px;z-index:0;pointer-events:none;user-select:none;
+  font-family:"Times New Roman","Songti SC",serif;font-size:50px;line-height:1;font-weight:700;
+  font-variant-numeric:lining-nums;color:rgba(13,107,85,.1)
+}
+#view-data .step-header::after{content:"02"}
+#view-statistics .stats-toolbar::after{content:"03"}
+#view-chart .studio-context::after{content:"04"}
+#view-compose .compose-header::after{content:"FIG"}
+/* 页头内所有直接子元素压到幽灵数字之上，保证按钮与标题清晰不被蒙层 */
+#view-data .step-header>*,#view-statistics .stats-toolbar>*,#view-chart .studio-context>*,#view-compose .compose-header>*{position:relative;z-index:1}
+
+/* —— 母题②切页重放：动效挂在 .active 上，每次切换视图都重放一次（错峰、backwards 不夺 hover） —— */
+#view-data.active .card,#view-statistics.active .card,#view-chart.active .card,#view-compose.active .card{animation:ssp-rise .42s var(--ease-out) backwards}
+#view-data.active .card:nth-child(n+3),#view-statistics.active .card:nth-child(n+3),#view-chart.active .card:nth-child(n+3),#view-compose.active .card:nth-child(n+3){animation-delay:.1s}
+#view-data.active .card:nth-child(n+6),#view-statistics.active .card:nth-child(n+6),#view-chart.active .card:nth-child(n+6),#view-compose.active .card:nth-child(n+6){animation-delay:.2s}
+
+/* —— 母题③统计页样板间：数据新闻风统计卡 + 引文式文字解读 —— */
+#view-statistics .summary-card{padding:16px 18px}
+#view-statistics .summary-card span{font-size:var(--fs-caption);color:var(--ink-3);letter-spacing:.06em;margin-bottom:9px}
+#view-statistics .summary-card b{font-size:var(--fs-display);font-weight:800;color:var(--ink-1);line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* 第一枚统计卡作主数据：淡绿面层 + 更大字级，制造层级对比 */
+#view-statistics .summary-card:first-child{background:linear-gradient(180deg,#f1f8f4 0%,#fff 74%);border-color:#d3e5dd}
+#view-statistics .summary-card:first-child b{font-size:34px;color:#0b5a46}
+/* 「自动文字解读」引文式排版：衬线字面（Times New Roman + lining-nums，避开老式数字）+ 左侧强化竖线 + 收窄行宽留白 */
+#view-statistics .interpretation-card{padding:26px 28px}
+#view-statistics .interpretation{font-family:"Times New Roman","Songti SC",SimSun,serif;font-size:var(--fs-title);line-height:1.85;font-variant-numeric:lining-nums;color:var(--ink-2);border-left:3px solid rgba(13,107,85,.7);padding:2px 0 2px 18px;max-width:44rem;margin-top:2px}
+#view-statistics .interpretation p{margin:12px 0}
+#view-statistics .interpretation p:first-child{margin-top:0}
+#view-statistics .interpretation p:last-child{margin-bottom:0}
+/* 空状态回到小字普通字面，不摆引文架子 */
+#view-statistics .interpretation.empty{font-family:inherit;font-size:var(--fs-body);line-height:1.7;color:var(--ink-3);border-left:3px solid #e4ebe8;padding:2px 0 2px 18px}
+
+/* ===== v1.5.0-preview4 空状态信息化：把干瘪的提示文字换成能解释产品的示意图 ===== */
+/* 依旧纯追加；首页 #view-plan 零接触。原则：空状态本身没有信息，图示本身就是信息。 */
+
+/* —— ① 图表页空画布：把当前所选图形的缩略图放大成虚影，先回答「我会得到什么图」 —— */
+#view-chart .gallery-empty{gap:14px;padding:10px}
+#view-chart .gallery-empty-ghost{width:186px;height:146px;display:grid;place-items:center}
+#view-chart .gallery-empty-ghost svg{width:100%;height:100%;color:rgba(13,107,85,.17)}
+#view-chart .gallery-empty b{font-size:var(--fs-title);color:var(--ink-1)}
+
+/* —— ② 数据页拖拽区：网格纸底纹，把「导入数据表」这件事直接画出来（纯背景，零 DOM 改动） —— */
+#view-data .drop-zone{
+  background-color:var(--surface-1);
+  background-image:linear-gradient(rgba(13,107,85,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(13,107,85,.055) 1px,transparent 1px);
+  background-size:26px 26px;background-position:center center
+}
+
+/* —— ③ 拼图页空画布：A/B/C/D 四格面板虚线框，用空画布先演示一遍拼图版式概念 —— */
+#view-compose .compose-empty-grid{display:grid;grid-template-columns:repeat(2,66px);grid-template-rows:repeat(2,48px);gap:9px;margin-bottom:16px}
+#view-compose .compose-empty-grid i{display:grid;place-items:center;font-style:normal;font-size:var(--fs-caption);font-weight:700;letter-spacing:.12em;color:rgba(13,107,85,.45);border:1.5px dashed rgba(13,107,85,.22);border-radius:6px;background:rgba(13,107,85,.035)}
+/* 第四格改实线高亮，暗示「正在编辑的那一块」 */
+#view-compose .compose-empty-grid i:nth-child(4){border-style:solid;border-color:rgba(13,107,85,.32);background:rgba(13,107,85,.075)}
+
+/* ===== v1.5.0-preview5 模板「格式速览」：迷你表格替代纯文字识别说明 ===== */
+/* 依旧纯追加。表格当示意不当数据：小号字、弱边框、淡色表头，不与右侧下载按钮抢层级。 */
+.schema-mini{margin-top:12px;max-width:430px}
+.schema-mini-table{border:1px solid #dbe6e1;border-radius:8px;overflow:hidden;background:#fff}
+.schema-mini-table table{border-collapse:collapse;width:100%}
+.schema-mini-table th,.schema-mini-table td{padding:5px 11px;font-size:var(--fs-caption);text-align:left;border-bottom:1px solid #edf2f0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.schema-mini-table th{background:var(--surface-2);color:var(--ink-2);font-weight:700;letter-spacing:.02em}
+.schema-mini-table th.is-key{background:#e6f2ed;color:#0b5a46}
+.schema-mini-table th.is-par{background:#f1f7f4}
+.schema-mini-table th.is-more{color:var(--ink-3);background:var(--surface-1)}
+.schema-mini-table td{color:var(--ink-3)}
+.schema-mini-table td.is-key{color:var(--ink-1);font-weight:600}
+.schema-mini-table tbody tr:last-child td{border-bottom:none}
+.schema-mini-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:var(--fs-caption);color:var(--ink-3)}
+.schema-mini-legend span{display:inline-flex;align-items:center}
+.schema-mini-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.schema-mini-legend i.k{background:#0d6b55}
+.schema-mini-legend i.p{background:#7fb3a3}
+.schema-mini-legend i.r{background:#cbd9d3}
+
+/* ===== v1.5.0-preview6 页头去卡片化：页头只是标题区、不承担交互，按 Apps 原则退掉卡片 chrome ===== */
+/* 纯追加。四页页头改「纯排版 + 底部细分隔线 + 标题左缘与内容对齐」；幽灵数字与 ssp-rise 入场动效保留。 */
+#view-data .step-header,#view-statistics .stats-toolbar,#view-chart .studio-context,#view-compose .compose-header{
+  background:transparent;border:none;border-radius:0;box-shadow:none;
+  border-bottom:1px solid #e2eae6;padding-left:0;padding-right:0
+}
+#view-data .step-header{padding-top:4px;padding-bottom:14px}
+#view-statistics .stats-toolbar{padding-top:4px;padding-bottom:14px}
+#view-chart .studio-context{padding-top:4px;padding-bottom:12px}
+#view-compose .compose-header{padding-top:4px;padding-bottom:14px}
+/* 幽灵数字贴右缘收齐（页头已无卡片内边距） */
+#view-data .step-header::after,#view-statistics .stats-toolbar::after,#view-chart .studio-context::after,#view-compose .compose-header::after{right:2px}
+
+/* ===== v1.5.0-preview7：hero 调浅 + 步骤页头精修（用户反馈：绿色太重、步骤页头太普通） ===== */
+/* hero 底色整体抬亮一档：深墨绿 → 中绿，白字与玻璃输入框对比仍充足；网格纹理/线稿水印不动 */
+#view-plan .chart-start{background:
+  radial-gradient(120% 150% at 92% -22%,rgba(88,208,170,.5) 0%,rgba(88,208,170,0) 58%),
+  radial-gradient(90% 120% at 2% 122%,rgba(20,120,94,.55) 0%,rgba(20,120,94,0) 62%),
+  linear-gradient(146deg,#1b4a3c 0%,#175f49 42%,#12805f 100%)}
+#view-plan .chart-start .eyebrow{color:#9be9cc}
+/* 步骤页头：步骤号升级为软填充胶囊（可识别的设计件，不再是裸文字） */
+#view-data .step-header .step-tag,#view-statistics .stats-toolbar .step-tag{
+  display:inline-flex;align-items:center;background:rgba(13,107,85,.09);color:#0d6b55;
+  padding:3px 10px;border-radius:999px;letter-spacing:.04em}
+/* 标题提一档到 24px，Chart Studio 上下文标题从 14px 提到 17px */
+#view-data .step-header h2,#view-statistics .stats-toolbar h2,#view-compose .compose-header h2{font-size:24px}
+#view-chart .studio-context b{font-size:var(--fs-title)}
+/* 幽灵数字从 10% 提到 16%：页头去卡片后它是该区域的签名件，需要真的被看见 */
+#view-data .step-header::after,#view-statistics .stats-toolbar::after,#view-chart .studio-context::after,#view-compose .compose-header::after{font-size:56px;color:rgba(13,107,85,.16)}
+
+/* ===== v1.5.0-preview8：hero 翻浅色，与步骤 2-4 统一亮度（用户反馈：太深、太宽、落差大） ===== */
+/* 底色：深绿横幅 → 淡绿渐变（--surface 系），保留右上光晕；padding 收紧降低体量感 */
+#view-plan .chart-start{
+  padding:22px 28px 18px;border-color:#dcebe4;color:var(--ink-2);
+  background:
+    radial-gradient(120% 150% at 92% -22%,rgba(52,183,146,.16) 0%,rgba(52,183,146,0) 58%),
+    linear-gradient(146deg,#f3f9f6 0%,#e9f4ef 100%);
+  box-shadow:0 1px 3px rgba(16,38,32,.05),0 10px 26px rgba(16,38,32,.06)
+}
+/* 网格纸纹理与线稿水印：白线 → 绿线，浅底上才能看见 */
+#view-plan .chart-start::before{
+  background-image:linear-gradient(rgba(13,107,85,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(13,107,85,.05) 1px,transparent 1px)}
+#view-plan .chart-start::after{opacity:.1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 330 190' fill='none' stroke='%230d6b55' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M24 168h286M24 168V18'/%3E%3Cpath d='M46 146l46-30 42 16 48-62 44 30 46-56' stroke-width='3'/%3E%3C/svg%3E") no-repeat right bottom/contain}
+/* eyebrow 改为与步骤 2-4 同款的软绿胶囊：五页页头第一次共用同一个设计件 */
+#view-plan .chart-start .eyebrow{display:inline-flex;align-items:center;background:rgba(13,107,85,.09);color:#0d6b55;
+  padding:3px 10px;border-radius:999px;font-size:var(--fs-caption);font-weight:800;letter-spacing:.04em}
+/* 文字翻深：白字体系 → 墨色体系 */
+#view-plan .chart-start h2{color:var(--ink-1);text-shadow:none}
+#view-plan .chart-start p{color:var(--ink-2)}
+#view-plan .chart-start .field>label{color:var(--ink-2)}
+#view-plan .chart-start .project-name-field small{color:var(--ink-3)}
+/* 输入控件：玻璃白 → 白底浅边（浅底上的常规表单件） */
+#view-plan .chart-start .chart-search-box input,
+#view-plan .chart-start .project-name-field input{background:#fff;border-color:#d7e4de;color:var(--ink-1)}
+#view-plan .chart-start .chart-search-box input::placeholder,
+#view-plan .chart-start .project-name-field input::placeholder{color:#9aaba6}
+#view-plan .chart-start .chart-search-box input:hover,
+#view-plan .chart-start .project-name-field input:hover{background:#fff;border-color:#b9d2c8}
+#view-plan .chart-start .chart-search-box input:focus,
+#view-plan .chart-start .project-name-field input:focus{background:#fff;border-color:#0d6b55;box-shadow:var(--focus-ring)}
+/* 研究目的胶囊：玻璃白 → 白底；选中态从「白底反白」翻转为「绿底白字」，明暗锚点保留 */
+#view-plan .chart-start .goal-tabs{border-top-color:#dcebe4}
+#view-plan .chart-start .goal-tab{background:#fff;border-color:#d7e4de;color:var(--ink-2)}
+#view-plan .chart-start .goal-tab:hover{background:#fff;border-color:#0d6b55;color:#0d6b55;transform:translateY(-1px)}
+#view-plan .chart-start .goal-tab.active{background:#0d6b55;border-color:#0d6b55;color:#fff;box-shadow:0 6px 16px rgba(13,107,85,.24)}
+
+/* ===== v1.5.0-preview9：侧边栏精修（用户反馈：选中态太重、编号普通、项目卡边界模糊） ===== */
+/* ① 当前步骤：整行绿底 → 左侧 3px 指示线 + 微绿底色，文字保持反白 */
+.v070-shell .workflow-nav .nav-item.active{
+  background:rgba(43,160,127,.12);box-shadow:inset 3px 0 0 var(--accent-2);border-radius:var(--r-sm)}
+/* ② 步骤编号：普通灰色方块 → 当前步骤绿色实心+微光，其他步骤半透明描边 */
+.v070-shell .workflow-nav .nav-no{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);color:#8fa6a0;font-weight:700}
+.v070-shell .workflow-nav .nav-item.active .nav-no{
+  background:var(--accent-2);border-color:var(--accent-2);color:#fff;box-shadow:0 2px 6px rgba(43,160,127,.35)}
+/* ③ 当前项目卡片：加「当前」标签 + 边框提亮，与侧边栏底色拉开层级 */
+.v070-shell .project-mini{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.06);position:relative}
+.v070-shell .project-mini::before{content:'当前';position:absolute;top:10px;right:10px;
+  font-size:var(--fs-caption);font-weight:700;color:#7fe0be;letter-spacing:.06em}
+/* ④ 分组标题下加细分隔线，「完整工作流」和「论文输出」不再裸奔 */
+.v070-shell .nav-label{border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:5px;margin-bottom:10px}
