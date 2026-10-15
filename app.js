@@ -563,7 +563,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.5.1'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.5.2'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1851,7 +1851,17 @@ function galleryBuildMethodNote(){
   const stat=galleryMethodNoteText();
   if(stat)return '图内统计口径：'+stat+'。显著性标记、误差棒与数值标注的具体设置见对应「图形专属」面板。';
   const type=state.gallery.type;
-  const texts={hist:'直方图用于展示数据的分布形态，分箱数量与柱体样式可在「图形专属」面板中调整。',kde:'核密度估计（KDE）用于展示数据的平滑分布形态；带宽、曲线填充与 rug 设置见「图形专属」面板。',stacked:'堆叠图展示各成分的构成与总量，堆叠方式、误差棒与数值标注设置见「图形专属」面板。',pie:'饼图（圆环图）展示各成分的构成占比，比例标签设置见「图形专属」面板。',radar:'雷达图用于多指标综合比较，数据按指标归一化后绘制；网格、刻度与主题背景设置见「图形专属」面板。'};
+  const mvs=(typeof state.multivar!=='undefined'&&state.multivar&&state.multivar.settings)?state.multivar.settings:{};
+  const texts={hist:'直方图用于展示数据的分布形态，分箱数量与柱体样式可在「图形专属」面板中调整。',kde:'核密度估计（KDE）用于展示数据的平滑分布形态；带宽、曲线填充与 rug 设置见「图形专属」面板。',stacked:'堆叠图展示各成分的构成与总量，堆叠方式、误差棒与数值标注设置见「图形专属」面板。',pie:'饼图（圆环图）展示各成分的构成占比，比例标签设置见「图形专属」面板。',radar:'雷达图用于多指标综合比较，数据按指标归一化后绘制；网格、刻度与主题背景设置见「图形专属」面板。',
+  spectrum:'光谱图用于绘制原始仪器曲线，每条曲线来自一对 X/Y 或同一 X 下的一个 Y 列；仪器类型、X 轴方向与曲线样式设置见「图形专属」面板。',
+  thermal:'热分析曲线（TGA/DSC/DTA）用于展示质量或热流随温度/时间的变化过程；仪器类型、曲线方向与样式设置见「图形专属」面板。',
+  waterfall:'光谱瀑布图将多条曲线沿纵深分层堆叠，用于展示信号随时间或条件的演化；层间距、视角方向与配色设置见「图形专属」面板。',
+  pca:'主成分分析（PCA）将标准化后的多变量数据投影到方差最大的正交方向上，用于无监督地观察样本聚类与离群趋势；主成分个数、置信椭圆与标签显示设置见「图形专属」面板。',
+  hca:'层次聚类分析（HCA）基于'+((mvs.hcaTarget==='variables')?'变量间距离':'样本间距离')+'与 '+String(mvs.hcaLinkage||'ward')+' 连接准则构建树状图，用于观察样本或变量的自然分组；聚类对象、连接方式与配色设置见「图形专属」面板。',
+  plsda:'偏最小二乘判别分析（PLS-DA）在类别标签的监督下提取最大化组间差异的潜变量，用于判别分组并给出 VIP 等变量重要性指标；潜变量个数、置信椭圆与标签设置见「图形专属」面板。',
+  oplsda:'正交偏最小二乘判别分析（OPLS-DA）在 PLS-DA 基础上将预测成分与正交成分分离，便于解释两类间差异；当前模型含 '+(Number(mvs.oplsOrthogonal)||0)+' 个正交成分，相关设置见「图形专属」面板。',
+  plsr:'偏最小二乘回归（PLS-R）在 X 与 Y 协方差最大的方向上建立回归模型，适用于存在多重共线性的多变量定量建模；潜变量个数、交叉验证与 VIP 设置见「图形专属」面板。',
+  oplsr:'正交偏最小二乘回归（OPLS-R）在 PLS-R 基础上分离与 Y 正交的变异成分，提高模型可解释性；当前模型含 '+(Number(mvs.oplsOrthogonal)||0)+' 个正交成分，相关设置见「图形专属」面板。'};
   return texts[type]||'本图基于当前项目数据绘制；绘图参数（配色、坐标轴、字体、图例等）均可在本工作台逐项调整。';
 }
 function galleryPaletteButtons(){var st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
@@ -2847,7 +2857,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.5.1',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.5.2',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
