@@ -690,3 +690,11 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
   font-size:var(--fs-caption);font-weight:700;color:#7fe0be;letter-spacing:.06em}
 /* ④ 分组标题下加细分隔线，「完整工作流」和「论文输出」不再裸奔 */
 .v070-shell .nav-label{border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:5px;margin-bottom:10px}
+
+/* ===== v1.5.0-preview10：画板下方改为自动文字解读（替代原 stage-tip 提示语） ===== */
+#view-chart .studio-interpretation{padding:14px 0 2px;text-align:left}
+#view-chart .studio-interpretation.empty{color:var(--ink-3);font-size:var(--fs-body)}
+#view-chart .studio-interpretation.empty p{margin:0}
+#view-chart .studio-interpretation-label{font-size:var(--fs-caption);font-weight:800;letter-spacing:.06em;color:#0d6b55;margin-bottom:8px}
+#view-chart .studio-interpretation p{font-family:"Times New Roman","Songti SC",SimSun,serif;font-size:var(--fs-title);line-height:1.85;font-variant-numeric:lining-nums;color:var(--ink-2);border-left:3px solid rgba(13,107,85,.7);padding:2px 0 2px 18px;max-width:44rem;margin:0 0 10px}
+#view-chart .studio-interpretation p:last-child{margin-bottom:0}

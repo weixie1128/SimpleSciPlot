@@ -563,7 +563,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.5.0'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.5.1'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1309,6 +1309,14 @@ function galleryMethodRows(type){
   if(type==='heatmap')return[['Pearson 相关矩阵','多指标线性相关','已接入'],['Spearman 矩阵','多指标秩相关','已接入'],['色阶与数值','自定义低值、中值、高值与对角线颜色','已接入']];
   if(type==='radar')return[['归一化','不同量纲指标统一尺度','已接入'],['综合评分','权重与综合评价','待后续增强']];
   if(['stacked','pie'].includes(type))return[['构成比例','类别总量和组分百分比','已接入'],['组成差异检验','比较不同类别构成差异','待后续增强']];
+  // v1.5.0：补上多变量与仪器信号的条目，避免落到「描述统计 / 已接入」的错误兜底。
+  if(type==='pca')return[['主成分分析','方差贡献率、得分图与载荷图','已接入'],['样本分组','得分图分组分离程度的文字判断','已接入'],['组间差异检验','PERMANOVA 等正式检验','未接入']];
+  if(type==='hca')return[['层次聚类','Ward / Average / Complete 连接与树状图','已接入'],['聚类判定','最佳簇数与聚类稳定性','未接入']];
+  if(type==='plsda')return[['PLS-DA 判别','得分图、VIP、R²Y、Q² 与分层交叉验证准确率','已接入'],['置换检验','判别模型的显著性检验','未接入']];
+  if(type==='oplsda')return[['OPLS-DA 判别','预测 / 正交得分、S-plot、VIP、R²X、R²Y、Q²','已接入'],['置换检验','OPLS-DA 置换检验与置换图','已接入']];
+  if(type==='plsr')return[['PLS-R 回归','交叉验证预测、得分图、VIP、R²、Q²、RMSECV','已接入'],['外部验证','独立验证集预测能力','未接入']];
+  if(type==='oplsr')return[['OPLS-R 回归','预测 / 正交得分、S-plot、VIP、R²X、R²、Q²、RMSECV','已接入'],['外部验证','独立验证集预测能力','未接入']];
+  if(type==='spectrum')return[['曲线区间统计','X 轴范围、曲线条数、峰位与峰高','已接入'],['曲线相似度','公共 X 网格重采样后的成对相关与 RMSE','已接入'],['峰归属','自动寻峰参数与谱峰归属','未接入']];
   return[['描述统计','基础数据概览','已接入']];
 }
 
@@ -1330,8 +1338,8 @@ function renderAnovaTable(){
   $('#anovaTable').innerHTML=html+'</tbody>';
 }
 
-function renderInterpretation(){
-  const box=$('#interpretationText'),a=state.analysis,d=state.design;if(!a){box.className='interpretation empty';box.textContent='暂无可解释结果。';return}
+function interpretationParagraphs(){
+  const a=state.analysis,d=state.design;if(!a)return null;
   const paragraphs=[];
   if(a.kind==='one'){
     const sorted=state.descriptive.slice().sort((x,y)=>levelIndex(x.a,d.factorALevels)-levelIndex(y.a,d.factorALevels)),first=sorted[0],last=sorted[sorted.length-1],change=last.mean-first.mean;
@@ -1343,6 +1351,11 @@ function renderInterpretation(){
     paragraphs.push(`两因素交互作用${a.pAB<.05?'显著':'不显著'}（${formatPText(a.pAB)}）${a.pAB<.05?'，说明一个因素的影响会随另一个因素水平而变化，因此应优先比较各组合的简单效应。':'，在当前数据下两因素的变化模式较为一致。'}`);
     d.factorBLevels.forEach(b=>{const series=state.descriptive.filter(r=>r.b===b).sort((x,y)=>levelIndex(x.a,d.factorALevels)-levelIndex(y.a,d.factorALevels));if(series.length>1){const c=series.at(-1).mean-series[0].mean;paragraphs.push(`${b} 条件下，${d.metricName} 从 ${series[0].a} 到 ${series.at(-1).a} 总体${c>0?'增加':c<0?'降低':'保持稳定'} ${formatNumber(Math.abs(c),3)}${d.metricUnit?` ${d.metricUnit}`:''}。`)}});
   }
+  return paragraphs;
+}
+function renderInterpretation(){
+  const box=$('#interpretationText'),paragraphs=interpretationParagraphs();
+  if(!paragraphs){box.className='interpretation empty';box.textContent='暂无可解释结果。';return}
   box.className='interpretation';box.innerHTML=paragraphs.map(p=>`<p>${esc(p)}</p>`).join('')+'<p class="small-note">以上文字为自动辅助解读。统计 n 指独立平行样本数；同一样品的重复测定仅用于获得该样品均值，不替代独立样本。</p>';
 }
 
@@ -2834,7 +2847,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.5.0',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.5.1',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -3157,7 +3170,7 @@ function downloadGalleryCsv(){
   const csv='\ufeff'+[headers,...body].map(row=>row.map(csvCell).join(',')).join('\r\n');
   download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`FoodLab_${safeFile(workflowChartEnglishLabel(def.id))}_template.csv`);toast('CSV 模板已生成');
 }
-function loadGalleryDemo(){state.gallery.rows=galleryTemplateRows();state.gallery.sourceName='内置示例';renderGallery();toast('已载入示例数据')}
+function loadGalleryDemo(){let rows=galleryTemplateRows();if(galleryDef().schema==='radar')rows=normalizeGalleryRows(rows,'radar');state.gallery.rows=rows;state.gallery.sourceName='内置示例';renderGallery();toast('已载入示例数据')}
 
 async function handleGalleryFile(file){
   try{
@@ -3285,14 +3298,43 @@ function regression(x,y){const mx=mean(x),my=mean(y),ssx=x.reduce((s,v)=>s+(v-mx
 function analyzeXY(rows){
   const method=state.gallery.settings.correlationMethod||'pearson',corrFn=method==='spearman'?spearman:pearson,label=correlationMethodLabel(method),table=[];
   groupValues(rows).forEach((rs,g)=>{const x=rs.map(r=>r.X),y=rs.map(r=>r.Y),m=regression(x,y),r=corrFn(x,y);table.push({Group:g,n:rs.length,Correlation:r,Method:label,Slope:m.slope,Intercept:m.intercept,R2:m.r2})});
-  const x=rows.map(r=>r.X),y=rows.map(r=>r.Y),m=regression(x,y),association=corrFn(x,y);return{kind:'xy',table,overall:{...m,association,method,label},summary:[['有效样本',rows.length],['组别数',table.length],[`总体 ${method==='spearman'?'Spearman ρ':'Pearson r'}`,formatNumber(association,3)],['线性回归 R²',formatNumber(m.r2,3)]],text:`总体${label}系数为 ${formatNumber(association,3)}；线性拟合模型 R² 为 ${formatNumber(m.r2,3)}。相关方法和回归模型是两个不同设置，相关不等同于因果关系。`}
+  const x=rows.map(r=>r.X),y=rows.map(r=>r.Y),m=regression(x,y),association=corrFn(x,y);
+  // v1.5.0：把已算好的 r、n 翻译成带显著性、效应量与样本量提示的解读。
+  const nXY=rows.length,dfXY=nXY-2,denXY=1-association*association;
+  const tXY=(dfXY>0&&denXY>0)?Math.abs(association)*Math.sqrt(dfXY/denXY):NaN;
+  const pXY=Number.isFinite(tXY)&&dfXY>0?clamp(2*(1-tCdf(tXY,dfXY)),0,1):NaN;
+  const symbolXY=method==='spearman'?'ρ':'r',strengthXY=correlationStrengthLabel(association);
+  const pPartXY=Number.isFinite(pXY)?`该相关达到统计显著（${formatPText(pXY)}），效应量 |${symbolXY}| = ${formatNumber(Math.abs(association),3)}，属${strengthXY}相关。${nXY<5?`注意：有效观测量 n = ${nXY}（< 5），样本量不足以支持该判断，以上显著性仅供参考。`:''}`:`有效观测不足（n = ${nXY}），无法检验该相关的统计显著性，不给出显著性结论。`;
+  return{kind:'xy',table,overall:{...m,association,method,label,n:nXY,p:pXY},summary:[['有效样本',nXY],['组别数',table.length],[`总体 ${method==='spearman'?'Spearman ρ':'Pearson r'}`,formatNumber(association,3)],['线性回归 R²',formatNumber(m.r2,3)]],text:`共 ${nXY} 个有效 X–Y 观测对，来自 ${table.length} 个组。总体${label}系数为 ${formatNumber(association,3)}，线性拟合模型 R² 为 ${formatNumber(m.r2,3)}。${pPartXY}相关刻画的是同步变化程度，回归模型刻画的是预测关系，两者并不等同，相关也不代表因果。`}
 }
 
 function analyzeComposition(rows){
-  const cats=groupValues(rows,'Category'),table=[];cats.forEach((rs,c)=>{const total=rs.reduce((s,r)=>s+r.Value,0);rs.forEach(r=>table.push({Category:c,Component:r.Component,Value:r.Value,Percent:total?r.Value/total*100:0}));});return{kind:'composition',table,summary:[['类别数',cats.size],['组分数',new Set(rows.map(r=>r.Component)).size],['数据行',rows.length],['总量',formatNumber(rows.reduce((s,r)=>s+r.Value,0),3)]],text:'已按每个类别计算组分总量与百分比。百分比堆叠图和饼图会自动使用类别内部占比。'}}
+  const cats=groupValues(rows,'Category'),table=[],dominants=[];
+  cats.forEach((rs,c)=>{
+    const total=rs.reduce((s,r)=>s+r.Value,0);
+    rs.forEach(r=>table.push({Category:c,Component:r.Component,Value:r.Value,Percent:total?r.Value/total*100:0}));
+    // v1.5.0：用已算的百分比直接生成「主导组分」结论，不再只给方法说明。
+    const top=rs.slice().sort((a,b)=>Number(b.Value)-Number(a.Value))[0];
+    if(top)dominants.push(`${c} 以 ${top.Component} 为主（${formatNumber(total?top.Value/total*100:0,1)}%，${formatNumber(top.Value,3)}）`);
+  });
+  const componentCount=new Set(rows.map(r=>r.Component)).size,grand=rows.reduce((s,r)=>s+Number(r.Value||0),0);
+  const caveat=cats.size<2?'当前仅一个类别，无法比较类别之间的组分构成差异。':'';
+  return{kind:'composition',table,summary:[['类别数',cats.size],['组分数',componentCount],['数据行',rows.length],['总量',formatNumber(grand,3)]],text:`共 ${cats.size} 个类别、${componentCount} 种组分，合计 ${formatNumber(grand,3)}。${dominants.length?dominants.join('；')+'。':''}以上百分比均为类别内部占比，百分比堆叠图与饼图直接使用该口径；比重接近（差距小于 3 个百分点）时不宜强调主导组分。${caveat}`}}
+
 function analyzeMatrix(rows){
-  const method=state.gallery.settings.correlationMethod||'pearson',corrFn=method==='spearman'?spearman:pearson,label=correlationMethodLabel(method),vars=[...new Set(rows.flatMap(r=>Object.keys(r).filter(k=>!['SampleID','Group'].includes(k)&&Number.isFinite(r[k]))))],corr={};
-  vars.forEach(a=>{corr[a]={};vars.forEach(b=>{const pairs=rows.filter(r=>Number.isFinite(r[a])&&Number.isFinite(r[b]));corr[a][b]=pairs.length>1?corrFn(pairs.map(r=>r[a]),pairs.map(r=>r[b])):NaN})});return{kind:'matrix',vars,corr,method,label,summary:[['样本数',rows.length],['数值指标',vars.length],['组别数',new Set(rows.map(r=>r.Group)).size],['相关方法',label]],text:`已对 ${vars.length} 个数值指标计算${label}矩阵。强相关并不自动代表指标之间存在直接机制关系。`}
+  const method=state.gallery.settings.correlationMethod||'pearson',corrFn=method==='spearman'?spearman:pearson,label=correlationMethodLabel(method),vars=[...new Set(rows.flatMap(r=>Object.keys(r).filter(k=>!['SampleID','Group'].includes(k)&&Number.isFinite(r[k]))))],corr={},corrN={};
+  vars.forEach(a=>{corr[a]={};corrN[a]={};vars.forEach(b=>{const pairs=rows.filter(r=>Number.isFinite(r[a])&&Number.isFinite(r[b]));corrN[a][b]=pairs.length;corr[a][b]=pairs.length>1?corrFn(pairs.map(r=>r[a]),pairs.map(r=>r[b])):NaN})});
+  // v1.5.0：把已算好的相关矩阵翻译成最强正/负相关对与强相关对数，并带样本量提示。
+  const offPairs=[];
+  for(let i=0;i<vars.length;i++)for(let j=i+1;j<vars.length;j++){const x=vars[i],y=vars[j],r=corr[x][y];if(Number.isFinite(r))offPairs.push({a:x,b:y,r,n:corrN[x][y]||0})}
+  const strongCount=offPairs.filter(q=>Math.abs(q.r)>=.7).length;
+  const strongestPos=offPairs.slice().sort((p,q)=>q.r-p.r)[0],strongestNeg=offPairs.slice().sort((p,q)=>p.r-q.r)[0];
+  const meanN=offPairs.length?Math.round(offPairs.reduce((s,q)=>s+q.n,0)/offPairs.length):rows.length;
+  const parts=[];
+  if(strongestPos)parts.push(`最强正相关为 ${strongestPos.a} 与 ${strongestPos.b}（r = ${formatNumber(strongestPos.r,3)}，n = ${strongestPos.n}，${correlationStrengthLabel(strongestPos.r)}相关）`);
+  if(strongestNeg&&strongestNeg!==strongestPos)parts.push(`最强负相关为 ${strongestNeg.a} 与 ${strongestNeg.b}（r = ${formatNumber(strongestNeg.r,3)}，n = ${strongestNeg.n}，${correlationStrengthLabel(strongestNeg.r)}相关）`);
+  const caveat=meanN<5?'成对完整观测平均不足 5 个，相关系数不够稳定，上述强弱判断仅供参考。':'';
+  return{kind:'matrix',vars,corr,corrN,method,label,summary:[['样本数',rows.length],['数值指标',vars.length],['组别数',new Set(rows.map(r=>r.Group)).size],['相关方法',label]],text:`共 ${rows.length} 个样本、${vars.length} 个数值指标，其中 ${strongCount} 对指标的 |r| ≥ 0.7。${parts.length?parts.join('；')+'。':''}强相关不自动代表指标之间存在直接机制关系，需结合机理与实验设计判断，也不代表因果。${caveat}`}
 }
 
 function analyzeRadar(rows){
@@ -3304,7 +3346,13 @@ function analyzeRadar(rows){
     const top=vals[0],second=vals[1];
     return {Indicator:ind,Leader:top?.group||'—',Top:top?.value??NaN,Gap:(top&&second)?top.value-second.value:NaN};
   });
-  return{kind:'radar',summary:[['组别数',groups.length],['指标数',indicators.length],['数据行',rows.length],['归一化',state.gallery.settings.normalize?'已开启':'未开启']],table,leaders,ranges,text:'雷达图适合综合展示多个指标。当前模板默认第一列为分组名、第一行为各测得指标；导入时会自动识别宽表。若各指标单位或量纲不同，应开启归一化后再比较形状。'}
+  // v1.5.0：把已算好的 leaders（每指标领先组与与第二名差距）翻译成解读文字。
+  const leadText=leaders.filter(x=>Number.isFinite(x.Top)&&x.Leader&&x.Leader!=='—').map(x=>{
+    const rg=ranges[x.Indicator]||{},span=(Number.isFinite(rg.max)&&Number.isFinite(rg.min))?rg.max-rg.min:NaN;
+    const clear=Number.isFinite(span)&&span>0&&Number.isFinite(x.Gap)&&x.Gap>=span*.1;
+    return `${x.Indicator} 以 ${x.Leader} 最高（${formatNumber(x.Top,3)}）；${clear?`领先第二名 ${formatNumber(x.Gap,3)}，达该指标量程的 ${formatNumber(span?x.Gap/span*100:0,1)}%，属明显领先`:'与其余组的差距小于该指标量程的 10%，视为基本持平'}`;
+  });
+  return{kind:'radar',summary:[['组别数',groups.length],['指标数',indicators.length],['数据行',rows.length],['归一化',state.gallery.settings.normalize?'已开启':'未开启']],table,leaders,ranges,text:`雷达图共 ${groups.length} 组、${indicators.length} 个指标。${leadText.length?leadText.join('；')+'。':''}${groups.length<2?'当前仅 1 组，无法比较组间差异。':''}当前模板默认第一列为分组名、第一行为各测得指标；各指标单位或量纲不同时，应开启归一化后再比较形状，当前归一化${state.gallery.settings.normalize?'已开启':'未开启'}。`}
 }
 
 function renderGalleryAnalysis(){
@@ -4099,5 +4147,254 @@ function startTour(){
   }
   show();
 }
+
+/* ===== v1.5.0 第二期：光谱 / 仪器曲线的分析（X 范围、峰位峰高、曲线间相似度）与文字解读 ===== */
+function spectrumPeaks(points,maxPeaks=3){
+  const pts=points.filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+  const out=[];
+  for(let i=1;i<pts.length-1;i++){
+    const y0=pts[i-1].y,y1=pts[i].y,y2=pts[i+1].y;
+    if(y1>y0&&y1>=y2)out.push({x:pts[i].x,y:y1});
+  }
+  return out.sort((a,b)=>b.y-a.y).slice(0,Math.max(1,maxPeaks));
+}
+function spectrumInterp(pts){
+  return x=>{
+    if(!pts.length)return NaN;
+    if(x<=pts[0].x)return pts[0].y;
+    const last=pts[pts.length-1];
+    if(x>=last.x)return last.y;
+    let lo=0,hi=pts.length-1;
+    while(hi-lo>1){const mid=(lo+hi)>>1;if(pts[mid].x<=x)lo=mid;else hi=mid}
+    const span=(pts[hi].x-pts[lo].x)||1,t=(x-pts[lo].x)/span;
+    return pts[lo].y+t*(pts[hi].y-pts[lo].y);
+  };
+}
+function analyzeSpectrumCurves(){
+  const d=state.spectrum?.data;
+  if(!d||!Array.isArray(d.series)||!d.series.length)return null;
+  const series=d.series.map(s=>{
+    const pts=(s.points||[]).filter(p=>Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y))).map(p=>({x:Number(p.x),y:Number(p.y)})).sort((a,b)=>a.x-b.x);
+    return{name:String(s.name||'曲线'),pts,peaks:spectrumPeaks(pts,3),n:pts.length};
+  }).filter(s=>s.pts.length>=5);
+  if(!series.length)return null;
+  const xMin=Number(d.xRange?.min),xMax=Number(d.xRange?.max),yMin=Number(d.yRange?.min),yMax=Number(d.yRange?.max);
+  const totalPoints=series.reduce((s,x)=>s+x.n,0);
+  const xSpan=Number.isFinite(xMax)&&Number.isFinite(xMin)?xMax-xMin:NaN;
+  const grid=Number.isFinite(xSpan)&&xSpan>0?Array.from({length:120},(_,i)=>xMin+xSpan*i/119):[];
+  const interps=series.map(s=>spectrumInterp(s.pts));
+  // 曲线两两相似度：重采样到 120 点公共网格后比较（形状比较，不做回归外推）
+  const pairs=[];
+  for(let i=0;i<series.length;i++)for(let j=i+1;j<series.length;j++){
+    const A=[],B=[];
+    grid.forEach(gx=>{const a=interps[i](gx),b=interps[j](gx);if(Number.isFinite(a)&&Number.isFinite(b)){A.push(a);B.push(b)}});
+    if(A.length>2){
+      const r=pearson(A,B),mu=mean(A),mu2=mean(B);
+      let sq=0;A.forEach((v,k)=>{sq+=(v-B[k])**2});
+      pairs.push({a:series[i].name,b:series[j].name,r,rmse:Math.sqrt(sq/A.length),
+        // 去均值后比较形状，避免整体强度差异被误判为形状差异
+        rShape:pearson(A.map(v=>v-mu),B.map(v=>v-mu2))});
+    }
+  }
+  const bySim=pairs.filter(p=>Number.isFinite(p.rShape)).sort((p,q)=>q.rShape-p.rShape);
+  const best=bySim[0],worst=bySim.length>1?bySim[bySim.length-1]:null;
+  const peakLines=series.map(s=>{
+    const top=s.peaks[0];
+    const others=s.peaks.slice(1).map(p=>`${formatNumber(p.x,3)}`).filter(x=>x!=='—');
+    return top?`${s.name} 最高峰位于 ${formatNumber(top.x,3)}（强度 ${formatNumber(top.y,3)}）${others.length?`，次峰位于 ${others.join('、')}`:''}`:null;
+  }).filter(Boolean);
+  const table=series.map(s=>({曲线:s.name,数据点:s.n,
+    '最高峰位置':s.peaks[0]?formatNumber(s.peaks[0].x,3):'—',
+    '最高峰强度':s.peaks[0]?formatNumber(s.peaks[0].y,3):'—',
+    '次峰位置':s.peaks[1]?formatNumber(s.peaks[1].x,3):'—'}));
+  const parts=[];
+  parts.push(`${d.xName||'X'} 轴范围 ${formatNumber(xMin,3)}–${formatNumber(xMax,3)}，${d.yName||'Y'} 轴范围 ${formatNumber(yMin,3)}–${formatNumber(yMax,3)}，共 ${series.length} 条曲线、${totalPoints} 个数据点。`);
+  if(peakLines.length)parts.push(`按逐点局部极大自动寻峰：${peakLines.join('；')}。`);
+  if(best)parts.push(`按公共 X 网格重采样（120 点）后的形状比较：${best.a} 与 ${best.b} 最相似（去均值 r = ${formatNumber(best.rShape,3)}，RMSE = ${formatNumber(best.rmse,3)}）${worst&&worst!==best?`；${worst.a} 与 ${worst.b} 差异最大（去均值 r = ${formatNumber(worst.rShape,3)}，RMSE = ${formatNumber(worst.rmse,3)}）`:''}。`);
+  parts.push(`说明：寻峰结果只是对曲线局部极大值的定位，用于比较峰位与峰高，不构成谱峰归属或官能团指认；若 Y 轴为透过率，向下凹陷处才是吸收峰。曲线相似度是重采样后的形状比较，不是成分鉴定，两者判断都应结合仪器参数与标准品。`);
+  return{kind:'spectrum',table,series:series.map(s=>({name:s.name,n:s.n,peaks:s.peaks})),xRange:{min:xMin,max:xMax},yRange:{min:yMin,max:yMax},
+    summary:[['曲线数',series.length],['数据点合计',totalPoints],[`${d.xName||'X'} 轴范围`,`${formatNumber(xMin,3)}–${formatNumber(xMax,3)}`],['最相似曲线对',best?`${best.a} / ${best.b}`:'—']],
+    text:parts.join('')};
+}
+function spectrumInterpretationParagraphs(){
+  const existing=state.gallery?.analysis;
+  if(existing&&existing.kind==='spectrum'&&existing.text)return[existing.text];
+  const sp=analyzeSpectrumCurves();
+  return sp&&sp.text?[sp.text]:[];
+}
+/* ===== v1.5.0：Chart Studio 画板下方的自动文字解读（替代原 stage-tip 提示语） ===== */
+const STUDIO_MV_TYPES=new Set(['pca','hca','plsda','oplsda','plsr','oplsr']);
+/* ===== v1.5.0 第一期：把已经算好的多变量模型指标翻译成可复核的中文解读（纯追加，不新增算法） ===== */
+function correlationStrengthLabel(r){const v=Math.abs(Number(r));if(!Number.isFinite(v))return'无法评估';if(v>=.7)return'强';if(v>=.5)return'中等偏强';if(v>=.3)return'中等';if(v>=.1)return'弱';return'极弱'}
+function mvNum(v,d=3){return Number.isFinite(Number(v))&&v!==null&&v!==''?formatNumber(Number(v),d):'—'}
+function mvVipTop(a,count=3){
+  return (a&&a.vip?a.vip:[]).map((v,i)=>({v:Number(v),i})).filter(x=>Number.isFinite(x.v)).sort((x,y)=>y.v-x.v).slice(0,count)
+    .map(x=>`${(a.variables||[])[x.i]||('V'+(x.i+1))}（VIP = ${mvNum(x.v,2)}）`);
+}
+function mvClassCounts(labels,classes){return (classes||[]).map(g=>labels.filter(x=>String(x)===String(g)).length)}
+function pcaGroupSeparation(scores,labels){
+  if(!scores||!scores.length||!labels||!labels.length)return null;
+  const by=new Map();
+  scores.forEach((s,i)=>{const g=String(labels[i]||'All');if(!by.has(g))by.set(g,[]);by.get(g).push(s)});
+  const groups=[...by.entries()].map(([g,v])=>({g,n:v.length,c:[mean(v.map(x=>x[0])),mean(v.map(x=>x[1]))]}));
+  if(groups.length<2)return null;
+  let within=0,cnt=0;
+  by.forEach((v,g)=>{const c=(groups.find(x=>x.g===g)||{}).c;if(!c)return;v.forEach(s=>{within+=Math.sqrt((s[0]-c[0])**2+(s[1]-c[1])**2);cnt++})});
+  within=cnt?within/cnt:0;
+  let between=Infinity;
+  for(let i=0;i<groups.length;i++)for(let j=i+1;j<groups.length;j++)between=Math.min(between,Math.sqrt((groups[i].c[0]-groups[j].c[0])**2+(groups[i].c[1]-groups[j].c[1])**2));
+  return{groups,within,between,ratio:(within>0&&Number.isFinite(between))?between/within:NaN};
+}
+function mvInterpretationParagraphs(type,a){
+  if(!a)return [];
+  const rows=a.rows||[],n=rows.length,p=(a.variables||[]).length,ps=[];
+  const excluded=Number(a.excludedRows||0)||0;
+  const missNote=excluded>0?`另有 ${excluded} 个样本因存在缺失值未进入模型。`:'';
+  try{
+    if(type==='pca'){
+      const e=a.explained||[];if(!e.length)return [];
+      const pc1=Number(e[0]),pc2=Number(e[1]),cum=(Number.isFinite(pc1)?pc1:0)+(Number.isFinite(pc2)?pc2:0);
+      const cover=cum>=70?'较高，二维得分图可代表大部分变异':cum>=50?'中等，二维得分图可作总体趋势参考':'偏低，二维得分图只反映部分变异，据此判断分组时要谨慎';
+      ps.push(`PCA 使用 ${n} 个完整样本、${p} 个变量，共提取 ${e.length} 个主成分。PC1 解释 ${mvNum(pc1,1)}%、PC2 解释 ${mvNum(pc2,1)}% 的总方差，累计 ${mvNum(cum,1)}%；前两个主成分的解释率${cover}。${missNote}`);
+      const labels=rows.map(r=>String(r.group||''));
+      const hasGroup=labels.some(Boolean),sep=hasGroup?pcaGroupSeparation(a.scores,labels):null;
+      if(sep){
+        const minN=Math.min(...sep.groups.map(g=>g.n));
+        if(minN>=5){
+          const verdict=sep.ratio>=1?'组间差异大于组内离散，各组在 PC1–PC2 得分图上呈现分离':(sep.ratio>=.5?'组间间距小于组内离散，分离趋势存在但重叠明显':'组间间距明显小于组内离散，各组在得分图上基本重叠，未见清晰分离');
+          ps.push(`按判别因素着色后共 ${sep.groups.length} 组（各组样本数 ${sep.groups.map(g=>g.n).join(' / ')}）：组间中心间距 ${mvNum(sep.between,2)}，组内样本到各自中心的平均距离 ${mvNum(sep.within,2)}，二者比值 ${mvNum(sep.ratio,2)}。${verdict}。得分图上的视觉分离不构成统计显著性证据，正式结论应结合 PERMANOVA 或判别模型的交叉验证结果；相关与判别结果均不代表因果。`);
+        }else{
+          ps.push(`注意：样本量不足——最小分组样本数为 ${minN}（< 5）。样本量不足以支持「分组是否分离」的判断，因此这里只报告方差贡献率，不对分组分离下结论。`);
+        }
+      }else if(hasGroup){
+        ps.push('判别因素只有 1 个有效水平，无法比较组间在得分图上的分离情况。');
+      }
+      ps.push('载荷表示各变量对主成分的贡献大小，同一主成分的驱动变量可在载荷图上查看；主成分是变量的线性组合，其实际含义必须结合变量的物理与化学意义解释，不能只按编号命名。');
+    }
+    else if(type==='hca'){
+      const obj=a.target==='variables'?'变量':'样本';
+      const lk={ward:'Ward 最小方差法',average:'Average 平均连接',complete:'Complete 最大连接'}[a.linkage]||a.linkage||'—';
+      const t=a.tree,top=(t&&t.left&&t.right)?`树状图最高一次合并距离为 ${mvNum(t.height,3)}，根节点分为两支（分别含 ${t.left.size} 与 ${t.right.size} 个${obj}）`:'';
+      ps.push(`HCA 对 ${(a.labels||[]).length} 个${obj}做层次聚类，连接方式为 ${lk}，输入为 Z-score 标准化后的数值矩阵。${top}。${missNote}`);
+      ps.push('聚类距离是欧氏距离，量纲被标准化消除，只能反映相似性的排序，不能按「显著 / 不显著」解读；切分为几个簇应结合专业判据，并与其他方法（例如 PCA 得分分布）相互印证。');
+    }
+    else if(type==='plsda'){
+      const counts=mvClassCounts(a.labels||[],a.groups||[]),minN=counts.length?Math.min(...counts):0,acc=a.accuracy,k=a.folds;
+      const q2=Number(a.q2);
+      const quality=q2>=.5?'交叉验证 Q² 达到 0.5 以上，模型具备较好的判别能力':(q2>=.3?'交叉验证 Q² 在 0.3–0.5 之间，模型具备一定判别能力，但解释应谨慎':(q2>0?'交叉验证 Q² 低于 0.3，判别能力较弱，结论仅作探索性参考':'交叉验证 Q² ≤ 0，模型不具备可用的预测能力，不应据此下判别结论'));
+      ps.push(`PLS-DA 使用 ${n} 个完整样本、${p} 个变量，分为 ${(a.groups||[]).length} 组（各组样本数 ${counts.join(' / ')}），提取 ${a.components} 个潜变量。校准拟合 R²Y = ${mvNum(a.r2y,3)}；${k}-折分层交叉验证 Q² = ${mvNum(a.q2,3)}，判别准确率 ${Number.isFinite(Number(acc))?mvNum(Number(acc)*100,1)+'%':'—'}。${missNote}`);
+      ps.push(`模型表现：${quality}。${(Number(a.r2y)-q2)>.3?'校准拟合明显优于交叉验证，提示过拟合风险，判断模型质量应以 Q² 为准。':''}`);
+      const vip=mvVipTop(a,3);
+      if(vip.length)ps.push(`对判别贡献最大的变量（VIP 前三位）为 ${vip.join('、')}。VIP ≥ 1 通常视为对判别贡献较大的变量，但重要性不等同于机制上的因果关系。`);
+      if(minN<5)ps.push(`注意：样本量不足——最小分组样本数为 ${minN}（< 5），样本量不足以支持上述判别结论，建议补足独立平行样本后重新建模。`);
+      if((a.groups||[]).length>2)ps.push(`当前分组多于两类，模型按全部分组同时建模；若需要聚焦两两判别，请使用 OPLS-DA 的两两比较。`);
+    }
+    else if(type==='oplsda'){
+      const cls=a.comparisonClasses||a.classes||[],counts=mvClassCounts(a.labels||[],cls),minN=counts.length?Math.min(...counts):0,acc=a.accuracy,q2=Number(a.q2);
+      const quality=q2>=.5?'交叉验证 Q² 达到 0.5 以上，该两组的判别模型表现较好':(q2>=.3?'交叉验证 Q² 在 0.3–0.5 之间，判别趋势存在但需谨慎解释':(q2>0?'交叉验证 Q² 低于 0.3，判别能力较弱，仅作探索性参考':'交叉验证 Q² ≤ 0，模型不具备可用的预测能力，不应据此下判别结论'));
+      const dropRows=Number(a.excludedComparisonRows||0);
+      ps.push(`OPLS-DA 按 ${cls[0]} vs ${cls[1]} 两两比较，使用 ${n} 个样本（两组样本数 ${counts.join(' / ')}），提取 1 个预测成分与 ${mvNum(a.orthogonalComponents,0)} 个正交成分。校准拟合 R²Y = ${mvNum(a.r2y,3)}；${a.folds}-折分层交叉验证 Q² = ${mvNum(a.q2,3)}，判别准确率 ${Number.isFinite(Number(acc))?mvNum(Number(acc)*100,1)+'%':'—'}。${missNote}${dropRows>0?`其中 ${dropRows} 个样本不属于这两个比较水平，未进入本次模型。`:''}`);
+      ps.push(`模型表现：${quality}。正交成分用于容纳与分类无关的系统变异，S-plot 与 VIP 用于解释两组差异变量；正式论文应结合置换检验（当前模型可生成置换图）与独立验证样本，判别结果不代表因果。`);
+      const vip=mvVipTop(a,3);
+      if(vip.length)ps.push(`两组差异贡献最大的变量（VIP 前三位）为 ${vip.join('、')}。VIP ≥ 1 通常视为对判别贡献较大的变量。`);
+      if(minN<5)ps.push(`注意：样本量不足——最小比较组样本数为 ${minN}（< 5），样本量不足以支持上述判别结论。`);
+    }
+    else if(type==='plsr'||type==='oplsr'){
+      const nm=a.yName||'Y 因变量',label=type==='oplsr'?'OPLS-R':'PLS-R',r2=Number(a.r2),q2=Number(a.q2),k=a.folds;
+      const fit=r2>=.8?'校准拟合 R² 较高':(r2>=.5?'校准拟合 R² 中等':'校准拟合 R² 偏低');
+      ps.push(`${label} 用 ${p} 个 X 变量预测 ${nm}，使用 ${n} 个 X、Y 均完整的观测，自动选择 ${a.components} 个潜变量。${Number.isFinite(r2)?fit:''}${Number.isFinite(r2)?`（R² = ${mvNum(a.r2,3)}）`:'（R² 无法计算）'}；${k}-折交叉验证 Q² = ${mvNum(a.q2,3)}，交叉验证 RMSECV = ${mvNum(a.rmsecv,3)}。${missNote}`);
+      const overfit=Number.isFinite(r2)&&Number.isFinite(q2)&&(r2-q2)>.3;
+      const quality=q2>=.5?'交叉验证 Q² 达到 0.5 以上，模型具备实际预测价值':(q2>=.3?'交叉验证 Q² 在 0.3–0.5 之间，可用于趋势性预测，精确度有限':(q2>0?'交叉验证 Q² 低于 0.3，预测能力较弱，仅作探索性参考':'交叉验证 Q² ≤ 0，模型不具备可用预测能力，不应据此预测未知样品'));
+      ps.push(`预测能力以交叉验证 Q² 与 RMSECV 为准：${quality}。${overfit?'校准拟合明显优于交叉验证，提示过拟合风险，不应只报告 R²。':''}`);
+      const vip=mvVipTop(a,3);
+      if(vip.length)ps.push(`对预测贡献最大的变量（VIP 前三位）为 ${vip.join('、')}。VIP ≥ 1 通常视为重要变量，但重要性不等于机制上的因果关系。`);
+      if(n<10)ps.push(`注意：样本量不足——本次建模仅有 ${n} 个完整观测（< 10），样本量不足以支持上述预测结论，模型稳定性需要更多独立样本验证。`);
+    }
+    else return [];
+  }catch(e){console.error(e);return ps}
+  return ps;
+}
+if(typeof window!=='undefined')window.mvInterpretationParagraphs=mvInterpretationParagraphs;
+/* v1.5.0：与光谱模块 spIsActive() 保持同一判定口径——图形选择下拉、工作流、画廊任一指向 spectrum 即视为启用。 */
+/* v1.5.1：光谱判定改为 state 优先。旧版把 #studioChartTypeSelect 的 DOM 值与 state 并列判断，
+   程序化驱动或状态恢复时下拉框可能残留 spectrum，导致 MV/其他图形被误判为光谱、解读不刷新。 */
+function studioSpectrumActive(){
+  try{
+    const t=state.workflow?.chartType||state.gallery?.type;
+    if(t)return t==='spectrum';
+    return String(document.querySelector('#studioChartTypeSelect')?.value||'')==='spectrum';
+  }catch(_){return false}
+}
+/* v1.5.1：切换 MV 类型时 setWorkflowChart 只清空 state.multivar，state.gallery.analysis 会残留上一类型的结果；
+   若直接回退读取 gallery.analysis，会把 PCA 的旧结果按 PLS-DA/HCA 模板套出 undefined 字段。
+   这里校验分析结果形状与当前图形类型一致，不匹配时回到空状态提示，绝不用残留对象拼凑文字。 */
+function mvAnalysisMatchesType(a,type){
+  if(!a)return false;
+  if(type==='pca')return Array.isArray(a.explained)&&a.explained.length>0;
+  if(type==='hca')return !!a.tree&&Array.isArray(a.labels);
+  if(type==='plsda')return Number.isFinite(Number(a.r2y))&&Array.isArray(a.vip);
+  if(type==='oplsda')return Array.isArray(a.comparisonClasses)&&Number.isFinite(Number(a.r2y));
+  if(type==='plsr'||type==='oplsr')return Number.isFinite(Number(a.r2))&&Array.isArray(a.vip);
+  return false;
+}
+function studioInterpretationParagraphs(){
+  const type=state.workflow?.chartType;
+  if(studioSpectrumActive())return spectrumInterpretationParagraphs();
+  if(STUDIO_MV_TYPES.has(type)){const a=state.multivar?.analysis;return mvAnalysisMatchesType(a,type)?mvInterpretationParagraphs(type,a):[]}
+  if(state.workflow?.mode==='experiment')return interpretationParagraphs()||[];
+  const a=state.gallery?.analysis;return a&&a.text?[a.text]:[];
+}
+function renderStudioInterpretation(){
+  const host=$('#studioInterpretation');if(!host)return;
+  const ps=studioInterpretationParagraphs();
+  if(!ps.length){host.className='studio-interpretation empty';host.innerHTML='<p>导入数据并完成分析后，这里会自动生成文字解读。</p>';return}
+  host.className='studio-interpretation';
+  host.innerHTML='<div class="studio-interpretation-label">自动文字解读</div>'+ps.map(p=>`<p>${esc(p)}</p>`).join('');
+}
+(function(){const prev=renderChartStudio;renderChartStudio=function(){const r=prev.apply(this,arguments);try{renderStudioInterpretation()}catch(e){console.error(e)}return r}})();
+/* v1.5.0：仪器信号（光谱）走专用的分析分支，让统计页与画板下方共用同一份解读文字。此处只看工作流/画廊类型，避免下拉框残留值误判。 */
+(function(){const prev=analyzeGalleryData;analyzeGalleryData=function(){const type=state.workflow?.chartType||state.gallery?.type;if(type==='spectrum'){try{const r=analyzeSpectrumCurves();if(r){state.gallery.analysis=r;return r}}catch(e){console.error(e)}}return prev.apply(this,arguments)}})();
+
+/* v1.5.1：光谱 / 多变量 / 热力图等类型会被 index.html 的内联补丁在 renderChartStudio 里短路返回，
+   不经过本文件的 renderChartStudio 包装，导致画板下方解读不刷新。这里用观察绘制区的方式兜底触发重绘：
+   只监听 #chartStage 的子节点变化，而解读写入的是它的兄弟节点 #studioInterpretation，不会自激。 */
+(function(){
+  try{
+    const stage=document.querySelector('#chartStage');
+    if(!stage||typeof MutationObserver!=='function')return;
+    let pending=false;
+    const flush=function(){pending=false;try{renderStudioInterpretation()}catch(e){console.error(e)}};
+    const schedule=function(){if(pending)return;pending=true;if(typeof requestAnimationFrame==='function')requestAnimationFrame(flush);else setTimeout(flush,16)};
+    new MutationObserver(schedule).observe(stage,{childList:true,subtree:true});
+    schedule();
+  }catch(e){console.error(e)}
+})();
+
+/* v1.5.1：内联补丁会覆盖 scheduleChartEntryRender 和 showView，导致画板下方解读在光谱 / MV / 热力图等类型上漏刷新。
+   这里用 setTimeout(0) 延迟包装（在所有同步内联补丁执行完毕后执行），确保每次进入 Chart Studio 后都会调用 renderStudioInterpretation()。 */
+setTimeout(function(){
+  try{
+    if(typeof scheduleChartEntryRender==='function'&&!scheduleChartEntryRender.__studioInterpWrapped){
+      const prev=scheduleChartEntryRender;
+      scheduleChartEntryRender=function(){
+        const r=prev.apply(this,arguments);
+        setTimeout(function(){try{renderStudioInterpretation()}catch(e){console.error(e)}},0);
+        return r;
+      };
+      scheduleChartEntryRender.__studioInterpWrapped=true;
+    }
+    if(typeof showView==='function'&&!showView.__studioInterpWrapped){
+      const prev=showView;
+      showView=function(v){
+        const r=prev.apply(this,arguments);
+        if(v==='chart'){
+          setTimeout(function(){try{renderStudioInterpretation()}catch(e){console.error(e)}},0);
+        }
+        return r;
+      };
+      showView.__studioInterpWrapped=true;
+    }
+  }catch(e){console.error(e)}
+},0);
 
 init();

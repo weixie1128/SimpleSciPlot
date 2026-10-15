@@ -766,7 +766,9 @@
         ['相关方法', result.overall?.label || correlationMethodLabel()],
         ['回归拟合', '按组分别']
       ];
-      result.text = `检测到 ${result.table.length} 个组。散点图默认对每个 Group 分别计算相关系数并分别进行普通最小二乘线性回归；初步分析表中的每一行对应一个组。不会再用一条整体回归线同时代表多个处理组。`;
+      // v1.5.1：旧版直接覆盖 result.text，会把 app.js analyzeXY 已生成的
+      // 显著性/效应量解读整体抹掉。改为在保留原解读的基础上补充分组拟合说明。
+      result.text = `检测到 ${result.table.length} 个组。散点图默认对每个 Group 分别计算相关系数并分别进行普通最小二乘线性回归；初步分析表中的每一行对应一个组，不会用一条整体回归线同时代表多个处理组。以下为全部观测合并后的总体参考：${result.text || ''}`;
     }
     return result;
   };
