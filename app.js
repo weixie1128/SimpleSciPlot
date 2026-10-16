@@ -101,7 +101,7 @@ const defaultChartSettings = {
   letters:true, letterScheme:'within', postHoc:'duncan', letterSize:11, letterWeight:400, letterOffset:10,
   yMin:null, yMax:null, yTickStep:null, yAxisSegments:6, yTickDecimals:'auto', yTickRound:false, yScale:'linear',
   lowerMin:0, lowerMax:20, upperMin:70, upperMax:82, breakGap:12, lowerRatio:.23,
-  wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block',
+  wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
   background:'#ffffff'
 };
 
@@ -565,7 +565,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.8.1'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.8.2'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2269,6 +2269,36 @@ function wfXScale(xvals){
 }
 function wfLine(a,b,c,w,extra=''){return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}"${extra?' '+extra:''}/>`;}
 function wfPoly(pts,attrs){return `<polygon points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" ${attrs}/>`;}
+function wfHexToRgb(hex){const h=(hex||'#000').replace('#','');const v=h.length===3?h.split('').map(c=>c+c).join(''):h;return [parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)];}
+function wfRgbToHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function wfLerpColor(c1,c2,t){const a=wfHexToRgb(c1),b=wfHexToRgb(c2);return wfRgbToHex(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t);}
+function wfColorForLayer(k,n,colors){
+  const s=state.chart.settings;
+  if(s.wfColorMode==='gradient'&&n>1&&colors.length>=2){
+    const t=k/(n-1);
+    const seg=(colors.length-1)*t;
+    const i=Math.min(Math.floor(seg),colors.length-2);
+    const lt=seg-i;
+    return wfLerpColor(colors[i],colors[i+1],lt);
+  }
+  return colors[k%colors.length];
+}
+function wfFindPeaks(pts,minProm=0){
+  const peaks=[];
+  for(let i=1;i<pts.length-1;i++){
+    if(pts[i].mean>pts[i-1].mean&&pts[i].mean>pts[i+1].mean){
+      if(minProm>0){
+        let leftMin=pts[i].mean,rightMin=pts[i].mean;
+        for(let j=i-1;j>=0&&pts[j].mean<=pts[j+1].mean;j--)leftMin=Math.min(leftMin,pts[j].mean);
+        for(let j=i+1;j<pts.length&&pts[j].mean<=pts[j-1].mean;j++)rightMin=Math.min(rightMin,pts[j].mean);
+        const prom=pts[i].mean-Math.max(leftMin,rightMin);
+        if(prom<minProm)continue;
+      }
+      peaks.push(pts[i]);
+    }
+  }
+  return peaks;
+}
 function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   const s=state.chart.settings;
   const allPos=state.chartData.every(d=>d.mean>=0);
@@ -2284,29 +2314,43 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   const sideNx=dir>0?0:1,zEdgeNx=dir>0?1:0;
   const yN=v=>(Number(v)-bmin)/((bmax-bmin)||1);
   const P=(nx,ny,k)=>[M.l+nx*plotW+dir*k*dx,axisY-ny*plotH-k*dy];
-  const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor;
+  const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   let out='';
   // 1) 后墙 k=K
-  out+=wfPoly([P(0,0,K),P(1,0,K),P(1,1,K),P(0,1,K)],`fill="${wc}" stroke="none"`);
+  out+=wfPoly([P(0,0,K),P(1,0,K),P(1,1,K),P(0,1,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,K),P(t.n,1,K),gc,gw));
   yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,K),P(1,ny,K),gc,gw);});
   // 2) 侧墙 sideNx
-  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,K),P(sideNx,1,K),P(sideNx,1,0)],`fill="${wc}" stroke="none"`);
+  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,K),P(sideNx,1,K),P(sideNx,1,0)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
   yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,K),gc,gw);});
   for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),gc,gw);
   // 3) 底面 ny=0
-  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,K),P(0,0,K)],`fill="${wc}" stroke="none"`);
+  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,K),P(0,0,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,K),gc,gw));
   for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gc,gw);
   // 4) 层片（后→前）
+  const selK=(s.wfHighlightSelected&&state.chart.selectedSeries!=null)?Number(state.chart.selectedSeries):null;
   for(let k=K;k>=0;k--){
-    const g=gs[k],pts=model.byGroup.get(String(g))||[],c=colors[k%colors.length];
+    const g=gs[k],pts=model.byGroup.get(String(g))||[],c=wfColorForLayer(k,gs.length,colors);
     const coords=pts.map(d=>{const nx=xs.norm(d.x),ny=yN(d.mean);return P(nx,ny,k);}).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
     if(coords.length<2)continue;
     const x1=coords[coords.length-1][0],bl=P(0,0,k),br=P(1,0,k);
-    if(s.wfFill)out+=wfPoly([bl,...coords,br],`fill="${c}" fill-opacity="${s.wfFillOpacity}" stroke="none"`);
+    const dimmed=(selK!=null&&selK!==k);
+    const fillOp=dimmed?(s.wfFillOpacity*.25):s.wfFillOpacity;
+    const strokeOp=dimmed?'.3':'1';
+    if(s.wfFill)out+=wfPoly([bl,...coords,br],`fill="${c}" fill-opacity="${fillOp}" stroke="none"`);
     const lw=getSeriesStyle(k).lineWidth||1.4;
-    out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${darken(c,.18)}" stroke-width="${lw}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${darken(c,.18)}" stroke-width="${lw}" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="${strokeOp}"/>`;
+    if(s.wfShowMarkers)coords.forEach(p=>out+=markerSvg(p[0],p[1],c,k));
+    if(s.wfPeakLabels){
+      const peaks=wfFindPeaks(pts,Number(s.wfPeakMinProminence)||0);
+      peaks.forEach(d=>{
+        const pp=P(xs.norm(d.x),yN(d.mean),k);
+        out+=`<circle cx="${pp[0].toFixed(1)}" cy="${(pp[1]-7).toFixed(1)}" r="3" fill="${c}" stroke="${darken(c,.3)}" stroke-width=".8"/>`;
+        const lbl=formatAxisNumber(d.mean,s.wfPeakLabelDecimals!=null?Number(s.wfPeakLabelDecimals):1,Math.abs(d.mean)*.1,false);
+        out+=`<text x="${pp[0].toFixed(1)}" y="${(pp[1]-12).toFixed(1)}" text-anchor="middle" font-size="${s.wfZLabelSize}" fill="${darken(c,.3)}">${esc(lbl)}</text>`;
+      });
+    }
     if(s.wfLineEndLabels)out+=`<text data-object="z-label" x="${(x1+6).toFixed(1)}" y="${(coords[coords.length-1][1]+4).toFixed(1)}" font-size="${s.wfZLabelSize}" fill="${darken(c,.2)}">${esc(g)}</text>`;
   }
   // 5) 棱线：前轴粗，后轮廓细
@@ -2679,12 +2723,20 @@ function renderProperties(){
 +'<div class="object-property-section"><h3>层曲线与填充</h3></div>'+fieldGroup([
     checkField('wfFill','每层填充到基线'),
     rangeField('wfFillOpacity','填充不透明度',0,1,.05),
+    checkField('wfShowMarkers','显示数据点 marker'),
+    checkField('wfHighlightSelected','选中某层时其他层变淡'),
+    selectField('wfColorMode','配色方式',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfLineEndLabels','线尾标注层名')])
++'<div class="object-property-section"><h3>峰值标注</h3></div>'+fieldGroup([
+    checkField('wfPeakLabels','自动标注每层峰值'),
+    rangeField('wfPeakMinProminence','最小突出度（过滤小峰）',0,5,.1),
+    selectField('wfPeakLabelDecimals','数值小数位',[['0','整数'],['1','1 位'],['2','2 位'],['3','3 位']])])
 +'<div class="object-property-section"><h3>Z 轴（层 / 时间 / 温度）</h3></div>'+fieldGroup([
     textField('wfZAxisTitle','Z 轴标题'),
     rangeField('wfZLabelSize','Z 轴标签字号',8,20,1)])
 +'<div class="object-property-section"><h3>墙面、网格与图例</h3></div>'+fieldGroup([
     colorField('wfWallColor','墙面底色'),
+    rangeField('wfWallOpacity','墙面透明度',0,1,.05),
     colorField('wfGridColor','网格线颜色'),
     rangeField('wfGridWidth','网格线粗细',.2,2,.1),
     checkField('wfLegend','显示图例'),
@@ -2859,7 +2911,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.8.1',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.8.2',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
