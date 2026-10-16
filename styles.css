@@ -698,3 +698,10 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 #view-chart .studio-interpretation-label{font-size:var(--fs-caption);font-weight:800;letter-spacing:.06em;color:#0d6b55;margin-bottom:8px}
 #view-chart .studio-interpretation p{font-family:"Times New Roman","Songti SC",SimSun,serif;font-size:var(--fs-title);line-height:1.85;font-variant-numeric:lining-nums;color:var(--ink-2);border-left:3px solid rgba(13,107,85,.7);padding:2px 0 2px 18px;max-width:44rem;margin:0 0 10px}
 #view-chart .studio-interpretation p:last-child{margin-bottom:0}
+
+/* ===== v1.5.3：Chart Studio 顶部图形类型切换按钮的选中态改为浅绿底 + 深绿字 =====
+   原因：选中态原为深绿底(--accent #0d6b55)，但上一段 `#view-chart .segmented button{color:var(--ink-2)}`
+   特异性更高，把选中态本应的白字覆盖成深灰绿字，形成深底深字、文字几乎不可见。
+   这里用更高特异性还原为与全站其他选中态一致的浅绿底(--accent-soft) + 深绿字，并加一道浅绿描边强化选中边界。 */
+.segmented button.active{background:var(--accent-soft);color:#0d6b55}
+#view-chart .segmented button.active{background:var(--accent-soft);color:#0d6b55;box-shadow:inset 0 0 0 1px var(--accent-2)}
