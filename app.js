@@ -565,7 +565,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.5.4'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.6.1'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2859,7 +2859,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.5.4',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.6.1',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -4365,7 +4365,7 @@ function renderStudioInterpretation(){
 }
 (function(){const prev=renderChartStudio;renderChartStudio=function(){const r=prev.apply(this,arguments);try{renderStudioInterpretation()}catch(e){console.error(e)}return r}})();
 /* v1.5.0：仪器信号（光谱）走专用的分析分支，让统计页与画板下方共用同一份解读文字。此处只看工作流/画廊类型，避免下拉框残留值误判。 */
-(function(){const prev=analyzeGalleryData;analyzeGalleryData=function(){const type=state.workflow?.chartType||state.gallery?.type;if(type==='spectrum'){try{const r=analyzeSpectrumCurves();if(r){state.gallery.analysis=r;return r}}catch(e){console.error(e)}}return prev.apply(this,arguments)}})();
+(function(){const prev=analyzeGalleryData;analyzeGalleryData=function(){const type=state.workflow?.chartType||state.gallery?.type;if(type==='spectrum'){try{const r=analyzeSpectrumCurves();if(r){state.gallery.analysis=r;return r}}catch(e){console.error(e)}}if(type==='thermal'){state.gallery.analysis=null;return null}return prev.apply(this,arguments)}})();
 
 /* v1.5.1：光谱 / 多变量 / 热力图等类型会被 index.html 的内联补丁在 renderChartStudio 里短路返回，
    不经过本文件的 renderChartStudio 包装，导致画板下方解读不刷新。这里用观察绘制区的方式兜底触发重绘：
