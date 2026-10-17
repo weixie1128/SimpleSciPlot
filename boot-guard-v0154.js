@@ -107,6 +107,13 @@
 
   window.addEventListener('unhandledrejection', event => {
     const reason = event.reason;
+    // v1.8.3: ServiceWorker 更新/抓取失败（常见于 GitHub Pages 部署期间或离线环境）
+    // 不影响绘图功能，下次刷新会自动重试，不应弹全局错误横幅打扰用户。
+    const msg = String((reason && (reason.message || reason.name)) || reason || '');
+    if (/serviceworker|service worker/i.test(msg)) {
+      event.preventDefault && event.preventDefault();
+      return;
+    }
     report('未处理的异步错误', reason && (reason.stack || reason.message) || String(reason));
   });
 

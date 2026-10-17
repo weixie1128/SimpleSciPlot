@@ -565,7 +565,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.8.2'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.8.3'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -1246,7 +1246,7 @@ function oneWayAnova(rows,key='a'){
 
 function twoWayAnova(rows){
   const A=[...new Set(rows.map(r=>r.a))],B=[...new Set(rows.map(r=>r.b))],cell=new Map();
-  if((state.workflow.chartType==='line'||state.workflow.chartType==='curve')&&A.length>250){
+  if((state.workflow.chartType==='line'||state.workflow.chartType==='curve'||state.workflow.chartType==='waterfall')&&A.length>250){
     return{kind:'two',balanced:false,continuous:true,rows:[],mse:null,dfError:null,message:`检测到 ${A.length} 个连续 X 水平。为避免把上千个时间点错误地当作分类水平并造成浏览器阻塞，初步分析不自动执行超大双因素 ANOVA；图形仍使用全部数据。需要正式推断时建议使用重复测量、混合效应或时间序列模型。`};
   }
   rows.forEach(r=>{const k=`${r.a}\u0001${r.b}`;if(!cell.has(k))cell.set(k,[]);cell.get(k).push(r.value)});
@@ -1259,7 +1259,20 @@ function twoWayAnova(rows){
   const ssA=B.length*n*A.reduce((s,a)=>s+(meanA.get(a)-grand)**2,0);
   const ssB=A.length*n*B.reduce((s,b)=>s+(meanB.get(b)-grand)**2,0);
   let ssAB=0,sse=0;A.forEach(a=>B.forEach(b=>{const cm=meanCell.get(`${a}\u0001${b}`);ssAB+=n*(cm-meanA.get(a)-meanB.get(b)+grand)**2;cell.get(`${a}\u0001${b}`).forEach(v=>sse+=(v-cm)**2)}));
-  const dfA=A.length-1,dfB=B.length-1,dfAB=dfA*dfB,dfE=A.length*B.length*(n-1),msA=ssA/dfA,msB=ssB/dfB,msAB=ssAB/dfAB,mse=sse/dfE;
+  const dfA=A.length-1,dfB=B.length-1,dfAB=dfA*dfB,dfE=A.length*B.length*(n-1),msA=ssA/dfA,msB=ssB/dfB,msAB=ssAB/dfAB;
+  // v1.8.3：每个因素组合只有 1 个观测（曲线/瀑布图的连续 X 数据常见）时误差自由度为 0，
+  // 此前 mse=sse/0=NaN，F 与 p 全部变成 NaN，解读却仍输出「主效应不显著（p = NaN）」。
+  if(dfE===0){
+    const noRepMsg='每个因素组合只有 1 个观测（无重复），无法估计误差项，双因素 ANOVA 不输出 F 与 p 值；连续曲线/瀑布数据请查看各层峰位与首末净变化的描述性摘要。';
+    return{kind:'two',balanced:true,noReplicates:true,A,B,n,grand,mse:null,dfError:0,pA:null,pB:null,pAB:null,message:noRepMsg,rows:[
+      {source:state.design.factorAName,ss:ssA,df:dfA,ms:msA,F:null,p:null},
+      {source:state.design.factorBName,ss:ssB,df:dfB,ms:msB,F:null,p:null},
+      {source:`${state.design.factorAName} × ${state.design.factorBName}`,ss:ssAB,df:dfAB,ms:msAB,F:null,p:null},
+      {source:'误差',ss:0,df:0,ms:null,F:null,p:null},
+      {source:'总计',ss:ssA+ssB+ssAB,df:all.length-1,ms:null,F:null,p:null}
+    ]};
+  }
+  const mse=sse/dfE;
   const FA=msA/mse,FB=msB/mse,FAB=msAB/mse,pA=fSurvival(FA,dfA,dfE),pB=fSurvival(FB,dfB,dfE),pAB=fSurvival(FAB,dfAB,dfE);
   return{kind:'two',balanced:true,A,B,n,grand,mse,dfError:dfE,pA,pB,pAB,rows:[
     {source:state.design.factorAName,ss:ssA,df:dfA,ms:msA,F:FA,p:pA},
@@ -1277,7 +1290,7 @@ function renderStatistics(){
   const qw=state.dataWarnings||[];
   const warnBanner=qw.length?`<div style="grid-column:1/-1;border:1px solid #e0a800;background:#fff8e6;color:#7a5b00;border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.6"><b>数据提醒（${qw.length}）：</b>${esc(qw.slice(0,8).join('；'))}${qw.length>8?' 等':''}</div>`:'';
   $('#summaryCards').innerHTML=warnBanner+[
-    ['原始测定值',state.rawData.length||'—'],['独立平行样本',state.analysisRows.length||'—'],['实验组合',desc.length||'—'],['分析模型',!a?'—':a.continuous?'连续趋势摘要':a.kind==='two'?'双因素 ANOVA':'单因素 ANOVA']
+    ['原始测定值',state.rawData.length||'—'],['独立平行样本',state.analysisRows.length||'—'],['实验组合',desc.length||'—'],['分析模型',!a?'—':a.continuous?'连续趋势摘要':a.noReplicates?'无重复·仅描述统计':a.kind==='two'?'双因素 ANOVA':'单因素 ANOVA']
   ].map(([n,v])=>`<div class="summary-card"><span>${n}</span><b>${v}</b></div>`).join('');
   renderDescriptiveTable();renderAnovaTable();renderInterpretation();
 }
@@ -1319,6 +1332,7 @@ function galleryMethodRows(type){
   if(type==='plsr')return[['PLS-R 回归','交叉验证预测、得分图、VIP、R²、Q²、RMSECV','已接入'],['外部验证','独立验证集预测能力','未接入']];
   if(type==='oplsr')return[['OPLS-R 回归','预测 / 正交得分、S-plot、VIP、R²X、R²、Q²、RMSECV','已接入'],['外部验证','独立验证集预测能力','未接入']];
   if(type==='spectrum')return[['曲线区间统计','X 轴范围、曲线条数、峰位与峰高','已接入'],['曲线相似度','公共 X 网格重采样后的成对相关与 RMSE','已接入'],['峰归属','自动寻峰参数与谱峰归属','未接入']];
+  if(type==='waterfall')return[['曲线区间统计','X 轴范围、层数、各层峰位与峰高','已接入（实验模式）'],['层间趋势比较','逐层首末净变化与峰位对比','已接入（实验模式）'],['显著性检验','瀑布图每个横轴位置只有 1 个测定值，需独立重复设计后检验','未接入']];
   return[['描述统计','基础数据概览','已接入']];
 }
 
@@ -1335,25 +1349,58 @@ function renderAnovaTable(){
   const a=state.analysis;$('#anovaMethodText').textContent=(state.design.designType==='two'?'平衡设计双因素 ANOVA，含交互作用。':'单因素 ANOVA。')+` 同一样品的技术测定按“${aggregationLabel()}”汇总，R1、R2、R3 等独立平行作为统计单元。`;
   let html='<thead><tr><th>变异来源</th><th>SS</th><th>df</th><th>MS</th><th>F</th><th>p</th></tr></thead><tbody>';
   if(!a)html+='<tr><td colspan="6" class="empty-row">暂无统计结果</td></tr>';
-  else if(!a.balanced&&a.kind==='two')html+=`<tr><td colspan="6" class="empty-row">${esc(a.message)}</td></tr>`;
+  else if(a.kind==='two'&&(!a.balanced||a.noReplicates))html+=`<tr><td colspan="6" class="empty-row">${esc(a.message)}</td></tr>`;
   else a.rows.forEach(r=>html+=`<tr><td>${esc(r.source)}</td><td>${formatNumber(r.ss,5)}</td><td>${r.df}</td><td>${r.ms==null?'—':formatNumber(r.ms,5)}</td><td>${r.F==null?'—':formatNumber(r.F,3)}</td><td>${r.p==null?'—':formatP(r.p)}</td></tr>`);
   $('#anovaTable').innerHTML=html+'</tbody>';
 }
 
 function interpretationParagraphs(){
   const a=state.analysis,d=state.design;if(!a)return null;
+  // v1.8.3：3D 瀑布图在「每个横轴位置只有 1 个测定值」（无重复误差项，
+  // 或连续 X 水平过多）时，不能套用双因素 ANOVA 与「首末均值差」模板，
+  // 改为逐层峰位/净变化的描述性摘要；若是有独立重复的合法双因素设计则仍走 ANOVA 解读。
+  if((state.workflow.chartType==='waterfall'||state.chart.type==='waterfall')&&a.kind==='two'&&(a.noReplicates||a.continuous)){
+    const wf=waterfallSignalParagraphs();
+    if(wf)return wf;
+  }
   const paragraphs=[];
   if(a.kind==='one'){
     const sorted=state.descriptive.slice().sort((x,y)=>levelIndex(x.a,d.factorALevels)-levelIndex(y.a,d.factorALevels)),first=sorted[0],last=sorted[sorted.length-1],change=last.mean-first.mean;
-    paragraphs.push(`${d.metricName} 在 ${d.factorAName} 的各水平间${a.pMain<.05?'存在统计学差异':'未检出统计学差异'}（${formatPText(a.pMain)}）。`);
+    if(Number.isFinite(a.pMain))paragraphs.push(`${d.metricName} 在 ${d.factorAName} 的各水平间${a.pMain<.05?'存在统计学差异':'未检出统计学差异'}（${formatPText(a.pMain)}）。`);
+    else paragraphs.push(a.message||'当前数据无法计算组间检验 p 值（通常因为各组没有重复观测），仅提供描述统计。');
     if(first&&last)paragraphs.push(`从 ${first.a} 到 ${last.a}，均值由 ${formatNumber(first.mean,3)} 变化到 ${formatNumber(last.mean,3)}，总体${change>0?'上升':change<0?'下降':'基本不变'} ${formatNumber(Math.abs(change),3)}${d.metricUnit?` ${d.metricUnit}`:''}。`);
   }else if(!a.balanced)paragraphs.push(a.message);
   else{
-    paragraphs.push(`${d.factorAName} 主效应${a.pA<.05?'显著':'不显著'}（${formatPText(a.pA)}），${d.factorBName} 主效应${a.pB<.05?'显著':'不显著'}（${formatPText(a.pB)}）。`);
-    paragraphs.push(`两因素交互作用${a.pAB<.05?'显著':'不显著'}（${formatPText(a.pAB)}）${a.pAB<.05?'，说明一个因素的影响会随另一个因素水平而变化，因此应优先比较各组合的简单效应。':'，在当前数据下两因素的变化模式较为一致。'}`);
-    d.factorBLevels.forEach(b=>{const series=state.descriptive.filter(r=>r.b===b).sort((x,y)=>levelIndex(x.a,d.factorALevels)-levelIndex(y.a,d.factorALevels));if(series.length>1){const c=series.at(-1).mean-series[0].mean;paragraphs.push(`${b} 条件下，${d.metricName} 从 ${series[0].a} 到 ${series.at(-1).a} 总体${c>0?'增加':c<0?'降低':'保持稳定'} ${formatNumber(Math.abs(c),3)}${d.metricUnit?` ${d.metricUnit}`:''}。`)}});
+    // v1.8.3：p 值为 null（如无重复观测）时不再输出「不显著（p = NaN）」式的误导结论。
+    if(!Number.isFinite(a.pA)||!Number.isFinite(a.pB)||!Number.isFinite(a.pAB)){
+      paragraphs.push(a.message||'当前数据无法计算双因素 ANOVA 的 F 与 p 值（通常因为每个因素组合只有 1 个观测、没有重复），因此不输出显著性结论，描述统计仍可参考。');
+    }else{
+      paragraphs.push(`${d.factorAName} 主效应${a.pA<.05?'显著':'不显著'}（${formatPText(a.pA)}），${d.factorBName} 主效应${a.pB<.05?'显著':'不显著'}（${formatPText(a.pB)}）。`);
+      paragraphs.push(`两因素交互作用${a.pAB<.05?'显著':'不显著'}（${formatPText(a.pAB)}）${a.pAB<.05?'，说明一个因素的影响会随另一个因素水平而变化，因此应优先比较各组合的简单效应。':'，在当前数据下两因素的变化模式较为一致。'}`);
+      d.factorBLevels.forEach(b=>{const series=state.descriptive.filter(r=>r.b===b).sort((x,y)=>levelIndex(x.a,d.factorALevels)-levelIndex(y.a,d.factorALevels));if(series.length>1){const c=series.at(-1).mean-series[0].mean;paragraphs.push(`${b} 条件下，${d.metricName} 从 ${series[0].a} 到 ${series.at(-1).a} 总体${c>0?'增加':c<0?'降低':'保持稳定'} ${formatNumber(Math.abs(c),3)}${d.metricUnit?` ${d.metricUnit}`:''}。`)}});
+    }
   }
   return paragraphs;
+}
+/* v1.8.3：瀑布图信号摘要——基于描述统计的「横轴位置 × 层」组合均值（每个位置 1 个值），
+   逐层给出点数、最高峰位置/强度、首末净变化，明确不做显著性检验。 */
+function waterfallSignalParagraphs(){
+  const d=state.design,rows=state.descriptive||[];
+  if(!rows.length)return null;
+  const byB=new Map();
+  rows.forEach(r=>{const b=String(r.b??'');const x=parseFloat(r.a),y=Number(r.mean);if(!Number.isFinite(x)||!Number.isFinite(y))return;if(!byB.has(b))byB.set(b,[]);byB.get(b).push({x,y})});
+  const layers=[...byB.entries()].map(([b,pts])=>[b,pts.sort((p,q)=>p.x-q.x)]).filter(([,pts])=>pts.length>0);
+  if(!layers.length)return null;
+  const xAll=layers.flatMap(([,pts])=>pts.map(p=>p.x));
+  const xMin=Math.min(...xAll),xMax=Math.max(...xAll);
+  const unit=d.metricUnit?` ${d.metricUnit}`:'';
+  const ps=[`共 ${layers.length} 条曲线（${layers.map(([b])=>b).join('、')}），横轴 ${d.factorAName||'X'} 范围 ${formatNumber(xMin,3)}–${formatNumber(xMax,3)}。每条曲线在每个横轴位置只有 1 个测定值、没有独立平行重复，因此这里只做峰位与净变化的描述性摘要，不做显著性检验。`];
+  layers.forEach(([b,pts])=>{
+    let top=pts[0];pts.forEach(p=>{if(p.y>top.y)top=p});
+    const first=pts[0],last=pts[pts.length-1],delta=last.y-first.y;
+    ps.push(`${b}：${pts.length} 个点，最高峰位于 ${formatNumber(top.x,3)}（${formatNumber(top.y,3)}${unit}）；从 ${formatNumber(first.x,3)} 到 ${formatNumber(last.x,3)} 数值由 ${formatNumber(first.y,3)} 变为 ${formatNumber(last.y,3)}，首末净${delta>0?'上升':delta<0?'下降':'持平'} ${formatNumber(Math.abs(delta),3)}${unit}；中间峰谷以曲线为准，首末差值不代表全程变化幅度。`);
+  });
+  return ps;
 }
 function renderInterpretation(){
   const box=$('#interpretationText'),paragraphs=interpretationParagraphs();
@@ -2317,6 +2364,7 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   let out='';
   // 1) 后墙 k=K
+  out+='<g pointer-events="none">';
   out+=wfPoly([P(0,0,K),P(1,0,K),P(1,1,K),P(0,1,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,K),P(t.n,1,K),gc,gw));
   yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,K),P(1,ny,K),gc,gw);});
@@ -2328,6 +2376,7 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,K),P(0,0,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,K),gc,gw));
   for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gc,gw);
+  out+='</g>';
   // 4) 层片（后→前）
   const selK=(s.wfHighlightSelected&&state.chart.selectedSeries!=null)?Number(state.chart.selectedSeries):null;
   for(let k=K;k>=0;k--){
@@ -2338,20 +2387,23 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
     const dimmed=(selK!=null&&selK!==k);
     const fillOp=dimmed?(s.wfFillOpacity*.25):s.wfFillOpacity;
     const strokeOp=dimmed?'.3':'1';
-    if(s.wfFill)out+=wfPoly([bl,...coords,br],`fill="${c}" fill-opacity="${fillOp}" stroke="none"`);
+    if(s.wfFill)out+=wfPoly([bl,...coords,br],`fill="${c}" fill-opacity="${fillOp}" stroke="none" pointer-events="none"`);
     const lw=getSeriesStyle(k).lineWidth||1.4;
-    out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${darken(c,.18)}" stroke-width="${lw}" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="${strokeOp}"/>`;
+    out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${darken(c,.18)}" stroke-width="${lw}" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="${strokeOp}" pointer-events="none"/>`;
     if(s.wfShowMarkers)coords.forEach(p=>out+=markerSvg(p[0],p[1],c,k));
     if(s.wfPeakLabels){
       const peaks=wfFindPeaks(pts,Number(s.wfPeakMinProminence)||0);
       peaks.forEach(d=>{
         const pp=P(xs.norm(d.x),yN(d.mean),k);
-        out+=`<circle cx="${pp[0].toFixed(1)}" cy="${(pp[1]-7).toFixed(1)}" r="3" fill="${c}" stroke="${darken(c,.3)}" stroke-width=".8"/>`;
+        out+=`<circle cx="${pp[0].toFixed(1)}" cy="${(pp[1]-7).toFixed(1)}" r="3" fill="${c}" stroke="${darken(c,.3)}" stroke-width=".8" pointer-events="none"/>`;
         const lbl=formatAxisNumber(d.mean,s.wfPeakLabelDecimals!=null?Number(s.wfPeakLabelDecimals):1,Math.abs(d.mean)*.1,false);
-        out+=`<text x="${pp[0].toFixed(1)}" y="${(pp[1]-12).toFixed(1)}" text-anchor="middle" font-size="${s.wfZLabelSize}" fill="${darken(c,.3)}">${esc(lbl)}</text>`;
+        out+=`<text x="${pp[0].toFixed(1)}" y="${(pp[1]-12).toFixed(1)}" text-anchor="middle" font-size="${s.wfZLabelSize}" fill="${darken(c,.3)}" pointer-events="none">${esc(lbl)}</text>`;
       });
     }
-    if(s.wfLineEndLabels)out+=`<text data-object="z-label" x="${(x1+6).toFixed(1)}" y="${(coords[coords.length-1][1]+4).toFixed(1)}" font-size="${s.wfZLabelSize}" fill="${darken(c,.2)}">${esc(g)}</text>`;
+    if(s.wfLineEndLabels)out+=`<text data-object="z-label" x="${(x1+6).toFixed(1)}" y="${(coords[coords.length-1][1]+4).toFixed(1)}" font-size="${s.wfZLabelSize}" fill="${darken(c,.2)}" pointer-events="none">${esc(g)}</text>`;
+    // v1.8.3：透明粗描边热区。层填充与可见细线都不接收指针事件，
+    // 仅这条 ~14px 宽的透明路径可点，保证密集曲线也能直接在图中选中该层。
+    out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="transparent" stroke-width="${Math.max(12,lw*6)}" stroke-linejoin="round" stroke-linecap="round" pointer-events="stroke" style="cursor:pointer"/>`;
   }
   // 5) 棱线：前轴粗，后轮廓细
   const ac=s.axisColor,aw=s.axisWidth;
@@ -2911,7 +2963,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.8.2',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.8.3',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -4420,7 +4472,11 @@ function renderStudioInterpretation(){
 }
 (function(){const prev=renderChartStudio;renderChartStudio=function(){const r=prev.apply(this,arguments);try{renderStudioInterpretation()}catch(e){console.error(e)}return r}})();
 /* v1.5.0：仪器信号（光谱）走专用的分析分支，让统计页与画板下方共用同一份解读文字。此处只看工作流/画廊类型，避免下拉框残留值误判。 */
-(function(){const prev=analyzeGalleryData;analyzeGalleryData=function(){const type=state.workflow?.chartType||state.gallery?.type;if(type==='spectrum'){try{const r=analyzeSpectrumCurves();if(r){state.gallery.analysis=r;return r}}catch(e){console.error(e)}}if(type==='thermal'){state.gallery.analysis=null;return null}return prev.apply(this,arguments)}})();
+(function(){const prev=analyzeGalleryData;analyzeGalleryData=function(){const type=state.workflow?.chartType||state.gallery?.type;if(type==='spectrum'){try{const r=analyzeSpectrumCurves();if(r){state.gallery.analysis=r;return r}}catch(e){console.error(e)}}if(type==='thermal'){state.gallery.analysis=null;return null}
+/* v1.8.3：3D 瀑布图是连续信号曲线，画廊通用兜底会把它误判成雷达数据并给出错误指标，
+   在接入专用曲线分析前先置空，宁可不显示解读也不输出错误结论。 */
+if(type==='waterfall'){state.gallery.analysis=null;return null}
+return prev.apply(this,arguments)}})();
 
 /* v1.5.1：光谱 / 多变量 / 热力图等类型会被 index.html 的内联补丁在 renderChartStudio 里短路返回，
    不经过本文件的 renderChartStudio 包装，导致画板下方解读不刷新。这里用观察绘制区的方式兜底触发重绘：
