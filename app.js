@@ -102,6 +102,8 @@ const defaultChartSettings = {
   yMin:null, yMax:null, yTickStep:null, yAxisSegments:6, yTickDecimals:'auto', yTickRound:false, yScale:'linear',
   lowerMin:0, lowerMax:20, upperMin:70, upperMax:82, breakGap:12, lowerRatio:.23,
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
+  // v1.8.5：3D 柱状图专属——方位角（绝对值，方向随 wfViewDir）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
+  b3Azim:34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
   background:'#ffffff'
 };
 
@@ -567,7 +569,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.8.4'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.8.5'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2249,7 +2251,7 @@ function renderChart(){
   const xvals=chartXs(),gs=chartGroups(),bounds=chartBounds();ensureSeriesStyles();
   const isWf=state.chart.type==='waterfall',isB3=state.chart.type==='bar3d';
   if(isWf){const WfM=wfLayout(gs.length,W,H);const WfPW=W-WfM.l-WfM.r,WfPH=H-WfM.t-WfM.b;svg+=renderWaterfall(W,H,WfM,WfPW,WfPH,xvals,gs,colors,bounds);}
-  else if(isB3){const WfM=wfLayout(gs.length,W,H);const WfPW=W-WfM.l-WfM.r,WfPH=H-WfM.t-WfM.b;svg+=renderBar3D(W,H,WfM,WfPW,WfPH,xvals,gs,colors,bounds);}
+  else if(isB3){svg+=renderBar3D(W,H,xvals,gs,colors,bounds);}
   else{svg+=state.chart.breakAxis?renderBrokenPlot(W,H,M,plotW,plotH,xvals,gs,colors):renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,bounds);svg+=renderExperimentAnnotations(M,plotW,plotH,xvals,bounds);svg+=renderLegendFrame(gs,colors);svg+=renderLegend(gs,colors);}
   svg+='</svg>';$('#chartStage').innerHTML=svg;bindChartObjects();bindDraggables();
 }
@@ -2335,6 +2337,21 @@ function wfColorForLayer(k,n,colors){
     return wfLerpColor(colors[i],colors[i+1],lt);
   }
   return colors[k%colors.length];
+}
+/* v1.8.5：3D 柱状图按数值渐变的色带（MATLAB/matplotlib 风格），t∈[0,1] */
+const B3_CMAPS={
+  plasma:[[0,'#0d0887'],[.25,'#7e03a8'],[.5,'#cc4678'],[.75,'#f89441'],[1,'#f0f921']],
+  viridis:[[0,'#440154'],[.25,'#3b528b'],[.5,'#21918c'],[.75,'#5ec962'],[1,'#fde725']],
+  inferno:[[0,'#000004'],[.25,'#57106e'],[.5,'#bc3754'],[.75,'#f98e09'],[1,'#fcffa4']],
+  rdbu:[[0,'#b2182b'],[.25,'#ef8a62'],[.5,'#f7f7f7'],[.75,'#67a9cf'],[1,'#2166ac']],
+  terrain:[[0,'#2c7bb6'],[.25,'#abd9e9'],[.5,'#ffffbf'],[.75,'#fdae61'],[1,'#d7191c']]
+};
+function b3CmapColor(name,t){
+  const stops=B3_CMAPS[name]||B3_CMAPS.plasma;const x=clamp(Number.isFinite(+t)?+t:0,0,1);
+  let a=stops[0],b2=stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++){if(x>=stops[i][0]&&x<=stops[i+1][0]){a=stops[i];b2=stops[i+1];break}}
+  const lt=(b2[0]-a[0])===0?0:(x-a[0])/(b2[0]-a[0]);
+  return wfLerpColor(a[1],b2[1],lt);
 }
 function wfFindPeaks(pts,minProm=0){
   const peaks=[];
@@ -2471,12 +2488,15 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   return out;
 }
 
-/* v1.8.4：3D 柱状图（纵深式）
- * X = 因素A水平（前底边，类目）；Z = 因素B水平（纵深层）；Y = 均值（柱高）。
- * 每根柱体沿 Z 方向有厚度（0.62 层距），绘制前面/顶面/侧面三个面，
- * 层间后→前排列保证遮挡正确；柱体正面直接可点选系列。
+/* 3D 柱状图（纵深式）：X = 因素A水平（前底边，类目）；Z = 因素B水平（纵深层）；Y = 均值（柱高）。
+ * v1.8.5 起重写为可旋转真三维投影，详见下方渲染器注释；柱体三面可直接点选系列。
  */
-function renderBar3D(W,H,M,plotW,plotH,xvals,gs,colors,b){
+/* v1.8.5：3D 柱状图渲染器（可旋转真三维正交投影）
+ * u=(nx-.5)cosA-(k-K/2)sinA；v=ny·cosE+((nx-.5)sinA+(k-K/2)cosA)sinE
+ * 屏幕 X=ox+L·u，Y=oy-L·v。柱体按相机深度整体排序（画家算法），杜绝层/列交叉穿模；
+ * 房间纵深延伸到 K+tD，最后一排柱不再穿出后墙；柱体纵深厚度可调；支持按数值渐变着色。
+ */
+function renderBar3D(W,H,xvals,gs,colors,b){
   const s=state.chart.settings;
   const allPos=state.chartData.every(d=>d.mean>=0);
   let bmin=(s.yMin!=null&&Number.isFinite(+s.yMin))?+s.yMin:(allPos?0:b.min);
@@ -2485,71 +2505,105 @@ function renderBar3D(W,H,M,plotW,plotH,xvals,gs,colors,b){
   if(bmax<=bmin)bmax=bmin+1;
   const yStepN=niceAxisStep(bmax-bmin,6),yTicksNice=[];
   for(let v=bmin;v<=bmax+yStepN*.5;v+=yStepN)yTicksNice.push(v);
-  const model=getChartModel(),K=gs.length-1;
-  // 柱状图 X 始终按类目等距（同 2D 分组柱状图），不走数值连续轴
-  const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/xvals.length},ticks:xvals.map((v,i)=>({n:(i+.5)/xvals.length,label:formatXTick(v)}))};
-  const axisY=M.t+plotH,dx=M.dx,dy=M.dy;
+  const model=getChartModel(),K=gs.length-1,Nx=Math.max(1,xvals.length);
+  const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
+  const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
+  const KD=K+tD;
   const dir=s.wfViewDir==='left'?-1:1;
+  const A=dir*clamp(Number(s.b3Azim)||34,6,72)*Math.PI/180;
+  const E=clamp(Number(s.b3Elev)||26,12,55)*Math.PI/180;
+  const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
+  const M={l:104,r:42,t:58,b:102};
+  const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
+  const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*sA;
+  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*cA)*sE;
+  let minU=1e9,maxU=-1e9,minV=1e9,maxV=-1e9;
+  for(const nx of [0,1])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
+  const L=Math.min((plotW-24)/(maxU-minU),(plotH-16)/(maxV-minV));
+  const ox=M.l+plotW/2-L*(minU+maxU)/2;
+  const oy=M.t+plotH/2+L*(minV+maxV)/2;
+  const P=(nx,ny,k)=>[ox+L*u(nx,k),oy-L*v(nx,ny,k)];
   const sideNx=dir>0?0:1,zEdgeNx=dir>0?1:0;
-  const yN=v=>(Number(v)-bmin)/((bmax-bmin)||1);
-  const P=(nx,ny,k)=>[M.l+nx*plotW+dir*k*dx,axisY-ny*plotH-k*dy];
+  const yN=vv=>(Number(vv)-bmin)/((bmax-bmin)||1);
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
-  let out='';
+  const valMode=s.b3ColorMode==='value';
+  const cmap=x=>b3CmapColor(s.b3Cmap,x);
+  const tVal=x=>clamp(yN(x),0,1);
+  // 柱体行（收集后按相机深度排序）
+  const barWnx=Math.max(0.01,(s.categoryWidth/Nx)-((s.barGap||0)/plotW));
+  const selK=(s.wfHighlightSelected&&state.chart.selectedSeries!=null)?Number(state.chart.selectedSeries):null;
+  const rows=[];
+  gs.forEach((g,k)=>{xvals.forEach((x,i)=>{
+    const d=(model.byGroup.get(String(g))||[]).find(r=>String(r.x)===String(x));
+    if(!d)return;
+    const cx=(i+.5)/Nx;
+    rows.push({g,k,i,d,c:wfColorForLayer(k,gs.length,colors),cx,x0:cx-barWnx/2,x1:cx+barWnx/2,
+      yBase:yN(Math.max(bmin,0)),yTop:yN(d.mean),
+      near:-(cx-.5)*sA-(k+tD/2-K/2)*cA});
+  })});
+  rows.sort((p,q)=>p.near-q.near);
+  // defs：每柱两条竖向渐变（前面/侧面），色条一条
+  let defs='';
+  const gradStops=(tb,tt,darkenAmt)=>[0,.25,.5,.75,1].map(f=>{const c=cmap(tb+(tt-tb)*f);return`<stop offset="${f*100}%" stop-color="${darkenAmt?wfLerpColor(c,'#000000',darkenAmt):c}"/>`}).join('');
+  if(valMode){
+    rows.forEach(r=>{
+      const tb=tVal(Math.max(bmin,0)),tt=tVal(r.d.mean);
+      defs+=`<linearGradient id="b3g-${r.k}-${r.i}" x1="0" y1="1" x2="0" y2="0">${gradStops(tb,tt,0)}</linearGradient>`;
+      defs+=`<linearGradient id="b3s-${r.k}-${r.i}" x1="0" y1="1" x2="0" y2="0">${gradStops(tb,tt,.2)}</linearGradient>`;
+    });
+    defs+=`<linearGradient id="b3cb" x1="0" y1="1" x2="0" y2="0">${[0,.25,.5,.75,1].map(f=>`<stop offset="${f*100}%" stop-color="${cmap(f)}"/>`).join('')}</linearGradient>`;
+  }
+  let out=defs?`<defs>${defs}</defs>`:'';
   // 1) 后墙
   out+='<g pointer-events="none">';
-  out+=wfPoly([P(0,0,K),P(1,0,K),P(1,1,K),P(0,1,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,K),P(t.n,1,K),gc,gw));
-  yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,K),P(1,ny,K),gc,gw);});
+  out+=wfPoly([P(0,0,KD),P(1,0,KD),P(1,1,KD),P(0,1,KD)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
+  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,KD),P(t.n,1,KD),gc,gw));
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,KD),P(1,ny,KD),gc,gw);});
   // 2) 侧墙
-  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,K),P(sideNx,1,K),P(sideNx,1,0)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,K),gc,gw);});
+  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,KD),P(sideNx,1,KD),P(sideNx,1,0)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1)out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,KD),gc,gw);});
   for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),gc,gw);
   // 3) 底面
-  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,K),P(0,0,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,K),gc,gw));
+  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,KD),P(0,0,KD)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
+  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,KD),gc,gw));
   for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gc,gw);
   out+='</g>';
-  // 4) 柱体（后→前）
-  const barDepthT=0.62;
-  const barWnx=Math.max(0.01,(s.categoryWidth/xvals.length)-((s.barGap||0)/plotW));
-  const selK=(s.wfHighlightSelected&&state.chart.selectedSeries!=null)?Number(state.chart.selectedSeries):null;
-  for(let k=K;k>=0;k--){
-    const g=gs[k],c=wfColorForLayer(k,gs.length,colors);
+  // 4) 柱体（远→近，深度排序）
+  rows.forEach(r=>{
+    const {k,i,d,cx,x0,x1,yBase,yTop}=r;
     const dimmed=(selK!=null&&selK!==k);
     const frontOp=dimmed?(s.barOpacity*.28):s.barOpacity;
     const strokeOp=dimmed?'.35':'1';
-    xvals.forEach((x,i)=>{
-      const d=(model.byGroup.get(String(g))||[]).find(r=>String(r.x)===String(x));
-      if(!d)return;
-      const cx=(i+.5)/xvals.length;
-      const x0=cx-barWnx/2,x1=cx+barWnx/2;
-      const yBase=yN(Math.max(bmin,0)),yTop=yN(d.mean);
-      const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
-      const bF2=P(x0,yBase,k+barDepthT),bR2=P(x1,yBase,k+barDepthT),tR2=P(x1,yTop,k+barDepthT),tF2=P(x0,yTop,k+barDepthT);
-      const faceTop=[tF,tR,tR2,tF2],faceSide=dir>0?[bR,tR,tR2,bR2]:[bF,tF,tF2,bF2],faceFront=[bF,bR,tR,tF];
-      const topC=wfLerpColor(c,'#ffffff',.28),sideC=wfLerpColor(c,'#000000',.22);
-      out+=wfPoly(faceSide,`data-object="series" data-series="${k}" class="chart-object" fill="${sideC}" fill-opacity="${frontOp}" stroke="${darken(c,.3)}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`);
-      out+=wfPoly(faceTop,`data-object="series" data-series="${k}" class="chart-object" fill="${topC}" fill-opacity="${frontOp}" stroke="${darken(c,.3)}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`);
-      out+=wfPoly(faceFront,`data-object="series" data-series="${k}" class="chart-object" fill="${c}" fill-opacity="${frontOp}" stroke="${darken(c,.3)}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`);
-      // 误差棒与显著性字母（贴在柱顶前缘中点）
-      if(s.errorType&&d.error!=null){
-        const midTop=[(tF[0]+tR[0])/2,(tF[1]+tR[1])/2];
-        const ePx=Math.abs(P(cx,yN(d.mean+d.error),k)[1]-midTop[1]),cap=s.errorCap/2;
-        const ec=s.errorColorMode==='black'?s.axisColor:c;
-        out+=`<path data-object="error" data-series="${k}" class="chart-object" d="M${midTop[0].toFixed(1)},${(midTop[1]-ePx).toFixed(1)}V${(midTop[1]+ePx).toFixed(1)}M${(midTop[0]-cap).toFixed(1)},${(midTop[1]-ePx).toFixed(1)}H${(midTop[0]+cap).toFixed(1)}M${(midTop[0]-cap).toFixed(1)},${(midTop[1]+ePx).toFixed(1)}H${(midTop[0]+cap).toFixed(1)}" fill="none" stroke="${ec}" stroke-width="${s.errorWidth}" pointer-events="none"/>`;
-        if(s.letters&&d.letter)out+=letterSvg(midTop[0],midTop[1]-ePx-s.letterOffset,d.letter,d.x,d.group);
-      }
-    });
-  }
+    const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
+    const bF2=P(x0,yBase,k+tD),bR2=P(x1,yBase,k+tD),tR2=P(x1,yTop,k+tD),tF2=P(x0,yTop,k+tD);
+    const faceTop=[tF,tR,tR2,tF2],faceSide=dir>0?[bR,tR,tR2,bR2]:[bF,tF,tF2,bF2],faceFront=[bF,bR,tR,tF];
+    let cFill,cSide,cTop,edgeC;
+    if(valMode){
+      const tt=tVal(d.mean),topC=cmap(tt);
+      cFill=`url(#b3g-${k}-${i})`;cSide=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.18);edgeC=darken(topC,.3);
+    }else{cFill=r.c;cSide=wfLerpColor(r.c,'#000000',.22);cTop=wfLerpColor(r.c,'#ffffff',.28);edgeC=darken(r.c,.3);}
+    const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
+    out+=wfPoly(faceSide,attr(cSide));
+    out+=wfPoly(faceTop,attr(cTop));
+    out+=wfPoly(faceFront,attr(cFill));
+    // 误差棒与显著性字母（贴在柱顶前缘中点）
+    if(s.errorType&&d.error!=null){
+      const midTop=[(tF[0]+tR[0])/2,(tF[1]+tR[1])/2];
+      const ePx=Math.abs(P(cx,yN(d.mean+d.error),k)[1]-midTop[1]),cap=s.errorCap/2;
+      const ec=valMode?s.axisColor:(s.errorColorMode==='black'?s.axisColor:r.c);
+      out+=`<path data-object="error" data-series="${k}" class="chart-object" d="M${midTop[0].toFixed(1)},${(midTop[1]-ePx).toFixed(1)}V${(midTop[1]+ePx).toFixed(1)}M${(midTop[0]-cap).toFixed(1)},${(midTop[1]-ePx).toFixed(1)}H${(midTop[0]+cap).toFixed(1)}M${(midTop[0]-cap).toFixed(1)},${(midTop[1]+ePx).toFixed(1)}H${(midTop[0]+cap).toFixed(1)}" fill="none" stroke="${ec}" stroke-width="${s.errorWidth}" pointer-events="none"/>`;
+      if(s.letters&&d.letter)out+=letterSvg(midTop[0],midTop[1]-ePx-s.letterOffset,d.letter,d.x,d.group);
+    }
+  });
   // 5) 棱线
   const ac=s.axisColor,aw=s.axisWidth;
   out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,K)[0].toFixed(1)},${P(zEdgeNx,0,K)[1].toFixed(1)}"/>`
+    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
     +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
     +`</g>`;
   out+=`<g stroke="#c9c9c9" stroke-width=".6" fill="none">`
-    +`<path d="M${P(zEdgeNx,0,K)[0].toFixed(1)},${P(zEdgeNx,0,K)[1].toFixed(1)} L${P(zEdgeNx,1,K)[0].toFixed(1)},${P(zEdgeNx,1,K)[1].toFixed(1)} L${P(sideNx,1,K)[0].toFixed(1)},${P(sideNx,1,K)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
+    +`<path d="M${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)} L${P(zEdgeNx,1,KD)[0].toFixed(1)},${P(zEdgeNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
     +`</g>`;
   // 6) X 刻度
   const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
@@ -2560,21 +2614,23 @@ function renderBar3D(W,H,M,plotW,plotH,xvals,gs,colors,b){
   // 7) Y 刻度
   const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
   out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showYTicks)yTicksNice.forEach(v=>{const ny=yN(v);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);const tx=dir>0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
+  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);const tx=dir>0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
   out+='</g>';
-  yTicksNice.forEach(v=>{const ny=yN(v);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);
     const tx=dir>0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=dir>0?'end':'start';
-    out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(v,s.yTickDecimals,yStep,false)}</text>`;});
+    out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(vv,s.yTickDecimals,yStep,false)}</text>`;});
   // 8) Z 标签
   if(K>=1&&s.wfZLabels){
+    const p0=P(zEdgeNx,0,0),pK=P(zEdgeNx,0,KD),ex=pK[0]-p0[0],ey=pK[1]-p0[1],el=Math.hypot(ex,ey)||1;
+    const nxO=dir*(-ey)/el,nyO=dir*ex/el;
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
-      const ox=dir>0?(11+((k%2)*18)):-(11+((k%2)*18));
-      const anchor=dir>0?'start':'end',lx=p[0]+ox,ly=p[1]+4,tickX=dir>0?p[0]+7:p[0]-7;
-      out+=wfLine(p,[tickX,p[1]],ac,aw);
-      out+=`<text data-object="axis-z" class="chart-object" x="${lx.toFixed(1)}" y="${ly}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" fill="${ac}">${esc(gs[k])}</text>`;}
+      const ox2=p[0]+nxO*12+dir*((k%2)*15),oy2=p[1]+nyO*12+4;
+      const anchor=dir>0?'start':'end';
+      out+=wfLine(p,[p[0]+nxO*7,p[1]+nyO*7],ac,aw);
+      out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${oy2.toFixed(1)}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" fill="${ac}">${esc(gs[k])}</text>`;}
     if(s.wfZAxisTitle){
-      const mid=P(zEdgeNx,0,K/2),ang=Math.atan2(-dy,dir*dx)*180/Math.PI,L=Math.hypot(dx,dy)||1,nxO=dir*dy/L,nyO=dx/L;
-      const tx=mid[0]+nxO*30,ty=mid[1]+nyO*30-6;
+      const mid=P(zEdgeNx,0,K/2),ang=Math.atan2(ey,ex)*180/Math.PI;
+      const tx=mid[0]+nxO*32,ty=mid[1]+nyO*32-6;
       out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.zTitleSize||s.yTickSize}" font-style="italic" fill="${ac}" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
     }
   }
@@ -2582,20 +2638,27 @@ function renderBar3D(W,H,M,plotW,plotH,xvals,gs,colors,b){
   if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,0);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
   if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,0);const rotY=dir>0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:dp[0],yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
-  // 10) 图例
+  // 10) 图例 / 数值色条（均可直接拖动，双击复位）
   if(s.wfLegend&&K>=1){
-    const lx0=P(zEdgeNx,1,K)[0]+(dir>0?14:-14),ly0=P(zEdgeNx,1,K)[1]+8;
-    const anchor=dir>0?'start':'end';
-    out+=`<g data-object="legend" class="chart-object" font-size="${s.wfLegendSize||11}">`;
-    for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=ly0+k*17;
-      if(s.wfLegendStyle==='line'){
-        const xa=dir>0?lx0:lx0-22,xb=dir>0?lx0+22:lx0;
-        out+=`<line x1="${xa.toFixed(1)}" y1="${(yy+5).toFixed(1)}" x2="${xb.toFixed(1)}" y2="${(yy+5).toFixed(1)}" stroke="${cc}" stroke-width="2.4"/>`;
-        out+=`<text x="${(dir>0?lx0+28:lx0-28).toFixed(1)}" y="${(yy+9).toFixed(1)}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
-      }else{
-        out+=`<rect x="${(dir>0?lx0:lx0-11).toFixed(1)}" y="${yy.toFixed(1)}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
-        out+=`<text x="${(dir>0?lx0+15:lx0-15).toFixed(1)}" y="${(yy+10).toFixed(1)}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
-      }}
+    const defLx=P(zEdgeNx,1,KD)[0]+(dir>0?14:-14),defLy=P(zEdgeNx,1,KD)[1]+8;
+    const lx=s.b3LegendX??defLx,ly=s.b3LegendY??defLy,anchor=dir>0?'start':'end';
+    out+=`<g data-object="b3legend" data-drag="b3legend" class="chart-object draggable" transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})" font-size="${s.wfLegendSize||11}" style="cursor:pointer">`;
+    if(valMode){
+      const cbH=118,cx0=dir>0?0:-14,txl=dir>0?20:-20;
+      out+=`<rect x="${cx0}" y="0" width="14" height="${cbH}" fill="url(#b3cb)" stroke="#8a8a8a" stroke-width=".6"/>`;
+      [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const yy=f*cbH+4;
+        out+=`<text x="${txl}" y="${yy.toFixed(1)}" text-anchor="${anchor}" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
+    }else{
+      for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=k*17;
+        if(s.wfLegendStyle==='line'){
+          const xa=dir>0?0:-22,xb=dir>0?22:0;
+          out+=`<line x1="${xa}" y1="${yy+5}" x2="${xb}" y2="${yy+5}" stroke="${cc}" stroke-width="2.4"/>`;
+          out+=`<text x="${dir>0?28:-28}" y="${yy+9}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
+        }else{
+          out+=`<rect x="${dir>0?0:-11}" y="${yy}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
+          out+=`<text x="${dir>0?15:-15}" y="${yy+10}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
+        }}
+    }
     out+=`</g>`;
   }
   return out;
@@ -2779,7 +2842,11 @@ function markerLegend(x,y,c,series){
 
 function bindChartObjects(){
   const stage=$('#chartStage');if(!stage)return;
-  stage.onclick=e=>{const le=e.target.closest('[data-letter-x]');if(le&&stage.contains(le)){e.stopPropagation();openLetterEditor(le);return}const el=e.target.closest('.chart-object');if(!el||!stage.contains(el))return;e.stopPropagation();if(el.dataset.annotationId)selectObject(`annotation:${el.dataset.annotationId}`);else selectObject(el.dataset.object==='axis-z'?(state.chart.type==='bar3d'?'bar3d':'waterfall3d'):el.dataset.object,el.dataset.series)};
+  stage.onclick=e=>{const le=e.target.closest('[data-letter-x]');if(le&&stage.contains(le)){e.stopPropagation();openLetterEditor(le);return}const el=e.target.closest('.chart-object');if(!el||!stage.contains(el))return;e.stopPropagation();
+    // v1.8.5：3D 柱状图空白处旋转手势结束后，忽略随之而来的 background 点击（避免误选背景面板）
+    if(el.dataset.object==='background'&&b3GestureMoved){b3GestureMoved=false;return}
+    if(el.dataset.annotationId)selectObject(`annotation:${el.dataset.annotationId}`);
+    else{let target=el.dataset.object;if(target==='axis-z')target=state.chart.type==='bar3d'?'bar3d':'waterfall3d';else if(target==='b3legend')target='bar3d';selectObject(target,el.dataset.series)}};
 }
 
 function openLetterEditor(t){ensureLetterEditor().open(t)}
@@ -2816,16 +2883,49 @@ function bindAnnotationEndpointHandles(svg,store,finish){
   }));
 }
 
+// v1.8.5：3D 柱状图在图表空白处按住拖动即旋转视角（方位角/仰角），window 级监听保证重绘后手势不断
+let b3GestureMoved=false;
+function bindBar3DRotateGesture(svg){
+  if(state.chart.type!=='bar3d')return;
+  const bg=svg.querySelector('[data-object="background"]');if(!bg)return;
+  bg.addEventListener('pointerdown',e=>{
+    if(e.button!=null&&e.button!==0)return;
+    const s=state.chart.settings;
+    const dir0=s.wfViewDir==='left'?1:-1;
+    const signed0=dir0*clamp(Number(s.b3Azim)||34,6,72);
+    const elev0=clamp(Number(s.b3Elev)||26,12,55);
+    const px0=e.clientX,py0=e.clientY;let moved=false;
+    b3GestureMoved=false;
+    const move=ev=>{
+      const dx=ev.clientX-px0,dy=ev.clientY-py0;
+      if(!moved&&Math.hypot(dx,dy)<3)return;
+      moved=true;b3GestureMoved=true;
+      let signed=signed0+dx*.35;signed=clamp(signed,-72,72);
+      if(Math.abs(signed)<6)signed=signed0>=0?6:-6; // 避免纯侧视（纵深退化为一条线）
+      s.wfViewDir=signed<0?'right':'left';
+      s.b3Azim=Math.round(Math.abs(signed));
+      s.b3Elev=Math.round(clamp(elev0-dy*.35,12,55));
+      renderChart();
+    };
+    const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);if(moved){setTimeout(()=>{b3GestureMoved=false},0);renderProperties();}};
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
+  });
+}
 function bindDraggables(){
   const svg=$('#paperSvg');if(!svg)return;
   bindAnnotationEndpointHandles(svg,state.chart,()=>{renderChart();renderLayers();renderProperties()});
+  bindBar3DRotateGesture(svg);
   $$('[data-drag]').forEach(el=>{
+    el.addEventListener('dblclick',()=>{
+      // v1.8.5：3D 图例/色条双击回到默认位置
+      if(el.dataset.drag==='b3legend'){state.chart.settings.b3LegendX=null;state.chart.settings.b3LegendY=null;renderChart()}
+    });
     el.addEventListener('pointerdown',e=>{
       if(e.target.closest('[data-annotation-handle]'))return;
       e.preventDefault();e.stopPropagation();
       const key=el.dataset.drag,start=svgPoint(svg,e),snapshot=dragSnapshot(key,el);
       el.setPointerCapture(e.pointerId);el.classList.add('dragging');
-      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':'axis-y';
+      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'bar3d':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':'axis-y';
       selectObject(target);
       const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;applyDrag(key,snapshot,dx,dy,el)};
       const up=()=>{el.classList.remove('dragging');el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);renderChart();renderProperties()};
@@ -2837,6 +2937,7 @@ function svgPoint(svg,e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.client
 function dragSnapshot(key,el=null){
   const s=state.chart.settings;if(key==='annotation'){const ann=state.chart.annotations.find(a=>a.id===el?.dataset.annotationId);return ann?structuredClone(ann):{}}
   if(key==='legend')return{x:state.chart.legend.x,y:state.chart.legend.y};
+  if(key==='b3legend'){const mm=(el?.getAttribute('transform')||'').match(/translate\(([-\d.]+)[ ,]+([-\d.]+)\)/);return{x:mm?parseFloat(mm[1]):0,y:mm?parseFloat(mm[2]):0};}
   if(key==='legendFrame')return{x:state.chart.legendFrame.x,y:state.chart.legendFrame.y};
   if(key==='title')return{x:s.titleX,y:s.titleY};if(key==='subtitle')return{x:s.subtitleX,y:s.subtitleY};
   if(key==='xTitle'){
@@ -2856,6 +2957,7 @@ function applyDrag(key,snap,dx,dy,el){
   }
   const x=snap.x+dx,y=snap.y+dy,s=state.chart.settings;
   if(key==='legend'){state.chart.legend.x=x;state.chart.legend.y=y;el.setAttribute('transform',`translate(${x} ${y})`)}
+  else if(key==='b3legend'){s.b3LegendX=x;s.b3LegendY=y;el.setAttribute('transform',`translate(${x} ${y})`);return}
   else if(key==='legendFrame'){state.chart.legendFrame.x=x;state.chart.legendFrame.y=y;el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='title'){s.titleX=x;s.titleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}else if(key==='subtitle'){s.subtitleX=x;s.subtitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='xTitle'){
@@ -2934,14 +3036,20 @@ function renderProperties(){
 +'<div class="method-badge">X ＝ 横轴点（波长/时间），在“X 轴与横标题”里改；Y ＝ 数值（前左竖边），在“Y 轴与纵标题”里改；Z ＝ 层（右斜边，每列一个时间点/温度），相关设置都在这里。</div>';
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
-'<div class="object-property-section"><h3>三维坐标与纵深</h3></div>'+fieldGroup([
+'<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
     selectField('wfViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
-    rangeField('wfLayerDx','层间水平错开（向右纵深）',0,220,1),
-    rangeField('wfLayerDy','层间垂直错开（向上纵深）',0,220,1),
+    rangeField('b3Azim','水平旋转角（方位）',6,72,1),
+    rangeField('b3Elev','俯仰角（仰角）',12,55,1),
+    rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01),
     checkField('wfZLabels','右侧 Z 轴与层标签')])
++'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
++'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱间距、组宽度（左右宽度）、柱填充透明度、柱边框粗细在「数据系列」面板里改。</div>'
 +'<div class="object-property-section"><h3>柱体配色</h3></div>'+fieldGroup([
-    selectField('wfColorMode','配色方式',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
+    selectField('b3ColorMode','着色方式',[['series','按系列着色（默认）'],['value','按数值渐变（MATLAB 风格）']]),
+    selectField('b3Cmap','渐变色带',[['plasma','等离子 Plasma'],['viridis','翠绿 Viridis'],['inferno','熔岩 Inferno'],['rdbu','红–蓝'],['terrain','地形 Terrain']]),
+    selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
++'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），右侧系列图例自动替换为数值色条。</div>'
 +'<div class="object-property-section"><h3>Z 轴（层 / 系列）</h3></div>'+fieldGroup([
     textField('wfZAxisTitle','Z 轴标题'),
     rangeField('wfZLabelSize','Z 轴标签字号',8,20,1)])
@@ -2950,10 +3058,10 @@ function renderProperties(){
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
     colorField('wfGridColor','网格线颜色'),
     rangeField('wfGridWidth','网格线粗细',.2,2,.1),
-    checkField('wfLegend','显示图例'),
+    checkField('wfLegend','显示图例 / 数值色条'),
     selectField('wfLegendStyle','图例样式',[['block','色块'],['line','线条']]),
     rangeField('wfLegendSize','图例字号',8,18,1)])
-+'<div class="method-badge">X ＝ 横轴类别（因素1水平），在“X 轴与横标题”里改；Y ＝ 均值（柱高），在“Y 轴与纵标题”里改；Z ＝ 纵深系列（因素2水平），相关设置都在这里；柱间距、组宽度、柱填充透明度、柱边框粗细在“数据系列”面板里改。</div>';
++'<div class="method-badge">X ＝ 横轴类别（因素1水平），在“X 轴与横标题”里改；Y ＝ 均值（柱高），在“Y 轴与纵标题”里改；Z ＝ 纵深系列（因素2水平），相关设置都在这里；旋转视角后导出/拼图会按当前角度出图。</div>';
   }
   else if(id==='series'){const idx=clamp(state.chart.selectedSeries,0,Math.max(0,gs.length-1));name=`数据系列 · ${gs[idx]||'Series'}`;
     // v1.8.4：按图形类型裁剪控件——瀑布图不显示柱状图控件，3D 柱状图不显示折线/marker 控件，
@@ -3069,6 +3177,7 @@ function bindPropertyInputs(){
   $$('[data-action]').forEach(el=>el.addEventListener('click',()=>{
     const act=el.dataset.action;
     if(act==='save-palette')exportPalette();
+    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=34;ss.b3Elev=26;ss.wfViewDir='right';ss.b3LegendX=null;ss.b3LegendY=null;renderChart();renderProperties();}
     else if(act==='load-palette')$('#paletteFile').click();
     else if(act==='paste-hex')applyHexString(prompt('粘贴一行 HEX（逗号分隔，例：#7B95C6,#49C2D9）：')||'');
     else if(act==='save-style')exportStyle();
@@ -3126,7 +3235,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.8.4',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.8.5',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
