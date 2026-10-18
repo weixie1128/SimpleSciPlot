@@ -102,7 +102,7 @@ const defaultChartSettings = {
   yMin:null, yMax:null, yTickStep:null, yAxisSegments:6, yTickDecimals:'auto', yTickRound:false, yScale:'linear',
   lowerMin:0, lowerMax:20, upperMin:70, upperMax:82, breakGap:12, lowerRatio:.23,
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
-  // v1.8.5：3D 柱状图专属——方位角（绝对值，方向随 wfViewDir）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
+  // v1.8.6：3D 柱状图专属——方位角（6–72°，固定 MATLAB 左侧布局）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
   b3Azim:34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
   background:'#ffffff'
 };
@@ -569,7 +569,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.8.5'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.8.6'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2509,21 +2509,22 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
   const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
   const KD=K+tD;
-  const dir=s.wfViewDir==='left'?-1:1;
-  const A=dir*clamp(Number(s.b3Azim)||34,6,72)*Math.PI/180;
+  const dir=1; // v1.8.6：固定 MATLAB 默认方位布局（值轴/深度标签恒在左侧），不再随 wfViewDir 翻转
+  const A=clamp(Number(s.b3Azim)||34,6,72)*Math.PI/180;
   const E=clamp(Number(s.b3Elev)||26,12,55)*Math.PI/180;
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
   const M={l:104,r:42,t:58,b:102};
   const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
-  const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*sA;
-  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*cA)*sE;
+  const kS=1/Nx; // v1.8.6：深度按横轴类别间距归一，柱体底面为正方形（MATLAB bar3 风格）
+  const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*kS*sA;
+  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE;
   let minU=1e9,maxU=-1e9,minV=1e9,maxV=-1e9;
   for(const nx of [0,1])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
   const L=Math.min((plotW-24)/(maxU-minU),(plotH-16)/(maxV-minV));
   const ox=M.l+plotW/2-L*(minU+maxU)/2;
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
   const P=(nx,ny,k)=>[ox+L*u(nx,k),oy-L*v(nx,ny,k)];
-  const sideNx=dir>0?0:1,zEdgeNx=dir>0?1:0;
+  const sideNx=0,zEdgeNx=0; // v1.8.6：值轴与深度标签固定在左侧（对齐 MATLAB 默认视图）
   const yN=vv=>(Number(vv)-bmin)/((bmax-bmin)||1);
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   const valMode=s.b3ColorMode==='value';
@@ -2539,7 +2540,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const cx=(i+.5)/Nx;
     rows.push({g,k,i,d,c:wfColorForLayer(k,gs.length,colors),cx,x0:cx-barWnx/2,x1:cx+barWnx/2,
       yBase:yN(Math.max(bmin,0)),yTop:yN(d.mean),
-      near:-(cx-.5)*sA-(k+tD/2-K/2)*cA});
+      near:-(cx-.5)*sA-(k+tD/2-K/2)*kS*cA});
   })});
   rows.sort((p,q)=>p.near-q.near);
   // defs：每柱两条竖向渐变（前面/侧面），色条一条
@@ -2574,17 +2575,18 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
   out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
-    +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
+    +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(0,0,KD)[0].toFixed(1)},${P(0,0,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)} L${P(1,0,KD)[0].toFixed(1)},${P(1,0,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(0,0,KD)[0].toFixed(1)},${P(0,0,KD)[1].toFixed(1)} L${P(0,1,KD)[0].toFixed(1)},${P(0,1,KD)[1].toFixed(1)}"/>`
     +`</g>`;
   out+=`<g stroke="#c9c9c9" stroke-width=".6" fill="none">`
-    +`<path d="M${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)} L${P(zEdgeNx,1,KD)[0].toFixed(1)},${P(zEdgeNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
+    +`<path d="M${P(0,1,0)[0].toFixed(1)},${P(0,1,0)[1].toFixed(1)} L${P(0,1,KD)[0].toFixed(1)},${P(0,1,KD)[1].toFixed(1)} L${P(1,1,KD)[0].toFixed(1)},${P(1,1,KD)[1].toFixed(1)}"/>`
     +`</g>`;
   out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
   if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,0);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
   out+='</g>';
   out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);const tx=dir>0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
+  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(0,ny,KD);const tx=p[0]-s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
   out+='</g>';
   // 4) 柱体（远→近，深度排序）
   rows.forEach(r=>{
@@ -2615,16 +2617,16 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   });
   // 5) X / Y 刻度文字（位于绘图区外，画在柱体之后）
   xs.ticks.forEach(t=>{const p=P(t.n,0,0);const yy=p[1]+s.tickLength+18;out+=`<text data-object="axis-x" class="chart-object" x="${p[0].toFixed(1)}" y="${yy}" text-anchor="${rot<0?'end':'middle'}" font-size="${s.xTickSize}" fill="${s.xTickColor}" transform="rotate(${rot} ${p[0].toFixed(1)} ${yy})">${esc(t.label)}</text>`;});
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);
-    const tx=dir>0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=dir>0?'end':'start';
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(0,ny,KD);
+    const tx=p[0]-s.tickLength-6,anchor='end';
     out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(vv,s.yTickDecimals,yStep,false)}</text>`;});
   // 8) Z 标签
   if(K>=1&&s.wfZLabels){
     const p0=P(zEdgeNx,0,0),pK=P(zEdgeNx,0,KD),ex=pK[0]-p0[0],ey=pK[1]-p0[1],el=Math.hypot(ex,ey)||1;
-    const nxO=dir*(-ey)/el,nyO=dir*ex/el;
+    const nxO=ey/el,nyO=-ex/el; // 左侧深度边的外法线（指向左下）
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
-      const ox2=p[0]+nxO*12+dir*((k%2)*15),oy2=p[1]+nyO*12+4;
-      const anchor=dir>0?'start':'end';
+      const ox2=p[0]+nxO*12-(k%2)*15,oy2=p[1]+nyO*12+4;
+      const anchor='end';
       out+=wfLine(p,[p[0]+nxO*7,p[1]+nyO*7],ac,aw);
       out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${oy2.toFixed(1)}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" fill="${ac}">${esc(gs[k])}</text>`;}
     if(s.wfZAxisTitle){
@@ -2635,11 +2637,11 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   }
   // 9) 轴标题
   if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,0);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
-  if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,0);const rotY=dir>0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:dp[0],yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
+  if(s.yTitleVisible&&s.yTitle){const dp=P(0,.5,KD);const rotY=-90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:dp[0]-40,yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例 / 数值色条（均可直接拖动，双击复位）
   if(s.wfLegend&&K>=1){
-    const defLx=P(zEdgeNx,1,KD)[0]+(dir>0?14:-14),defLy=P(zEdgeNx,1,KD)[1]+8;
+    const defLx=12,defLy=M.t-40; // v1.8.6：图例/色条默认置于画布左上角
     const lx=s.b3LegendX??defLx,ly=s.b3LegendY??defLy,anchor=dir>0?'start':'end';
     out+=`<g data-object="b3legend" data-drag="b3legend" class="chart-object draggable" transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})" font-size="${s.wfLegendSize||11}" style="cursor:pointer">`;
     if(valMode){
@@ -2890,8 +2892,7 @@ function bindBar3DRotateGesture(svg){
   bg.addEventListener('pointerdown',e=>{
     if(e.button!=null&&e.button!==0)return;
     const s=state.chart.settings;
-    const dir0=s.wfViewDir==='left'?1:-1;
-    const signed0=dir0*clamp(Number(s.b3Azim)||34,6,72);
+    const azim0=clamp(Number(s.b3Azim)||34,6,72);
     const elev0=clamp(Number(s.b3Elev)||26,12,55);
     const px0=e.clientX,py0=e.clientY;let moved=false;
     b3GestureMoved=false;
@@ -2899,10 +2900,7 @@ function bindBar3DRotateGesture(svg){
       const dx=ev.clientX-px0,dy=ev.clientY-py0;
       if(!moved&&Math.hypot(dx,dy)<3)return;
       moved=true;b3GestureMoved=true;
-      let signed=signed0+dx*.35;signed=clamp(signed,-72,72);
-      if(Math.abs(signed)<6)signed=signed0>=0?6:-6; // 避免纯侧视（纵深退化为一条线）
-      s.wfViewDir=signed<0?'right':'left';
-      s.b3Azim=Math.round(Math.abs(signed));
+      s.b3Azim=Math.round(clamp(azim0+dx*.35,6,72)); // v1.8.6：固定 MATLAB 方位布局，仅在 6–72° 内旋转
       s.b3Elev=Math.round(clamp(elev0-dy*.35,12,55));
       renderChart();
     };
@@ -3036,11 +3034,10 @@ function renderProperties(){
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
-    selectField('wfViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('b3Azim','水平旋转角（方位）',6,72,1),
     rangeField('b3Elev','俯仰角（仰角）',12,55,1),
     rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01),
-    checkField('wfZLabels','右侧 Z 轴与层标签')])
+    checkField('wfZLabels','左侧 Z 轴与层标签')])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
 +'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱间距、组宽度（左右宽度）、柱填充透明度、柱边框粗细在「数据系列」面板里改。</div>'
 +'<div class="object-property-section"><h3>柱体配色</h3></div>'+fieldGroup([
@@ -3048,7 +3045,7 @@ function renderProperties(){
     selectField('b3Cmap','渐变色带',[['plasma','等离子 Plasma'],['viridis','翠绿 Viridis'],['inferno','熔岩 Inferno'],['rdbu','红–蓝'],['terrain','地形 Terrain']]),
     selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
-+'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），右侧系列图例自动替换为数值色条。</div>'
++'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条。</div>'
 +'<div class="object-property-section"><h3>Z 轴（层 / 系列）</h3></div>'+fieldGroup([
     textField('wfZAxisTitle','Z 轴标题'),
     rangeField('wfZLabelSize','Z 轴标签字号',8,20,1)])
@@ -3176,7 +3173,7 @@ function bindPropertyInputs(){
   $$('[data-action]').forEach(el=>el.addEventListener('click',()=>{
     const act=el.dataset.action;
     if(act==='save-palette')exportPalette();
-    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=34;ss.b3Elev=26;ss.wfViewDir='right';ss.b3LegendX=null;ss.b3LegendY=null;renderChart();renderProperties();}
+    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=34;ss.b3Elev=26;ss.b3LegendX=null;ss.b3LegendY=null;renderChart();renderProperties();}
     else if(act==='load-palette')$('#paletteFile').click();
     else if(act==='paste-hex')applyHexString(prompt('粘贴一行 HEX（逗号分隔，例：#7B95C6,#49C2D9）：')||'');
     else if(act==='save-style')exportStyle();
@@ -3234,7 +3231,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.8.5',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.8.6',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
