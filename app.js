@@ -2568,6 +2568,24 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,KD),gc,gw));
   for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gc,gw);
   out+='</g>';
+  // 坐标轴盒与刻度线（必须画在柱体之前，避免轴线穿模、柱体与背景框线叠加）
+  const ac=s.axisColor,aw=s.axisWidth;
+  const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
+  const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
+  out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
+    +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
+    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
+    +`</g>`;
+  out+=`<g stroke="#c9c9c9" stroke-width=".6" fill="none">`
+    +`<path d="M${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)} L${P(zEdgeNx,1,KD)[0].toFixed(1)},${P(zEdgeNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
+    +`</g>`;
+  out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
+  if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,0);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
+  out+='</g>';
+  out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
+  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);const tx=dir>0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
+  out+='</g>';
   // 4) 柱体（远→近，深度排序）
   rows.forEach(r=>{
     const {k,i,d,cx,x0,x1,yBase,yTop}=r;
@@ -2595,27 +2613,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
       if(s.letters&&d.letter)out+=letterSvg(midTop[0],midTop[1]-ePx-s.letterOffset,d.letter,d.x,d.group);
     }
   });
-  // 5) 棱线
-  const ac=s.axisColor,aw=s.axisWidth;
-  out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
-    +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
-    +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
-    +`</g>`;
-  out+=`<g stroke="#c9c9c9" stroke-width=".6" fill="none">`
-    +`<path d="M${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)} L${P(zEdgeNx,1,KD)[0].toFixed(1)},${P(zEdgeNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
-    +`</g>`;
-  // 6) X 刻度
-  const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
-  out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,0);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
-  out+='</g>';
+  // 5) X / Y 刻度文字（位于绘图区外，画在柱体之后）
   xs.ticks.forEach(t=>{const p=P(t.n,0,0);const yy=p[1]+s.tickLength+18;out+=`<text data-object="axis-x" class="chart-object" x="${p[0].toFixed(1)}" y="${yy}" text-anchor="${rot<0?'end':'middle'}" font-size="${s.xTickSize}" fill="${s.xTickColor}" transform="rotate(${rot} ${p[0].toFixed(1)} ${yy})">${esc(t.label)}</text>`;});
-  // 7) Y 刻度
-  const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
-  out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);const tx=dir>0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
-  out+='</g>';
   yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,0);
     const tx=dir>0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=dir>0?'end':'start';
     out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(vv,s.yTickDecimals,yStep,false)}</text>`;});
