@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -102,8 +102,8 @@ const defaultChartSettings = {
   yMin:null, yMax:null, yTickStep:null, yAxisSegments:6, yTickDecimals:'auto', yTickRound:false, yScale:'linear',
   lowerMin:0, lowerMax:20, upperMin:70, upperMax:82, breakGap:12, lowerRatio:.23,
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
-  // v1.8.6：3D 柱状图专属——方位角（6–72°，固定 MATLAB 左侧布局）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
-  b3Azim:34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
+  // v1.8.7：3D 柱状图专属——方位角（-72–-6°，MATLAB 默认左前视角）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
+  b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
   background:'#ffffff'
 };
 
@@ -569,7 +569,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.8.6'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.8.7'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -2509,13 +2509,12 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
   const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
   const KD=K+tD;
-  const dir=1; // v1.8.6：固定 MATLAB 默认方位布局（值轴/深度标签恒在左侧），不再随 wfViewDir 翻转
-  const A=clamp(Number(s.b3Azim)||34,6,72)*Math.PI/180;
+  const A=clamp(Number(s.b3Azim)||-34,-72,-6)*Math.PI/180;
   const E=clamp(Number(s.b3Elev)||26,12,55)*Math.PI/180;
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
   const M={l:104,r:42,t:58,b:102};
   const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
-  const kS=1/Nx; // v1.8.6：深度按横轴类别间距归一，柱体底面为正方形（MATLAB bar3 风格）
+  const kS=1/Nx; // v1.8.7：深度按横轴类别间距归一，柱体底面为正方形（MATLAB bar3 风格）
   const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*kS*sA;
   const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE;
   let minU=1e9,maxU=-1e9,minV=1e9,maxV=-1e9;
@@ -2524,7 +2523,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const ox=M.l+plotW/2-L*(minU+maxU)/2;
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
   const P=(nx,ny,k)=>[ox+L*u(nx,k),oy-L*v(nx,ny,k)];
-  const sideNx=0,zEdgeNx=0; // v1.8.6：值轴与深度标签固定在左侧（对齐 MATLAB 默认视图）
+  const sideNx=0,zEdgeNx=0; // v1.8.7：值轴与深度标签固定在左侧（对齐 MATLAB 默认视图）
   const yN=vv=>(Number(vv)-bmin)/((bmax-bmin)||1);
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   const valMode=s.b3ColorMode==='value';
@@ -2596,7 +2595,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const strokeOp=dimmed?'.35':'1';
     const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
     const bF2=P(x0,yBase,k+tD),bR2=P(x1,yBase,k+tD),tR2=P(x1,yTop,k+tD),tF2=P(x0,yTop,k+tD);
-    const faceTop=[tF,tR,tR2,tF2],faceSide=dir>0?[bR,tR,tR2,bR2]:[bF,tF,tF2,bF2],faceFront=[bF,bR,tR,tF];
+    const faceTop=[tF,tR,tR2,tF2],faceSide=[bF,tF,tF2,bF2],faceFront=[bF,bR,tR,tF];
     let cFill,cSide,cTop,edgeC;
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
@@ -2641,23 +2640,23 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例 / 数值色条（均可直接拖动，双击复位）
   if(s.wfLegend&&K>=1){
-    const defLx=12,defLy=M.t-40; // v1.8.6：图例/色条默认置于画布左上角
-    const lx=s.b3LegendX??defLx,ly=s.b3LegendY??defLy,anchor=dir>0?'start':'end';
+    const defLx=12,defLy=M.t-40; // v1.8.7：图例/色条默认置于画布左上角
+    const lx=s.b3LegendX??defLx,ly=s.b3LegendY??defLy,anchor='start';
     out+=`<g data-object="b3legend" data-drag="b3legend" class="chart-object draggable" transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})" font-size="${s.wfLegendSize||11}" style="cursor:pointer">`;
     if(valMode){
-      const cbH=118,cx0=dir>0?0:-14,txl=dir>0?20:-20;
+      const cbH=118,cx0=0,txl=20;
       out+=`<rect x="${cx0}" y="0" width="14" height="${cbH}" fill="url(#b3cb)" stroke="#8a8a8a" stroke-width=".6"/>`;
       [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const yy=f*cbH+4;
         out+=`<text x="${txl}" y="${yy.toFixed(1)}" text-anchor="${anchor}" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
     }else{
       for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=k*17;
         if(s.wfLegendStyle==='line'){
-          const xa=dir>0?0:-22,xb=dir>0?22:0;
+          const xa=0,xb=22;
           out+=`<line x1="${xa}" y1="${yy+5}" x2="${xb}" y2="${yy+5}" stroke="${cc}" stroke-width="2.4"/>`;
-          out+=`<text x="${dir>0?28:-28}" y="${yy+9}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
+          out+=`<text x="28" y="${yy+9}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
         }else{
-          out+=`<rect x="${dir>0?0:-11}" y="${yy}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
-          out+=`<text x="${dir>0?15:-15}" y="${yy+10}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
+          out+=`<rect x="0" y="${yy}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
+          out+=`<text x="15" y="${yy+10}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
         }}
     }
     out+=`</g>`;
@@ -2892,7 +2891,7 @@ function bindBar3DRotateGesture(svg){
   bg.addEventListener('pointerdown',e=>{
     if(e.button!=null&&e.button!==0)return;
     const s=state.chart.settings;
-    const azim0=clamp(Number(s.b3Azim)||34,6,72);
+    const azim0=clamp(Number(s.b3Azim)||-34,-72,-6);
     const elev0=clamp(Number(s.b3Elev)||26,12,55);
     const px0=e.clientX,py0=e.clientY;let moved=false;
     b3GestureMoved=false;
@@ -2900,7 +2899,7 @@ function bindBar3DRotateGesture(svg){
       const dx=ev.clientX-px0,dy=ev.clientY-py0;
       if(!moved&&Math.hypot(dx,dy)<3)return;
       moved=true;b3GestureMoved=true;
-      s.b3Azim=Math.round(clamp(azim0+dx*.35,6,72)); // v1.8.6：固定 MATLAB 方位布局，仅在 6–72° 内旋转
+      s.b3Azim=Math.round(clamp(azim0+dx*.35,-72,-6)); // v1.8.7：MATLAB 默认左前视角，方位角在 -72–-6° 内旋转
       s.b3Elev=Math.round(clamp(elev0-dy*.35,12,55));
       renderChart();
     };
@@ -3034,7 +3033,7 @@ function renderProperties(){
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
-    rangeField('b3Azim','水平旋转角（方位）',6,72,1),
+    rangeField('b3Azim','水平旋转角（方位）',-72,-6,1),
     rangeField('b3Elev','俯仰角（仰角）',12,55,1),
     rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01),
     checkField('wfZLabels','左侧 Z 轴与层标签')])
@@ -3173,7 +3172,7 @@ function bindPropertyInputs(){
   $$('[data-action]').forEach(el=>el.addEventListener('click',()=>{
     const act=el.dataset.action;
     if(act==='save-palette')exportPalette();
-    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=34;ss.b3Elev=26;ss.b3LegendX=null;ss.b3LegendY=null;renderChart();renderProperties();}
+    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=-34;ss.b3Elev=26;ss.b3LegendX=null;ss.b3LegendY=null;renderChart();renderProperties();}
     else if(act==='load-palette')$('#paletteFile').click();
     else if(act==='paste-hex')applyHexString(prompt('粘贴一行 HEX（逗号分隔，例：#7B95C6,#49C2D9）：')||'');
     else if(act==='save-style')exportStyle();
@@ -3231,7 +3230,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.8.6',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.8.7',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
