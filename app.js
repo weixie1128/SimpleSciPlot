@@ -104,6 +104,7 @@ const defaultChartSettings = {
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
   // v1.8.7：3D 柱状图专属——方位角（-72–-6°，MATLAB 默认左前视角）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
   b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
+  b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,wfLegendX:null,wfLegendY:null,
   background:'#ffffff'
 };
 
@@ -2472,16 +2473,17 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   // 10) 图例
   if(s.wfLegend&&K>=1){
     const lx0=P(zEdgeNx,1,K)[0]+(dir>0?14:-14),ly0=P(zEdgeNx,1,K)[1]+8;
+    const lx=s.wfLegendX!=null?s.wfLegendX:lx0,ly=s.wfLegendY!=null?s.wfLegendY:ly0;
     const anchor=dir>0?'start':'end';
-    out+=`<g data-object="legend" class="chart-object" font-size="${s.wfLegendSize||11}">`;
-    for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=ly0+k*17;
+    out+=`<g data-object="legend" data-drag="wflegend" class="chart-object draggable" font-size="${s.wfLegendSize||11}" transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})">`;
+    for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=k*17;
       if(s.wfLegendStyle==='line'){
-        const xa=dir>0?lx0:lx0-22,xb=dir>0?lx0+22:lx0;
-        out+=`<line x1="${xa.toFixed(1)}" y1="${(yy+5).toFixed(1)}" x2="${xb.toFixed(1)}" y2="${(yy+5).toFixed(1)}" stroke="${cc}" stroke-width="2.4"/>`;
-        out+=`<text x="${(dir>0?lx0+28:lx0-28).toFixed(1)}" y="${(yy+9).toFixed(1)}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
+        const xa=dir>0?0:-22,xb=dir>0?22:0;
+        out+=`<line x1="${xa}" y1="${yy+5}" x2="${xb}" y2="${yy+5}" stroke="${cc}" stroke-width="2.4"/>`;
+        out+=`<text x="${dir>0?28:-28}" y="${yy+9}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
       }else{
-        out+=`<rect x="${(dir>0?lx0:lx0-11).toFixed(1)}" y="${yy.toFixed(1)}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
-        out+=`<text x="${(dir>0?lx0+15:lx0-15).toFixed(1)}" y="${(yy+10).toFixed(1)}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
+        out+=`<rect x="${dir>0?0:-11}" y="${yy}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
+        out+=`<text x="${dir>0?15:-15}" y="${yy+10}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
       }}
     out+=`</g>`;
   }
@@ -2509,14 +2511,16 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
   const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
   const KD=K+tD;
-  const A=clamp(Number(s.b3Azim)||-34,-72,-6)*Math.PI/180;
+  let A=clamp(Number(s.b3Azim)||-34,-72,-6)*Math.PI/180;
+  if(s.b3ViewDir==='left')A=-A; // 纵深方向镜像
   const E=clamp(Number(s.b3Elev)||26,12,55)*Math.PI/180;
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
   const M={l:104,r:42,t:58,b:102};
   const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
-  const kS=1/Nx; // v1.8.7：深度按横轴类别间距归一，柱体底面为正方形（MATLAB bar3 风格）
+  const kS=1/Nx*(1+clamp(Number(s.b3LayerDx)||0,0,200)/100); // v1.8.8：层间水平错开缩放
+  const dyOff=clamp(Number(s.b3LayerDy)||0,0,200)/100*0.35; // v1.8.8：层间垂直错开（每层整体抬高）
   const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*kS*sA;
-  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE;
+  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE+k*dyOff;
   let minU=1e9,maxU=-1e9,minV=1e9,maxV=-1e9;
   for(const nx of [0,1])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
   const L=Math.min((plotW-24)/(maxU-minU),(plotH-16)/(maxV-minV));
@@ -2915,13 +2919,14 @@ function bindDraggables(){
     el.addEventListener('dblclick',()=>{
       // v1.8.5：3D 图例/色条双击回到默认位置
       if(el.dataset.drag==='b3legend'){state.chart.settings.b3LegendX=null;state.chart.settings.b3LegendY=null;renderChart()}
+      if(el.dataset.drag==='wflegend'){state.chart.settings.wfLegendX=null;state.chart.settings.wfLegendY=null;renderChart()}
     });
     el.addEventListener('pointerdown',e=>{
       if(e.target.closest('[data-annotation-handle]'))return;
       e.preventDefault();e.stopPropagation();
       const key=el.dataset.drag,start=svgPoint(svg,e),snapshot=dragSnapshot(key,el);
       el.setPointerCapture(e.pointerId);el.classList.add('dragging');
-      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'bar3d':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':'axis-y';
+      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'bar3d':key==='wflegend'?'bar3d':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':'axis-y';
       selectObject(target);
       const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;applyDrag(key,snapshot,dx,dy,el)};
       const up=()=>{el.classList.remove('dragging');el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);renderChart();renderProperties()};
@@ -2934,6 +2939,7 @@ function dragSnapshot(key,el=null){
   const s=state.chart.settings;if(key==='annotation'){const ann=state.chart.annotations.find(a=>a.id===el?.dataset.annotationId);return ann?structuredClone(ann):{}}
   if(key==='legend')return{x:state.chart.legend.x,y:state.chart.legend.y};
   if(key==='b3legend'){const mm=(el?.getAttribute('transform')||'').match(/translate\(([-\d.]+)[ ,]+([-\d.]+)\)/);return{x:mm?parseFloat(mm[1]):0,y:mm?parseFloat(mm[2]):0};}
+  if(key==='wflegend'){const s=state.chart.settings;return{x:s.wfLegendX??0,y:s.wfLegendY??0};}
   if(key==='legendFrame')return{x:state.chart.legendFrame.x,y:state.chart.legendFrame.y};
   if(key==='title')return{x:s.titleX,y:s.titleY};if(key==='subtitle')return{x:s.subtitleX,y:s.subtitleY};
   if(key==='xTitle'){
@@ -2954,6 +2960,7 @@ function applyDrag(key,snap,dx,dy,el){
   const x=snap.x+dx,y=snap.y+dy,s=state.chart.settings;
   if(key==='legend'){state.chart.legend.x=x;state.chart.legend.y=y;el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='b3legend'){s.b3LegendX=x;s.b3LegendY=y;el.setAttribute('transform',`translate(${x} ${y})`);return}
+  else if(key==='wflegend'){s.wfLegendX=x;s.wfLegendY=y;el.setAttribute('transform',`translate(${x} ${y})`);return}
   else if(key==='legendFrame'){state.chart.legendFrame.x=x;state.chart.legendFrame.y=y;el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='title'){s.titleX=x;s.titleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}else if(key==='subtitle'){s.subtitleX=x;s.subtitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='xTitle'){
@@ -3035,6 +3042,9 @@ function renderProperties(){
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
     rangeField('b3Azim','水平旋转角（方位）',-72,-6,1),
     rangeField('b3Elev','俯仰角（仰角）',12,55,1),
+    selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
+    rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
+    rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1),
     rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01),
     checkField('wfZLabels','左侧 Z 轴与层标签')])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
@@ -3172,7 +3182,7 @@ function bindPropertyInputs(){
   $$('[data-action]').forEach(el=>el.addEventListener('click',()=>{
     const act=el.dataset.action;
     if(act==='save-palette')exportPalette();
-    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=-34;ss.b3Elev=26;ss.b3LegendX=null;ss.b3LegendY=null;renderChart();renderProperties();}
+    else if(act==='b3ResetView'){const ss=state.chart.settings;ss.b3Azim=-34;ss.b3Elev=26;ss.b3LegendX=null;ss.b3LegendY=null;ss.wfLegendX=null;ss.wfLegendY=null;renderChart();renderProperties();}
     else if(act==='load-palette')$('#paletteFile').click();
     else if(act==='paste-hex')applyHexString(prompt('粘贴一行 HEX（逗号分隔，例：#7B95C6,#49C2D9）：')||'');
     else if(act==='save-style')exportStyle();
