@@ -2599,12 +2599,12 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const strokeOp=dimmed?'.35':'1';
     const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
     const bF2=P(x0,yBase,k+tD),bR2=P(x1,yBase,k+tD),tR2=P(x1,yTop,k+tD),tF2=P(x0,yTop,k+tD);
-    const faceTop=[tF,tR,tR2,tF2],faceSide=[bF,tF,tF2,bF2],faceFront=[bF,bR,tR,tF];
+    const faceTop=[tF,tR,tR2,tF2],faceSide=[bR,tR,tR2,bR2],faceFront=[bF,bR,tR,tF];
     let cFill,cSide,cTop,edgeC;
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
-      cFill=`url(#b3g-${k}-${i})`;cSide=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.18);edgeC=darken(topC,.3);
-    }else{cFill=r.c;cSide=wfLerpColor(r.c,'#000000',.22);cTop=wfLerpColor(r.c,'#ffffff',.28);edgeC=darken(r.c,.3);}
+      cFill=`url(#b3g-${k}-${i})`;cSide=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
+    }else{cFill=r.c;cSide=wfLerpColor(r.c,'#000000',.42);cTop=wfLerpColor(r.c,'#ffffff',.5);edgeC='#ffffff';}
     const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
     out+=wfPoly(faceSide,attr(cSide));
     out+=wfPoly(faceTop,attr(cTop));
@@ -2627,15 +2627,15 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   if(K>=1&&s.wfZLabels){
     const p0=P(zEdgeNx,0,0),pK=P(zEdgeNx,0,KD),ex=pK[0]-p0[0],ey=pK[1]-p0[1],el=Math.hypot(ex,ey)||1;
     const nxO=ey/el,nyO=-ex/el; // 左侧深度边的外法线（指向左下）
+    const zAng=Math.atan2(ey,ex)*180/Math.PI; // 纵深边倾斜角
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
-      const ox2=p[0]+nxO*12-(k%2)*15,oy2=p[1]+nyO*12+4;
-      const anchor='end';
+      const ox2=p[0]+nxO*14,oy2=p[1]+nyO*14;
       out+=wfLine(p,[p[0]+nxO*7,p[1]+nyO*7],ac,aw);
-      out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${oy2.toFixed(1)}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" fill="${ac}">${esc(gs[k])}</text>`;}
+      out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${(oy2+4).toFixed(1)}" text-anchor="middle" font-size="${s.wfZLabelSize}" fill="${ac}" transform="rotate(${zAng.toFixed(1)} ${ox2.toFixed(1)} ${(oy2+4).toFixed(1)})">${esc(gs[k])}</text>`;}
     if(s.wfZAxisTitle){
-      const mid=P(zEdgeNx,0,K/2),ang=Math.atan2(ey,ex)*180/Math.PI;
-      const tx=mid[0]+nxO*32,ty=mid[1]+nyO*32-6;
-      out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.zTitleSize||s.yTickSize}" font-style="italic" fill="${ac}" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
+      const mid=P(zEdgeNx,0,K/2),ang=zAng;
+      const tx=mid[0]+nxO*36,ty=mid[1]+nyO*36;
+      out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.zTitleSize||s.yTickSize}" font-style="italic" fill="${ac}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
     }
   }
   // 9) 轴标题
