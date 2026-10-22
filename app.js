@@ -2527,8 +2527,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const ox=M.l+plotW/2-L*(minU+maxU)/2;
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
   const P=(nx,ny,k)=>[ox+L*u(nx,k),oy-L*v(nx,ny,k)];
-  const sideNx = s.b3ViewDir==='left' ? 1 : 0; // 左后视角 Y 轴在右侧，右后视角在左侧
-  const zEdgeNx = s.b3ViewDir==='left' ? 0 : 1; // Z 轴标签在另一侧，避免被柱子遮挡
+  const sideNx = s.b3ViewDir==='right' ? 1 : 0; // 右后视角坐标轴镜像到右侧，避免被柱子遮挡
+  const zEdgeNx = sideNx; // Y 与 Z 轴同侧共享原点
   const yN=vv=>(Number(vv)-bmin)/((bmax-bmin)||1);
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   const valMode=s.b3ColorMode==='value';
