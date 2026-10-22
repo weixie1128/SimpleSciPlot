@@ -2599,14 +2599,15 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const strokeOp=dimmed?'.35':'1';
     const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
     const bF2=P(x0,yBase,k+tD),bR2=P(x1,yBase,k+tD),tR2=P(x1,yTop,k+tD),tF2=P(x0,yTop,k+tD);
-    const faceTop=[tF,tR,tR2,tF2],faceSide=[bR,tR,tR2,bR2],faceFront=[bF,bR,tR,tF];
+    const faceTop=[tF,tR,tR2,tF2],faceSideL=[bF,tF,tF2,bF2],faceSideR=[bR,tR,tR2,bR2],faceFront=[bF,bR,tR,tF];
     let cFill,cSide,cTop,edgeC;
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
       cFill=`url(#b3g-${k}-${i})`;cSide=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
     }else{cFill=r.c;cSide=wfLerpColor(r.c,'#000000',.42);cTop=wfLerpColor(r.c,'#ffffff',.5);edgeC='#ffffff';}
     const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
-    out+=wfPoly(faceSide,attr(cSide));
+    out+=wfPoly(faceSideL,attr(cSide));
+    out+=wfPoly(faceSideR,attr(cSide));
     out+=wfPoly(faceTop,attr(cTop));
     out+=wfPoly(faceFront,attr(cFill));
     // 误差棒与显著性字母（贴在柱顶前缘中点）
