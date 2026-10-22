@@ -2527,7 +2527,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const ox=M.l+plotW/2-L*(minU+maxU)/2;
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
   const P=(nx,ny,k)=>[ox+L*u(nx,k),oy-L*v(nx,ny,k)];
-  const sideNx=0,zEdgeNx=0; // v1.8.7：值轴与深度标签固定在左侧（对齐 MATLAB 默认视图）
+  const sideNx = s.b3ViewDir==='left' ? 1 : 0; // 左后视角 Y 轴在右侧，右后视角在左侧
+  const zEdgeNx = s.b3ViewDir==='left' ? 0 : 1; // Z 轴标签在另一侧，避免被柱子遮挡
   const yN=vv=>(Number(vv)-bmin)/((bmax-bmin)||1);
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   const valMode=s.b3ColorMode==='value';
@@ -2589,7 +2590,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,0);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
   out+='</g>';
   out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(0,ny,KD);const tx=p[0]-s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
+  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,KD);const tx=sideNx===0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
   out+='</g>';
   // 4) 柱体（远→近，深度排序）
   rows.forEach(r=>{
@@ -2621,14 +2622,16 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   });
   // 5) X / Y 刻度文字（位于绘图区外，画在柱体之后）
   xs.ticks.forEach(t=>{const p=P(t.n,0,0);const yy=p[1]+s.tickLength+18;out+=`<text data-object="axis-x" class="chart-object" x="${p[0].toFixed(1)}" y="${yy}" text-anchor="${rot<0?'end':'middle'}" font-size="${s.xTickSize}" fill="${s.xTickColor}" transform="rotate(${rot} ${p[0].toFixed(1)} ${yy})">${esc(t.label)}</text>`;});
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(0,ny,KD);
-    const tx=p[0]-s.tickLength-6,anchor='end';
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,KD);
+    const tx=sideNx===0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=sideNx===0?'end':'start';
     out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(vv,s.yTickDecimals,yStep,false)}</text>`;});
   // 8) Z 标签
   if(K>=1&&s.wfZLabels){
     const p0=P(zEdgeNx,0,0),pK=P(zEdgeNx,0,KD),ex=pK[0]-p0[0],ey=pK[1]-p0[1],el=Math.hypot(ex,ey)||1;
-    const nxO=ey/el,nyO=-ex/el; // 左侧深度边的外法线（指向左下）
-    const zAng=Math.atan2(ey,ex)*180/Math.PI; // 纵深边倾斜角
+    let zAng=Math.atan2(ey,ex)*180/Math.PI;
+    // 文字始终正立：角度超出 ±90° 就镜像 180°
+    if(zAng>90)zAng-=180; else if(zAng<-90)zAng+=180;
+    const nxO=ey/el,nyO=-ex/el; // 深度边的外法线
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
       const ox2=p[0]+nxO*14,oy2=p[1]+nyO*14;
       out+=wfLine(p,[p[0]+nxO*7,p[1]+nyO*7],ac,aw);
@@ -2641,7 +2644,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   }
   // 9) 轴标题
   if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,0);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
-  if(s.yTitleVisible&&s.yTitle){const dp=P(0,.5,KD);const rotY=-90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:dp[0]-40,yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
+  if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,KD);const rotY=sideNx===0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:(sideNx===0?dp[0]-40:dp[0]+40),yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例 / 数值色条（均可直接拖动，双击复位）
   if(s.wfLegend&&K>=1){
