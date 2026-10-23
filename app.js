@@ -2176,12 +2176,12 @@ function applyCanvasPreset(value){
 }
 
 function renderLayers(){
-  const isWf=state.chart.type==='waterfall',isB3=state.chart.type==='bar3d';const gs=chartGroups();const layers=[['section','基础对象'],['title','图题','base'],['subtitle','副标题','base'],['typography','中英文字体','base'],['canvas','画布与清晰度','base'],['legend','图例内容','base'],['legend-frame','图例边框','base'],['axis-y','Y 轴与纵标题','base'],['axis-x','X 轴与横标题','base'],...((isWf||isB3)?[['axis-z','Z 轴与标题','base']]:[]),['frame','图片边框','base'],['background','背景','base'],['palette','配色参数','base'],['style','图片参数','base'],['methodnote','方法说明','base'],['section','数据对象']];
+  const isWf=state.chart.type==='waterfall',isB3=state.chart.type==='bar3d';const gs=chartGroups();const layers=[['section','基础对象'],['title','图题','base'],['subtitle','副标题','base'],['typography','中英文字体','base'],['canvas','画布与清晰度','base'],['legend','图例内容','base'],['legend-frame','图例边框','base'],['axis-y','Y 轴与纵标题','base'],['axis-x','X 轴与横标题','base'],['frame','图片边框','base'],['background','背景','base'],['palette','配色参数','base'],['style','图片参数','base'],['methodnote','方法说明','base'],['section','数据对象']];
   gs.forEach((g,i)=>layers.push([`series:${i}`,`数据系列 · ${g}`,'series']));
   if(state.chart.type!=='curve'&&!isWf){layers.push(['error','误差棒','special']);if(!state.analysis?.continuous)layers.push(['letters','显著性字母','special'])}
   if(state.chart.annotations.length){layers.push(['section','标注对象']);state.chart.annotations.forEach((a,i)=>layers.push([`annotation:${a.id}`,`${annotationTypeLabel(a.type)} ${i+1}`,'special']))}
-  if(isWf)layers.push(['section','图形专属'],['waterfall3d','3D 瀑布图','special']);
-  if(isB3)layers.push(['section','图形专属'],['bar3d','3D 柱状图','special']);
+  if(isWf)layers.push(['section','图形专属'],['axis-z','Z 轴与标题','special'],['waterfall3d','3D 瀑布图','special']);
+  if(isB3)layers.push(['section','图形专属'],['axis-z','Z 轴与标题','special'],['bar3d','3D 柱状图','special']);
   $('#layersList').innerHTML=layers.map(item=>{if(item[0]==='section')return`<div class="layer-section-label">${item[1]}</div>`;const[id,name,kind]=item;return`<button class="layer-item ${selectedMatches(id)?'active':''}" data-layer="${esc(id)}"><span class="layer-dot"></span>${esc(name)}<span class="layer-tag ${kind==='special'?'special':''}">${kind==='special'?'专属':'基础'}</span></button>`}).join('');
   $$('[data-layer]').forEach(b=>b.addEventListener('click',()=>selectObject(b.dataset.layer)));
 }
@@ -2841,7 +2841,7 @@ function bindChartObjects(){
     // v1.8.5：3D 柱状图空白处旋转手势结束后，忽略随之而来的 background 点击（避免误选背景面板）
     if(el.dataset.object==='background'&&b3GestureMoved){b3GestureMoved=false;return}
     if(el.dataset.annotationId)selectObject(`annotation:${el.dataset.annotationId}`);
-    else{let target=el.dataset.object;if(target==='axis-z')target=state.chart.type==='bar3d'?'bar3d':'waterfall3d';else if(target==='b3legend')target='bar3d';selectObject(target,el.dataset.series)}};
+    else{let target=el.dataset.object;if(target==='b3legend')target='bar3d';selectObject(target,el.dataset.series)}};
 }
 
 function openLetterEditor(t){ensureLetterEditor().open(t)}
@@ -3093,7 +3093,7 @@ function renderProperties(){
   else if(id==='palette'){name='配色参数';html=paletteBlock()+paletteButtons();}
   else if(id==='style'){name='图片参数';html=styleButtons();}
   else if(id==='methodnote'){name='方法说明';const note=s.methodNote||buildMethodNote();html='<div class="subhead">方法说明（可编辑、可复制到论文）</div><textarea id="methodNoteArea" style="width:100%;min-height:220px;font-size:13px;line-height:1.7;padding:10px;border:1px solid #c9d2d8;border-radius:6px;resize:vertical;box-sizing:border-box" placeholder="自动生成方法说明...">'+esc(note)+'</textarea><div style="display:flex;gap:6px;margin-top:8px"><button type="button" id="regenMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">重新自动生成</button><button type="button" id="copyMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复制全部</button></div><div class="hint">这段文字不画到图上，供你复制进论文「材料与方法」；直接在框里改字，点空白处自动保存。</div>';}
-  $('#selectedObjectName').textContent=name||'未选择对象';$('#propertyEditor').innerHTML=html||'<div class="empty-state">在图中点击一个对象</div>';const badge=$('#propertyScopeBadge');if(badge){const special=['series','error','letters','waterfall3d','bar3d','palette','style'].includes(id)||id.startsWith('annotation:');badge.textContent=special?'图形专属':'基础';badge.classList.toggle('chart-specific',special)}bindPropertyInputs();
+  $('#selectedObjectName').textContent=name||'未选择对象';$('#propertyEditor').innerHTML=html||'<div class="empty-state">在图中点击一个对象</div>';const badge=$('#propertyScopeBadge');if(badge){const special=['series','error','letters','axis-z','waterfall3d','bar3d','palette','style'].includes(id)||id.startsWith('annotation:');badge.textContent=special?'图形专属':'基础';badge.classList.toggle('chart-specific',special)}bindPropertyInputs();
   const mna=$('#methodNoteArea');if(mna)mna.oninput=()=>{state.chart.settings.methodNote=mna.value};
   const rg=$('#regenMethodNote');if(rg)rg.onclick=()=>{delete state.chart.settings.methodNote;renderProperties()};
   const cp=$('#copyMethodNote');if(cp)cp.onclick=()=>{const a=$('#methodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
