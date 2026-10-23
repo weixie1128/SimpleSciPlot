@@ -2474,8 +2474,8 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,0);const rotY=dir>0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:dp[0],yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例
-  out+=renderLegend(gs,colors);
   out+=renderLegendFrame(gs,colors);
+  out+=renderLegend(gs,colors);
   return out;
 }
 
@@ -2651,8 +2651,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
       out+=`<text x="${txl}" y="${yy.toFixed(1)}" text-anchor="start" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
     out+=`</g>`;
   }else{
-    out+=renderLegend(gs,colors);
     out+=renderLegendFrame(gs,colors);
+    out+=renderLegend(gs,colors);
   }
   return out;
 }
