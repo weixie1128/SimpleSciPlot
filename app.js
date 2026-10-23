@@ -105,6 +105,9 @@ const defaultChartSettings = {
   // v1.8.7：3D 柱状图专属——方位角（-72–-6°，MATLAB 默认左前视角）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
   b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
   b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,wfLegendX:null,wfLegendY:null,
+  // v1.9.6：Z 轴独立完整设置
+  wfZTitleVisible:true,wfZTitleSize:12,wfZTitleColor:'',wfZTitleWeight:400,
+  wfZLabelColor:'',wfZLabelWeight:400,wfZShowTicks:true,wfZTickLength:7,
   background:'#ffffff'
 };
 
@@ -2579,12 +2582,12 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
   out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(0,0,KD)[0].toFixed(1)},${P(0,0,KD)[1].toFixed(1)}"/>`
-    +`<path d="M${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)} L${P(1,0,KD)[0].toFixed(1)},${P(1,0,KD)[1].toFixed(1)}"/>`
-    +`<path d="M${P(0,0,KD)[0].toFixed(1)},${P(0,0,KD)[1].toFixed(1)} L${P(0,1,KD)[0].toFixed(1)},${P(0,1,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,0,KD)[0].toFixed(1)},${P(sideNx,0,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(1-sideNx,0,0)[0].toFixed(1)},${P(1-sideNx,0,0)[1].toFixed(1)} L${P(1-sideNx,0,KD)[0].toFixed(1)},${P(1-sideNx,0,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(sideNx,0,KD)[0].toFixed(1)},${P(sideNx,0,KD)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)}"/>`
     +`</g>`;
   out+=`<g stroke="#c9c9c9" stroke-width=".6" fill="none">`
-    +`<path d="M${P(0,1,0)[0].toFixed(1)},${P(0,1,0)[1].toFixed(1)} L${P(0,1,KD)[0].toFixed(1)},${P(0,1,KD)[1].toFixed(1)} L${P(1,1,KD)[0].toFixed(1)},${P(1,1,KD)[1].toFixed(1)}"/>`
+    +`<path d="M${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)} L${P(1-sideNx,1,KD)[0].toFixed(1)},${P(1-sideNx,1,KD)[1].toFixed(1)}"/>`
     +`</g>`;
   out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
   if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,0);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
@@ -2625,21 +2628,27 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,KD);
     const tx=sideNx===0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=sideNx===0?'end':'start';
     out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(vv,s.yTickDecimals,yStep,false)}</text>`;});
-  // 8) Z 标签
+  // 8) Z 标签（v1.9.6：独立完整设置，偏移随字号自适应防遮挡）
   if(K>=1&&s.wfZLabels){
     const p0=P(zEdgeNx,0,0),pK=P(zEdgeNx,0,KD),ex=pK[0]-p0[0],ey=pK[1]-p0[1],el=Math.hypot(ex,ey)||1;
     let zAng=Math.atan2(ey,ex)*180/Math.PI;
     // 文字始终正立：角度超出 ±90° 就镜像 180°
     if(zAng>90)zAng-=180; else if(zAng<-90)zAng+=180;
-    const nxO=ey/el,nyO=-ex/el; // 深度边的外法线
+    const sgn = sideNx===1 ? -1 : 1;
+    const nxO=ey/el*sgn, nyO=-ex/el*sgn; // 外法线：右侧时反向
+    const zFs = s.wfZLabelSize || s.yTickSize;
+    const tickLen = s.wfZShowTicks ? (Number(s.wfZTickLength)||0) : 0;
+    const labelGap = tickLen + zFs*0.75; // 标签离轴距离：刻度线 + 字号自适应
+    const zCol = s.wfZLabelColor || ac;
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
-      const ox2=p[0]+nxO*14,oy2=p[1]+nyO*14;
-      out+=wfLine(p,[p[0]+nxO*7,p[1]+nyO*7],ac,aw);
-      out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${(oy2+4).toFixed(1)}" text-anchor="middle" font-size="${s.wfZLabelSize}" fill="${ac}" transform="rotate(${zAng.toFixed(1)} ${ox2.toFixed(1)} ${(oy2+4).toFixed(1)})">${esc(gs[k])}</text>`;}
-    if(s.wfZAxisTitle){
+      if(tickLen>0)out+=wfLine(p,[p[0]+nxO*tickLen,p[1]+nyO*tickLen],ac,aw);
+      const ox2=p[0]+nxO*labelGap,oy2=p[1]+nyO*labelGap;
+      out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${(oy2+zFs*0.35).toFixed(1)}" text-anchor="middle" font-size="${zFs}" font-weight="${s.wfZLabelWeight||400}" fill="${zCol}" transform="rotate(${zAng.toFixed(1)} ${ox2.toFixed(1)} ${(oy2+zFs*0.35).toFixed(1)})">${esc(gs[k])}</text>`;}
+    if(s.wfZTitleVisible&&s.wfZAxisTitle){
       const mid=P(zEdgeNx,0,K/2),ang=zAng;
-      const tx=mid[0]+nxO*36,ty=mid[1]+nyO*36;
-      out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.zTitleSize||s.yTickSize}" font-style="italic" fill="${ac}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
+      const titleGap = labelGap + s.wfZTitleSize*1.1;
+      const tx=mid[0]+nxO*titleGap,ty=mid[1]+nyO*titleGap;
+      out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.wfZTitleSize}" font-weight="${s.wfZTitleWeight||400}" fill="${s.wfZTitleColor||ac}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
     }
   }
   // 9) 轴标题
@@ -3049,8 +3058,7 @@ function renderProperties(){
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
     rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1),
-    rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01),
-    checkField('wfZLabels','左侧 Z 轴与层标签')])
+    rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01)])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
 +'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱间距、组宽度（左右宽度）、柱填充透明度、柱边框粗细在「数据系列」面板里改。</div>'
 +'<div class="object-property-section"><h3>柱体配色</h3></div>'+fieldGroup([
@@ -3059,9 +3067,18 @@ function renderProperties(){
     selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
 +'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条。</div>'
-+'<div class="object-property-section"><h3>Z 轴（层 / 系列）</h3></div>'+fieldGroup([
-    textField('wfZAxisTitle','Z 轴标题'),
-    rangeField('wfZLabelSize','Z 轴标签字号',8,20,1)])
++'<div class="object-property-section"><h3>Z 轴与标题</h3></div>'+fieldGroup([
+    checkField('wfZLabels','显示 Z 轴与层标签'),
+    checkField('wfZTitleVisible','显示 Z 轴标题'),
+    textField('wfZAxisTitle','Z 轴标题文字'),
+    rangeField('wfZTitleSize','标题字号',9,30,1),
+    selectField('wfZTitleWeight','标题字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
+    colorField('wfZTitleColor','标题颜色'),
+    rangeField('wfZLabelSize','层标签字号',8,28,1),
+    selectField('wfZLabelWeight','层标签字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
+    colorField('wfZLabelColor','层标签颜色'),
+    checkField('wfZShowTicks','显示 Z 轴刻度线'),
+    rangeField('wfZTickLength','刻度线长度',0,18,1)])
 +'<div class="object-property-section"><h3>墙面、网格与图例</h3></div>'+fieldGroup([
     colorField('wfWallColor','墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
