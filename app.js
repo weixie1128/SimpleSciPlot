@@ -1802,7 +1802,7 @@ function galleryBasePropertyHtml(id){
 }
 function renderGalleryStudioProperties(){
   const def=galleryDef(),id=state.gallery.selected;let name='',html='',scope='基础';
-  const baseNames={title:'图题',subtitle:'副标题',typography:'中英文字体',canvas:'画布与清晰度','axis-x':'X 轴与横标题','axis-y':'Y 轴与纵标题',frame:'图片边框',legend:'图例内容','legend-frame':'图例边框',background:'背景',palette:'配色参数',style:'图片参数',methodnote:'方法说明'};
+  const baseNames={title:'图题',subtitle:'副标题',typography:'中英文字体',canvas:'画布与清晰度','axis-z':'Z 轴与标题','axis-x':'X 轴与横标题','axis-y':'Y 轴与纵标题',frame:'图片边框',legend:'图例内容','legend-frame':'图例边框',background:'背景',palette:'配色参数',style:'图片参数',methodnote:'方法说明'};
   if(baseNames[id]){name=baseNames[id];html=galleryBasePropertyHtml(id)}
   else if(id.startsWith('annotation:')){const ann=annotationById(id.split(':')[1]);name=ann?`标注 · ${annotationTypeLabel(ann.type)}`:'标注';html=ann?annotationPropertyHtml(ann):'';scope='图形专属'}
   else if(id==='series'){const names=galleryStudioSeriesNames(),idx=clamp(state.gallery.selectedSeries,0,Math.max(0,names.length-1));name=`数据系列 · ${names[idx]||'Series'}`;html=gallerySeriesPropertyHtml(def.id,idx);scope='图形专属'}
@@ -2176,7 +2176,7 @@ function applyCanvasPreset(value){
 }
 
 function renderLayers(){
-  const isWf=state.chart.type==='waterfall',isB3=state.chart.type==='bar3d';const gs=chartGroups();const layers=[['section','基础对象'],['title','图题','base'],['subtitle','副标题','base'],['typography','中英文字体','base'],['canvas','画布与清晰度','base'],['legend','图例内容','base'],['legend-frame','图例边框','base'],['axis-y','Y 轴与纵标题','base'],['axis-x','X 轴与横标题','base'],['frame','图片边框','base'],['background','背景','base'],['palette','配色参数','base'],['style','图片参数','base'],['methodnote','方法说明','base'],['section','数据对象']];
+  const isWf=state.chart.type==='waterfall',isB3=state.chart.type==='bar3d';const gs=chartGroups();const layers=[['section','基础对象'],['title','图题','base'],['subtitle','副标题','base'],['typography','中英文字体','base'],['canvas','画布与清晰度','base'],['legend','图例内容','base'],['legend-frame','图例边框','base'],['axis-y','Y 轴与纵标题','base'],['axis-x','X 轴与横标题','base'],...((isWf||isB3)?[['axis-z','Z 轴与标题','base']]:[]),['frame','图片边框','base'],['background','背景','base'],['palette','配色参数','base'],['style','图片参数','base'],['methodnote','方法说明','base'],['section','数据对象']];
   gs.forEach((g,i)=>layers.push([`series:${i}`,`数据系列 · ${g}`,'series']));
   if(state.chart.type!=='curve'&&!isWf){layers.push(['error','误差棒','special']);if(!state.analysis?.continuous)layers.push(['letters','显著性字母','special'])}
   if(state.chart.annotations.length){layers.push(['section','标注对象']);state.chart.annotations.forEach((a,i)=>layers.push([`annotation:${a.id}`,`${annotationTypeLabel(a.type)} ${i+1}`,'special']))}
@@ -3018,6 +3018,21 @@ function renderProperties(){
     ...(isLineLike()?[selectField('yScale','Y 轴坐标类型',[['linear','线性（等距数值）'],['log','对数 log₁₀（适合跨数量级）']]),'<div class="hint">对数轴：Y 轴按 10 的幂分布，“刻度间隔”填 10 或 100 表示每隔 1 个或 2 个数量级放一个刻度；若数据（含误差棒端点）出现 0 或负数，会自动退回线性轴。断轴模式下不使用对数轴。</div>']:[]),
     rangeField('axisWidth','坐标轴粗细',.5,5,.1),colorField('axisColor','坐标轴颜色'),rangeField('yTickSize','Y轴数字字号',8,30,1),selectField('yTickWeight','Y轴数字字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),colorField('yTickColor','Y轴数字颜色'),rangeField('tickLength','刻度线长度',0,18,1),checkField('showYTicks','显示纵坐标刻度线')
   ])+breakPropertyBlock();}
+  else if(id==='axis-z'){name='Z 轴与标题';html=
+  '<div class="object-property-section"><h3>Z 轴与层标签</h3></div>'+fieldGroup([
+    checkField('wfZLabels','显示 Z 轴与层标签'),
+    rangeField('wfZLabelSize','层标签字号',8,28,1),
+    selectField('wfZLabelWeight','层标签字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
+    colorField('wfZLabelColor','层标签颜色'),
+    checkField('wfZShowTicks','显示 Z 轴刻度线'),
+    rangeField('wfZTickLength','刻度线长度',0,18,1)])
+  +'<div class="object-property-section"><h3>Z 轴标题</h3></div>'+fieldGroup([
+    checkField('wfZTitleVisible','显示 Z 轴标题'),
+    textField('wfZAxisTitle','标题文字'),
+    rangeField('wfZTitleSize','标题字号',9,30,1),
+    selectField('wfZTitleWeight','标题字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
+    colorField('wfZTitleColor','标题颜色')])
+  +'<div class="hint">标签离轴距离随字号自动增大，不会与刻度线或坐标轴重叠。</div>';}
   else if(id==='frame'){name='图片边框';html=fieldGroup([
     selectField('frameMode','边框形式',[['lb','仅左、下轴'],['lbr','左、下、右三边'],['box','完整四边框'],['none','不显示边框']]),rangeField('frameWidth','边框粗细',.5,6,.1),colorField('frameColor','边框颜色')
   ]);}
@@ -3067,18 +3082,6 @@ function renderProperties(){
     selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
 +'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条。</div>'
-+'<div class="object-property-section"><h3>Z 轴与标题</h3></div>'+fieldGroup([
-    checkField('wfZLabels','显示 Z 轴与层标签'),
-    checkField('wfZTitleVisible','显示 Z 轴标题'),
-    textField('wfZAxisTitle','Z 轴标题文字'),
-    rangeField('wfZTitleSize','标题字号',9,30,1),
-    selectField('wfZTitleWeight','标题字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
-    colorField('wfZTitleColor','标题颜色'),
-    rangeField('wfZLabelSize','层标签字号',8,28,1),
-    selectField('wfZLabelWeight','层标签字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
-    colorField('wfZLabelColor','层标签颜色'),
-    checkField('wfZShowTicks','显示 Z 轴刻度线'),
-    rangeField('wfZTickLength','刻度线长度',0,18,1)])
 +'<div class="object-property-section"><h3>墙面、网格与图例</h3></div>'+fieldGroup([
     colorField('wfWallColor','墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
@@ -4515,6 +4518,7 @@ const SETTING_INDEX=[
  {id:'subtitle',label:'副标题',kw:'副标题 副标 subtitle'},
  {id:'typography',label:'字体与字号',kw:'字体 字号 字重 英文 中文 font typography'},
  {id:'canvas',label:'画布与导出',kw:'画布 尺寸 宽度 高度 dpi 清晰度 比例 导出 紧凑 svg png'},
+ {id:'axis-z',label:'Z轴与标题',kw:'Z轴 纵深 层 系列 标题 刻度 温度 axis-z z轴'},
  {id:'axis-x',label:'X轴与横标题',kw:'X轴 横坐标 标题 刻度 数字 倾斜 axis-x x轴'},
  {id:'axis-y',label:'Y轴与纵标题',kw:'Y轴 纵坐标 标题 刻度 数字 axis-y y轴'},
  {id:'legend',label:'图例内容',kw:'图例 legend 位置 列数'},
