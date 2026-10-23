@@ -2474,22 +2474,8 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,0);const rotY=dir>0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:dp[0],yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例
-  if(s.wfLegend&&K>=1){
-    const lx0=P(zEdgeNx,1,K)[0]+(dir>0?14:-14),ly0=P(zEdgeNx,1,K)[1]+8;
-    const lx=s.wfLegendX!=null?s.wfLegendX:lx0,ly=s.wfLegendY!=null?s.wfLegendY:ly0;
-    const anchor=dir>0?'start':'end';
-    out+=`<g data-object="legend" data-drag="wflegend" class="chart-object draggable" font-size="${s.wfLegendSize||11}" transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})">`;
-    for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=k*17;
-      if(s.wfLegendStyle==='line'){
-        const xa=dir>0?0:-22,xb=dir>0?22:0;
-        out+=`<line x1="${xa}" y1="${yy+5}" x2="${xb}" y2="${yy+5}" stroke="${cc}" stroke-width="2.4"/>`;
-        out+=`<text x="${dir>0?28:-28}" y="${yy+9}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
-      }else{
-        out+=`<rect x="${dir>0?0:-11}" y="${yy}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
-        out+=`<text x="${dir>0?15:-15}" y="${yy+10}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
-      }}
-    out+=`</g>`;
-  }
+  out+=renderLegend(gs,colors);
+  out+=renderLegendFrame(gs,colors);
   return out;
 }
 
@@ -2655,28 +2641,18 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,0);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
   if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,KD);const rotY=sideNx===0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:(sideNx===0?dp[0]-40:dp[0]+40),yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
-  // 10) 图例 / 数值色条（均可直接拖动，双击复位）
-  if(s.wfLegend&&K>=1){
-    const defLx=12,defLy=M.t-40; // v1.8.7：图例/色条默认置于画布左上角
-    const lx=s.b3LegendX??defLx,ly=s.b3LegendY??defLy,anchor='start';
-    out+=`<g data-object="b3legend" data-drag="b3legend" class="chart-object draggable" transform="translate(${lx.toFixed(1)} ${ly.toFixed(1)})" font-size="${s.wfLegendSize||11}" style="cursor:pointer">`;
-    if(valMode){
-      const cbH=118,cx0=0,txl=20;
-      out+=`<rect x="${cx0}" y="0" width="14" height="${cbH}" fill="url(#b3cb)" stroke="#8a8a8a" stroke-width=".6"/>`;
-      [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const yy=f*cbH+4;
-        out+=`<text x="${txl}" y="${yy.toFixed(1)}" text-anchor="${anchor}" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
-    }else{
-      for(let k=0;k<=K;k++){const cc=colors[k%colors.length],yy=k*17;
-        if(s.wfLegendStyle==='line'){
-          const xa=0,xb=22;
-          out+=`<line x1="${xa}" y1="${yy+5}" x2="${xb}" y2="${yy+5}" stroke="${cc}" stroke-width="2.4"/>`;
-          out+=`<text x="28" y="${yy+9}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
-        }else{
-          out+=`<rect x="0" y="${yy}" width="11" height="11" fill="${cc}" stroke="${darken(cc,.2)}" stroke-width=".6"/>`;
-          out+=`<text x="15" y="${yy+10}" text-anchor="${anchor}" fill="#333">${esc(gs[k])}</text>`;
-        }}
-    }
+  // 10) 图例 / 数值色条（统一图例体系，可直接拖动）
+  if(valMode&&s.legendVisible&&K>=1){
+    const lx=state.chart.legend.x,ly=state.chart.legend.y;
+    out+=`<g data-object="legend" data-drag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})" style="cursor:pointer">`;
+    const cbH=118,cx0=0,txl=20;
+    out+=`<rect x="${cx0}" y="0" width="14" height="${cbH}" fill="url(#b3cb)" stroke="#8a8a8a" stroke-width=".6"/>`;
+    [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const yy=f*cbH+4;
+      out+=`<text x="${txl}" y="${yy.toFixed(1)}" text-anchor="start" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
     out+=`</g>`;
+  }else{
+    out+=renderLegend(gs,colors);
+    out+=renderLegendFrame(gs,colors);
   }
   return out;
 }
@@ -2814,7 +2790,9 @@ function letterSvg(x,y,text,lx,lg){const s=state.chart.settings;return`<text dat
 
 function legendLayout(gs,colors){
   const s=state.chart.settings,font=s.legendSize,rowH=Math.max(25,font*1.55),symbolW=Math.max(18,font*1.15),textGap=Math.max(9,font*.55),itemGap=Math.max(18,font*.9),colGap=Math.max(18,font*1.1);
-  const horizontal=s.legendOrientation!=='vertical';
+  const is3Dlegend=state.chart.type==='bar3d'||state.chart.type==='waterfall';
+  // 3D 图默认垂直单列，2D 图默认水平；用户可在面板切换
+  const horizontal=is3Dlegend ? s.legendOrientation==='horizontal' : s.legendOrientation!=='vertical';
   const requested=Math.max(1,Math.round(Number(s.legendColumns)||1));
   const cols=horizontal?Math.min(gs.length,requested===1?gs.length:requested):1;
   const rows=Math.ceil(gs.length/cols);
@@ -2826,7 +2804,7 @@ function legendLayout(gs,colors){
   let content='';
   gs.forEach((g,i)=>{
     const col=horizontal?i%cols:0,row=horizontal?Math.floor(i/cols):i,ox=colX[col],oy=row*rowH+rowH*.52,c=colors[i%colors.length],st=getSeriesStyle(i);
-    if(state.chart.type==='bar')content+=`<rect data-object="legend" x="${ox}" y="${oy-font*.42}" width="${symbolW}" height="${Math.max(12,font*.82)}" fill="${c}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}"/><text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
+    if(state.chart.type==='bar'||state.chart.type==='bar3d'||state.chart.type==='waterfall')content+=`<rect data-object="legend" x="${ox}" y="${oy-font*.42}" width="${symbolW}" height="${Math.max(12,font*.82)}" fill="${c}" stroke="${darken(c,.25)}" stroke-width=".6"/><text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
     else content+=`<line data-object="legend" x1="${ox}" x2="${ox+symbolW}" y1="${oy}" y2="${oy}" stroke="${c}" stroke-width="${st.lineWidth}"/>${seriesMarkersVisible()?markerLegend(ox+symbolW/2,oy,c,i):''}<text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.12}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
   });
   return {content,width:cursor,height:Math.max(rowH,rows*rowH),padX:14,padY:10};
@@ -3056,15 +3034,12 @@ function renderProperties(){
 +'<div class="object-property-section"><h3>Z 轴（层 / 时间 / 温度）</h3></div>'+fieldGroup([
     textField('wfZAxisTitle','Z 轴标题'),
     rangeField('wfZLabelSize','Z 轴标签字号',8,20,1)])
-+'<div class="object-property-section"><h3>墙面、网格与图例</h3></div>'+fieldGroup([
++'<div class="object-property-section"><h3>墙面与网格</h3></div>'+fieldGroup([
     colorField('wfWallColor','墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
     colorField('wfGridColor','网格线颜色'),
-    rangeField('wfGridWidth','网格线粗细',.2,2,.1),
-    checkField('wfLegend','显示图例'),
-    selectField('wfLegendStyle','图例样式',[['block','色块'],['line','线条']]),
-    rangeField('wfLegendSize','图例字号',8,18,1)])
-+'<div class="method-badge">X ＝ 横轴点（波长/时间），在“X 轴与横标题”里改；Y ＝ 数值（前左竖边），在“Y 轴与纵标题”里改；Z ＝ 层（右斜边，每列一个时间点/温度），相关设置都在这里。</div>';
+    rangeField('wfGridWidth','网格线粗细',.2,2,.1)])
++'<div class="method-badge">X ＝ 横轴点（波长/时间），在“X 轴与横标题”里改；Y ＝ 数值（前左竖边），在“Y 轴与纵标题”里改；Z ＝ 层（右斜边，每列一个时间点/温度），在“Z 轴与标题”；图例设置在“图例内容”。</div>';
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
@@ -3082,15 +3057,12 @@ function renderProperties(){
     selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
 +'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条。</div>'
-+'<div class="object-property-section"><h3>墙面、网格与图例</h3></div>'+fieldGroup([
++'<div class="object-property-section"><h3>墙面与网格</h3></div>'+fieldGroup([
     colorField('wfWallColor','墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
     colorField('wfGridColor','网格线颜色'),
-    rangeField('wfGridWidth','网格线粗细',.2,2,.1),
-    checkField('wfLegend','显示图例 / 数值色条'),
-    selectField('wfLegendStyle','图例样式',[['block','色块'],['line','线条']]),
-    rangeField('wfLegendSize','图例字号',8,18,1)])
-+'<div class="method-badge">X ＝ 横轴类别（因素1水平），在“X 轴与横标题”里改；Y ＝ 均值（柱高），在“Y 轴与纵标题”里改；Z ＝ 纵深系列（因素2水平），相关设置都在这里；旋转视角后导出/拼图会按当前角度出图。</div>';
+    rangeField('wfGridWidth','网格线粗细',.2,2,.1)])
++'<div class="method-badge">X ＝ 横轴类别（因素1水平），在“X 轴与横标题”里改；Y ＝ 均值（柱高），在“Y 轴与纵标题”里改；Z ＝ 纵深系列（因素2水平），相关设置在“Z 轴与标题”；图例设置在“图例内容”；旋转视角后导出/拼图会按当前角度出图。</div>';
   }
   else if(id==='series'){const idx=clamp(state.chart.selectedSeries,0,Math.max(0,gs.length-1));name=`数据系列 · ${gs[idx]||'Series'}`;
     // v1.8.4：按图形类型裁剪控件——瀑布图不显示柱状图控件，3D 柱状图不显示折线/marker 控件，
@@ -3107,7 +3079,8 @@ function renderProperties(){
     ...(_t==='bar'?[checkField('barLineMode','柱线组合（柱顶叠加均值趋势线）'),checkField(`series:${idx}:barLine`,'本系列趋势折线'),rangeField('barLineWidth','趋势线粗细',.8,5,.1),checkField('barLineMarker','趋势线数据点')]:[])
   ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+paletteBlock();}
   else if(id==='error'){name='误差棒';html=fieldGroup([selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI']]),rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']])]);}
-  else if(id==='legend'){name='图例内容';html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框在独立图层中单独移动。</div>`;}
+  else if(id==='legend'){name='图例内容';
+    html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
   else if(id==='legend-frame'){name='图例边框';html=fieldGroup([
     selectField('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),
     numberLegendFrameField('x','水平位置'),numberLegendFrameField('y','垂直位置'),checkLegendFrameField('autoSize','自动适应图例大小'),numberLegendFrameField('width','边框宽度'),numberLegendFrameField('height','边框高度'),
