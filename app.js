@@ -2178,7 +2178,7 @@ function applyCanvasPreset(value){
 function renderLayers(){
   const isWf=state.chart.type==='waterfall',isB3=state.chart.type==='bar3d';const gs=chartGroups();const layers=[['section','基础对象'],['title','图题','base'],['subtitle','副标题','base'],['typography','中英文字体','base'],['canvas','画布与清晰度','base'],['legend','图例内容','base'],['legend-frame','图例边框','base'],['axis-y','Y 轴与纵标题','base'],['axis-x','X 轴与横标题','base'],['frame','图片边框','base'],['background','背景','base'],['palette','配色参数','base'],['style','图片参数','base'],['methodnote','方法说明','base'],['section','数据对象']];
   gs.forEach((g,i)=>layers.push([`series:${i}`,`数据系列 · ${g}`,'series']));
-  if(state.chart.type!=='curve'&&!isWf){layers.push(['error','误差棒','special']);if(!state.analysis?.continuous)layers.push(['letters','显著性字母','special'])}
+  if(state.chart.type!=='curve'&&!isWf&&!isB3){layers.push(['error','误差棒','special']);if(!state.analysis?.continuous)layers.push(['letters','显著性字母','special'])}
   if(state.chart.annotations.length){layers.push(['section','标注对象']);state.chart.annotations.forEach((a,i)=>layers.push([`annotation:${a.id}`,`${annotationTypeLabel(a.type)} ${i+1}`,'special']))}
   if(isWf)layers.push(['section','图形专属'],['axis-z','Z 轴与标题','special'],['waterfall3d','3D 瀑布图','special']);
   if(isB3)layers.push(['section','图形专属'],['axis-z','Z 轴与标题','special'],['bar3d','3D 柱状图','special']);
