@@ -726,3 +726,14 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
   body.mobile-nav-open .mobile-nav-overlay{opacity:1;pointer-events:auto}
   body.mobile-nav-open{overflow:hidden}
 }
+
+/* 图片参数区：桌面端改 12 栅格，字体占第一行，画布与导出占第二行。 */
+@media(min-width:761px){
+  .quick-format-bar{grid-template-columns:repeat(12,minmax(0,1fr))}
+  .quick-format-bar>label{min-width:0}
+  .quick-format-bar>label:nth-child(-n+3){grid-column:span 4}
+  .quick-format-bar>label:nth-child(n+4){grid-column:span 3}
+}
+@media(min-width:761px) and (max-width:1500px){
+  .quick-format-bar>label:nth-child(7) input{width:46px}
+}
