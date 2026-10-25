@@ -88,6 +88,9 @@
       </div>
       <div class="top-actions">
         <div class="current-choice"><span>当前图形</span><b id="topCurrentChart">尚未选择</b></div>
+        <span id="autosaveState" class="autosave-state" aria-live="polite"></span>
+        <button id="undoBtn" class="ghost icon-btn" title="撤销 (Ctrl+Z)" aria-label="撤销" disabled>↶</button>
+        <button id="redoBtn" class="ghost icon-btn" title="重做 (Ctrl+Shift+Z)" aria-label="重做" disabled>↷</button>
         <button id="saveProjectBtn" class="secondary">保存项目</button>
         <button id="nextStepBtn" class="primary">填写基本实验信息</button>
       </div>
@@ -172,7 +175,7 @@
             <div class="upload-icon">↑</div><b>拖入填写好的 Excel / CSV</b><span>第一列的所有时间点、浓度或温度会自动识别；可以是几十行，也可以是上千行。数据仅在浏览器本地处理。</span>
             <button id="chooseFile" class="primary">选择数据文件</button>
           </div>
-          <div class="action-row wrap"><button id="loadRawDemo" class="secondary">载入当前图形示例数据</button><button id="inlineEditToggle" class="ghost">在线填写数据</button><button id="pasteToggle" class="ghost">粘贴表格文本</button><button id="clearData" class="ghost danger">清空数据</button></div>
+          <div class="action-row wrap"><button id="loadRawDemo" class="secondary">载入当前图形示例数据</button><button id="inlineEditToggle" class="ghost">在线填写数据</button><button id="pasteToggle" class="ghost">粘贴表格文本</button><button id="importProject" class="ghost">导入项目 JSON</button><input type="file" id="projectFileInput" accept=".json,application/json" hidden><button id="clearData" class="ghost danger">清空数据</button></div>
           <div id="pasteBox" class="paste-box hidden"><textarea id="dataText" rows="10" spellcheck="false" placeholder="可粘贴制表符或逗号分隔数据"></textarea><button id="parsePasted" class="primary">解析粘贴数据</button></div>
           <div id="inlineEditBox" class="paste-box hidden">
             <div class="inline-edit-head"><b>在线填写数据</b><span>类似 Excel：点击单元格填写；从 Excel 复制多行多列，选中起始格后 Ctrl+V 一次粘贴。Enter 下移一格，可加行/加列。</span></div>

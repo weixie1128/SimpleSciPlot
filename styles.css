@@ -737,3 +737,8 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 @media(min-width:761px) and (max-width:1500px){
   .quick-format-bar>label:nth-child(7) input{width:46px}
 }
+.autosave-state{font-size:12px;color:#6b7c85;white-space:nowrap}
+@media(max-width:900px){.autosave-state{display:none}}
+@media(max-width:760px){.top-actions .current-choice{display:none}}
+.icon-btn{padding:4px 10px;font-size:15px;line-height:1}
+.icon-btn:disabled{opacity:.4;cursor:default}

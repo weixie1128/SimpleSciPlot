@@ -226,8 +226,9 @@ function normalizeTextSettings(){
 }
 
 function init(){
-  restoreProjectName();
-  applyLastPalette();
+  const restoredAt=restoreAutosavedProject();
+  if(restoredAt===null){restoreProjectName();applyLastPalette();}
+  else if(restoredAt)updateAutosaveBadge('已恢复上次编辑');
   normalizeTextSettings();
   bindNavigation();
   bindWorkflow();
@@ -241,6 +242,10 @@ function init(){
   fillDesignForm();
   renderDesignPreview();
   renderDataPreview();
+  bindAutosave();
+  bindShortcuts();
+  history.last=stateSnapshot();
+  if(restoredAt)toast('已恢复上次编辑'+(restoredAt?' · '+new Date(restoredAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):''));
   showView('plan');
   ensureTourFab();
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v='+(window.FOODLAB_BUILD||'1.9.12')).catch(()=>{});
@@ -668,7 +673,7 @@ function processGalleryImported(rows,source){
   const normalized=normalizeGalleryRows(rows,galleryDef().schema);
   if(!normalized.length){showValidation('error','没有读取到有效数据',`当前需要 ${currentWorkflowSchema().name}。请使用平台生成的模板。`);return}
   state.gallery.rows=normalized;state.gallery.sourceName=source;analyzeGalleryData();renderDataPreview();
-  showValidation('success',`导入成功：${normalized.length} 行`,`${workflowChartLabel(state.workflow.chartType)} · ${currentWorkflowSchema().name} · ${source}`);toast('数据已导入并完成初步分析');
+  showValidation('success',`导入成功：${normalized.length} 行`,`${workflowChartLabel(state.workflow.chartType)} · ${currentWorkflowSchema().name} · ${source}`);toast('数据已导入并完成初步分析');scheduleHistory();
 }
 
 /* ---------- v0.21.0: in-page spreadsheet editor (no download needed) ---------- */
@@ -1114,6 +1119,7 @@ function finalizeImportedExperiment(parsed,errors,source,layout,inferred=null){
   const qw=state.dataWarnings||[];
   if(qw.length)showValidation('warning','初步分析完成，但有 '+qw.length+' 条数据提醒',qw.slice(0,3).join('；')+(qw.length>3?' 等':''));
   toast('数据已导入并完成初步分析');
+  scheduleHistory();
 }
 
 function parseDelimited(text){
@@ -3247,11 +3253,137 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.9.12',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload=projectPayload();
   let localSaved=true;
-  try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
+  try{localStorage.setItem('foodlab-project',JSON.stringify(payload));localStorage.setItem(AUTOSAVE_KEY,JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
   toast(localSaved?'项目已保存为 JSON，并同步保存在当前浏览器':'项目 JSON 已导出；浏览器本地存储不可用（配额已满或无痕模式），本次未同步到本机')
+}
+// ===== v1.9.12 项目持久化：自动保存、刷新恢复、JSON 导入 =====
+const AUTOSAVE_KEY='foodlab-project-autosave';
+let autosaveTimer=null,projectDirty=false;
+function projectPayload(){return {version:window.FOODLAB_BUILD||'1.9.12',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard}}
+function applyProjectSnapshot(p){
+  if(!p||typeof p!=='object'||!p.workflow||!p.design)return false;
+  state.workflow=Object.assign({},state.workflow,p.workflow);
+  state.design=Object.assign(structuredClone(defaultDesign),p.design);
+  state.rawData=Array.isArray(p.rawData)?p.rawData:[];
+  const c=p.chart||{},g=p.gallery||{},f=p.figureBoard||{};
+  state.chart=Object.assign({},state.chart,c,{
+    settings:Object.assign(structuredClone(defaultChartSettings),c.settings||{}),
+    palette:Array.isArray(c.palette)&&c.palette.length?c.palette:state.chart.palette,
+    legend:Object.assign({},state.chart.legend,c.legend||{}),
+    legendFrame:Object.assign({},state.chart.legendFrame,c.legendFrame||{}),
+    seriesStyles:c.seriesStyles||{},annotations:Array.isArray(c.annotations)?c.annotations:[],selectedAnnotation:null
+  });
+  state.gallery=Object.assign({},state.gallery,g,{
+    settings:Object.assign(structuredClone(defaultGallerySettings),g.settings||{}),
+    palette:Array.isArray(g.palette)&&g.palette.length?g.palette:state.gallery.palette,
+    rows:Array.isArray(g.rows)?g.rows:[],seriesStyles:g.seriesStyles||{},
+    annotations:Array.isArray(g.annotations)?g.annotations:[],selectedAnnotation:null
+  });
+  state.figureBoard=Object.assign({},state.figureBoard,f,{items:Array.isArray(f.items)?f.items:[],annotations:Array.isArray(f.annotations)?f.annotations:[],selectedAnnotation:null});
+  return true;
+}
+function restoreAutosavedProject(){
+  let p=null;
+  try{const raw=localStorage.getItem(AUTOSAVE_KEY)||localStorage.getItem('foodlab-project');if(raw)p=JSON.parse(raw)}catch(_err){return null}
+  if(!applyProjectSnapshot(p))return null;
+  normalizeTextSettings();
+  try{
+    if(state.workflow.mode==='experiment'){if(state.rawData.length)analyzeData()}
+    else if(state.gallery.rows.length)analyzeGalleryData();
+  }catch(_err){}
+  return p.savedAt||'';
+}
+function updateAutosaveBadge(text){const el=$('#autosaveState');if(el)el.textContent=text}
+function autosaveNow(){
+  clearTimeout(autosaveTimer);autosaveTimer=null;
+  const payload=projectPayload();
+  try{
+    localStorage.setItem(AUTOSAVE_KEY,JSON.stringify(payload));
+    projectDirty=false;
+    updateAutosaveBadge('已自动保存 '+new Date(payload.savedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
+  }catch(_err){updateAutosaveBadge('自动保存失败：浏览器存储已满')}
+}
+function scheduleAutosave(){projectDirty=true;clearTimeout(autosaveTimer);autosaveTimer=setTimeout(autosaveNow,900);scheduleHistory()}
+function bindAutosave(){
+  ['input','change'].forEach(name=>document.addEventListener(name,scheduleAutosave,true));
+  document.addEventListener('click',e=>{if(e.target.closest('button,[data-action],.layer-row,.chart-series-row'))scheduleAutosave()},true);
+  window.addEventListener('beforeunload',()=>{if(projectDirty)autosaveNow()});
+  const btn=$('#importProject'),input=$('#projectFileInput');
+  if(btn&&input){
+    btn.addEventListener('click',()=>input.click());
+    input.addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importProjectFile(f);e.target.value=''});
+  }
+}
+async function importProjectFile(file){
+  try{
+    const p=JSON.parse(await file.text());
+    if(!applyProjectSnapshot(p)){toast('无法识别该项目文件：不是 SimpleSciPlot 导出的 JSON');return}
+    normalizeTextSettings();
+    fillDesignForm();renderDesignPreview();renderDataPreview();
+    showView('data');
+    autosaveNow();
+    toast(`已导入项目「${state.design.experimentName||'未命名'}」`);
+  }catch(_err){toast('项目文件解析失败，请确认是本工具导出的 JSON 文件')}
+}
+// ===== v1.9.12 撤销/重做与快捷键 =====
+const history={past:[],future:[],last:null,timer:null,suspended:false};
+function stateSnapshot(){try{return JSON.stringify({workflow:state.workflow,design:state.design,rawData:state.rawData,chart:state.chart,gallery:state.gallery,figureBoard:state.figureBoard})}catch(_err){return null}}
+function updateHistoryButtons(){const u=$('#undoBtn'),r=$('#redoBtn');if(u)u.disabled=!history.past.length;if(r)r.disabled=!history.future.length}
+function recordHistory(){
+  history.timer=null;
+  if(history.suspended)return;
+  const snap=stateSnapshot();if(!snap)return;
+  if(history.last===snap){updateHistoryButtons();return}
+  if(history.last)history.past.push(history.last);
+  while(history.past.length>20)history.past.shift();
+  history.last=snap;history.future.length=0;updateHistoryButtons();
+}
+function scheduleHistory(){if(history.suspended)return;clearTimeout(history.timer);history.timer=setTimeout(recordHistory,500)}
+function restoreHistorySnapshot(snap){
+  history.suspended=true;
+  let ok=false;
+  try{
+    if(applyProjectSnapshot(JSON.parse(snap))){
+      normalizeTextSettings();
+      fillDesignForm();renderDesignPreview();renderDataPreview();
+      if(state.workflow.mode==='experiment'){if(state.rawData.length)analyzeData()}
+      else if(state.gallery.rows.length)analyzeGalleryData();
+      showView(state.view);
+      autosaveNow();
+      ok=true;
+    }
+  }catch(_err){ok=false}
+  history.suspended=false;
+  return ok;
+}
+function undo(){
+  if(!history.past.length){toast('没有可撤销的操作');return}
+  const cur=stateSnapshot(),prev=history.past.pop();
+  if(!restoreHistorySnapshot(prev)){history.past.push(prev);toast('撤销失败');return}
+  history.future.push(cur);history.last=prev;updateHistoryButtons();toast('已撤销');
+}
+function redo(){
+  if(!history.future.length){toast('没有可重做的操作');return}
+  const cur=stateSnapshot(),next=history.future.pop();
+  if(!restoreHistorySnapshot(next)){history.future.push(next);toast('重做失败');return}
+  history.past.push(cur);history.last=next;updateHistoryButtons();toast('已重做');
+}
+function bindShortcuts(){
+  const u=$('#undoBtn'),r=$('#redoBtn');
+  if(u)u.addEventListener('click',undo);
+  if(r)r.addEventListener('click',redo);
+  document.addEventListener('keydown',e=>{
+    if(!(e.ctrlKey||e.metaKey))return;
+    const t=e.target,typing=!!(t&&t.matches&&t.matches('input,textarea,select,[contenteditable="true"]'));
+    const k=String(e.key||'').toLowerCase();
+    if(k==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo()}
+    else if(k==='y'){if(typing)return;e.preventDefault();redo()}
+    else if(k==='s'){e.preventDefault();saveProject()}
+    else if(k==='e'){e.preventDefault();try{exportPng()}catch(_err){toast('当前视图没有可导出的图')}}
+  });
 }
 function paletteTools(){var st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
   return '<div class="subhead">配色与参数管理</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">'
