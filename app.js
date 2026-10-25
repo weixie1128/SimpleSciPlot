@@ -243,7 +243,7 @@ function init(){
   renderDataPreview();
   showView('plan');
   ensureTourFab();
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v='+(window.FOODLAB_BUILD||'0.96.0')).catch(()=>{});
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v='+(window.FOODLAB_BUILD||'1.9.12')).catch(()=>{});
 }
 
 function bindNavigation(){
@@ -251,6 +251,16 @@ function bindNavigation(){
   $$('[data-open]').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.open)));
   $('#nextStepBtn').addEventListener('click',()=>showView(nextViewFor(state.view)));
   $('#saveProjectBtn').addEventListener('click',saveProject);
+  bindMobileNav();
+}
+
+function bindMobileNav(){
+  const toggle=$('#mobileNavToggle'),overlay=$('#mobileNavOverlay');
+  const setOpen=open=>{document.body.classList.toggle('mobile-nav-open',open);if(toggle)toggle.setAttribute('aria-expanded',open?'true':'false')};
+  if(toggle)toggle.addEventListener('click',()=>setOpen(!document.body.classList.contains('mobile-nav-open')));
+  if(overlay)overlay.addEventListener('click',()=>setOpen(false));
+  $$('#mainNav .nav-item').forEach(btn=>btn.addEventListener('click',()=>setOpen(false)));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false)});
 }
 
 function nextViewFor(view){
@@ -573,7 +583,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.8.7'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.9.12'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -3237,7 +3247,7 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload={version:'1.8.7',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
+  const payload={version:'1.9.12',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
   try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
@@ -4471,17 +4481,17 @@ const TOUR_STEPS={
     {target:'#goChart,#nextStepBtn',title:'③ 进入作图',text:'确认数据没问题，点这里进 Chart Studio 开始调图。'}
   ],
   chart:[
-    {target:'#view-chart .object-tree,#objectTree,[data-layer-id]',title:'① 左侧对象树',text:'想改图哪部分，就点这里：图题、坐标轴、图例、背景……点中哪个，右边就出哪个的设置。'},
+    {target:'#layersList,[data-layer-id]',title:'① 左侧对象树',text:'想改图哪部分，就点这里：图题、坐标轴、图例、背景……点中哪个，右边就出哪个的设置。'},
     {target:'#paperSvg,.chart-canvas,#chartCanvas',title:'② 中间画布',text:'图画在这里。图题、坐标轴、图例可以直接用鼠标拖动位置。'},
     {target:'#propertyEditor',title:'③ 右侧属性面板',text:'选中对象后，在这里调颜色、字号、粗细、显著性字母、误差棒等。'},
-    {target:'#view-chart .property-section:has(#paletteFile),#view-chart',title:'④ 配色与参数',text:'左侧树里有「配色参数」「图片参数」，可以存一套配色和图设置，下次直接套用。'},
-    {target:'#exportSvgBtn,#exportPngBtn,.export-buttons,[data-export]',title:'⑤ 导出',text:'调好后点这里导出。SVG 是矢量图，PNG 选 300 dpi 直接贴论文。'}
+    {target:'#journalTemplate,#layersList',title:'④ 配色与参数',text:'在这里换整套论文配色；左侧对象树里还有「配色参数」「图片参数」，可以存一套设置下次直接套用。'},
+    {target:'#view-chart .toolbar-actions,#addChartText,.canvas-toolbar',title:'⑤ 导出',text:'调好后在画布上方工具栏右侧点「导出 SVG / 导出 PNG」。SVG 是矢量图，PNG 选 300 dpi 直接贴论文。'}
   ],
   compose:[
-    {target:'#addToCompose,.add-compose,[data-add-compose]',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
-    {target:'#composeCanvas,.compose-board,#composeSvg',title:'② 拼图画布',text:'多图自动排列，A/B/C/D 面板标签自动加。'},
-    {target:'#composeGap,[data-compose-gap]',title:'③ 调间距',text:'在这里调图与图之间的空白大小，紧凑导出会自动裁白边。'},
-    {target:'#exportComposeSvg,#exportComposePng',title:'④ 导出整图',text:'满意后导出整版拼图，直接是论文图版。'}
+    {target:'#composeAddCurrent,#composeItemList',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
+    {target:'#composeStage,.compose-stage',title:'② 拼图画布',text:'多图自动排列，A/B/C/D 面板标签自动加，可直接拖动画布上的图调整位置。'},
+    {target:'#composeSettings',title:'③ 调间距',text:'在右侧「画布与布局」里调「面板间距」，想紧凑导出就勾「裁剪面板白边」。'},
+    {target:'#composeExportSvg,#composeExportPng',title:'④ 导出整图',text:'满意后在顶部右侧点「导出 SVG / 导出高清 PNG」，直接得到论文图版。'}
   ]
 };
 function tourCss(){if($('#tourCss'))return;const c=document.createElement('style');c.id='tourCss';c.textContent='#tourFab{position:fixed;right:18px;bottom:18px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6aa6ff,#5b8def);color:#fff;border:none;font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:0;box-shadow:0 4px 14px rgba(91,141,239,.45);z-index:9998}#tourFab:hover{transform:scale(1.1)}#settingSearchWrap{position:relative;margin-left:14px;display:inline-block;vertical-align:middle}#settingSearch{padding:5px 10px;border:1px solid #c9d2d8;border-radius:14px;font-size:12px;width:150px;outline:none}#settingSearch:focus{border-color:#5b8def}#settingSearchDrop{position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid #e0e6ea;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:260px;overflow-y:auto;min-width:220px;z-index:50;display:none}#settingSearchDrop button{display:block;width:100%;text-align:left;padding:7px 12px;border:none;background:none;cursor:pointer;font-size:12px;color:#2a3340}#settingSearchDrop button:hover{background:#eef4ff}#settingSearchDrop button small{color:#8a969c;margin-left:6px}.tour-mask{position:fixed;inset:0;background:rgba(20,28,38,.55);z-index:9999;pointer-events:none}.tour-hl{outline:3px solid #ffd166;outline-offset:3px;border-radius:8px;position:relative;z-index:10000!important;transition:all .2s}.tour-bubble{position:fixed;z-index:10001;max-width:300px;max-height:80vh;overflow-y:auto;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28);font-size:13px;line-height:1.65;color:#2a3340}.tour-bubble h4{margin:0 0 6px;font-size:14px;color:#3a6fd8}.tour-bubble .tour-nav{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}.tour-bubble button{padding:5px 12px;border-radius:6px;border:1px solid #c9d2d8;background:#f4f7f9;cursor:pointer;font-size:12px}.tour-bubble .tour-next{background:#5b8def;color:#fff;border-color:#5b8def}.tour-bubble .tour-skip{color:#8a969c}';document.head.appendChild(c)}

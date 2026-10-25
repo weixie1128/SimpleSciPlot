@@ -72,9 +72,14 @@
       <b>统一原则</b>
       <span>所有图形先选研究目的，再生成匹配模板、分析结果和可编辑论文图。</span>
     </div>
-    <div class="sidebar-foot">v0.96.0 · 自动识别宽表版</div>
+    <div class="sidebar-foot">v1.9.12 · 自动识别宽表版</div>
   </aside>
   <main class="main v070-main">
+    <div class="mobile-topbar">
+      <button id="mobileNavToggle" class="mobile-nav-toggle" type="button" aria-label="打开导航菜单" aria-expanded="false" aria-controls="mainNav">☰</button>
+      <b>SimpleSciPlot</b><span>简易科研绘图</span>
+    </div>
+    <div id="mobileNavOverlay" class="mobile-nav-overlay"></div>
     <header class="topbar v070-topbar">
       <div>
         <div class="breadcrumb" id="pageStepLabel">步骤 1 / 5</div>
@@ -281,7 +286,8 @@
   </main>
 </div>
 <div id="toast" class="toast"></div>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<!-- 收尾优化：xlsx 改为仓库内置，避免境外 CDN 阻塞首屏或断网时 Excel 模板不可用。 -->
+<script src="assets/xlsx.full.min.js"></script>
 <!-- v0.15.4: must load before app.js — provides the structuredClone fallback
      and the visible error surface that app.js depends on. -->
 <script src="boot-guard-v0154.js?v=1.9.12"></script>
