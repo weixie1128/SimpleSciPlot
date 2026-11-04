@@ -3122,6 +3122,9 @@ function renderProperties(){
   const cp=$('#copyMethodNote');if(cp)cp.onclick=()=>{const a=$('#methodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
   const aas=$('#applyAutoSub');if(aas)aas.onclick=()=>{const N=Math.max(1,Number(state.chart.settings.seriesSubAutoSize)||1);chartGroups().forEach((_,gi)=>setSeriesSetting(gi,'subGroup',Math.floor(gi/N)+1));state.chart.settings.seriesSubEnabled=true;renderProperties();renderChart();toast('已按每 '+N+' 个系列编号')};
   $$('[data-cpe]').forEach(inp=>{inp.addEventListener('input',()=>{const r=state.chartData[Number(inp.dataset.cpe)];if(!r)return;const k=r.x+'\u001f'+r.group;if(!state.chart.settings.customPointErrors)state.chart.settings.customPointErrors={};state.chart.settings.customPointErrors[k]=inp.value===''?0:Number(inp.value);prepareChartData();renderChart();})});
+  const parsePaste=txt=>txt.split(/\r?\n/).map(line=>{const a=line.match(/-?\d+(\.\d+)?/g);return a?Number(a[a.length-1]):null;}).filter(v=>v!==null&&Number.isFinite(v));
+  const cpb=$('#cpePasteBtn');if(cpb)cpb.onclick=()=>{const ta=$('#cpePaste'),nums=parsePaste(ta?ta.value:'');if(!nums.length){toast('没有识别到数字');return;}if(!state.chart.settings.customPointErrors)state.chart.settings.customPointErrors={};state.chartData.forEach((r,i)=>{if(i>=nums.length)return;const k=r.x+'\u001f'+r.group;state.chart.settings.customPointErrors[k]=nums[i];});prepareChartData();renderProperties();renderChart();toast('已填入 '+Math.min(nums.length,state.chartData.length)+' 个误差值')};
+  const ccl=$('#cpeClearBtn');if(ccl)ccl.onclick=()=>{state.chart.settings.customPointErrors={};prepareChartData();renderProperties();renderChart();toast('已清空')};
 }
 
 function markerShapeGrid(index){
@@ -3177,7 +3180,8 @@ function customPointErrorTable(){
     return `<tr><td ${cell}>${esc(r.x)}</td><td ${cell}>${esc(r.group)}</td><td ${cell}>${r.mean}</td><td ${cell}><input data-cpe="${i}" type="number" min="0" step=".0001" value="${v}" style="width:84px"></td></tr>`;
   }).join('');
   const hcell='style="padding:6px 7px;text-align:left;position:sticky;top:0;background:#f4f7f9;border-bottom:1px solid #d8e0e4"';
-  return `<div style="max-height:340px;overflow:auto;border:1px solid #d8e0e4;border-radius:6px;margin:6px 0"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${hcell}>类别</th><th ${hcell}>系列</th><th ${hcell}>均值</th><th ${hcell}>单侧误差</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  const pasteBox=`<div style="margin:6px 0"><textarea id="cpePaste" placeholder="从 Excel 复制一整列误差值粘贴到这里（每行一个数字，按下方表格顺序对应）" style="width:100%;min-height:78px;font-size:12px;box-sizing:border-box;border:1px solid #c9d2d8;border-radius:6px;padding:8px;resize:vertical"></textarea><div style="display:flex;gap:6px;margin-top:6px"><button type="button" id="cpePasteBtn" class="ghost" style="flex:1;padding:7px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">按顺序填入</button><button type="button" id="cpeClearBtn" class="ghost" style="padding:7px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">全部清空</button></div></div>`;
+  return pasteBox+`<div style="max-height:340px;overflow:auto;border:1px solid #d8e0e4;border-radius:6px;margin:6px 0"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${hcell}>类别</th><th ${hcell}>系列</th><th ${hcell}>均值</th><th ${hcell}>单侧误差</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 function seriesSubGroupBlock(){
   const groups=chartGroups();
