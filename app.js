@@ -93,9 +93,9 @@ const defaultChartSettings = {
   xTickSize:12, yTickSize:12, xTickWeight:400, yTickWeight:400, xTickColor:'#20262b', yTickColor:'#20262b', tickLength:6, xTickRotation:0, xTickAutoRotate:true, xTickStagger:false, showXTicks:true, showYTicks:true,
   xUnitSource:'auto', xUnitTarget:'auto', xScaleMode:'auto', xAxisMin:null, xAxisMax:null, xAxisSegments:10, xTickDecimals:'auto', xTickRound:true, xScale:'linear', xTickStep:null,
   lineWidth:2.1, markerSize:4.7, markerShape:'circle', markerFill:'white', lineMode:'straight', lineOffset:0,
-  barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barLineMode:false,barLineWidth:1.8,barLineMarker:true,
+  barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barBorderColorMode:'auto', barBorderColor:'#000000', barLineMode:false,barLineWidth:1.8,barLineMarker:true,
   seriesSubEnabled:false, seriesSubGap:10, seriesSubAutoSize:6,
-  errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0,
+  errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0, errorCustomValue:0.3,
   legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3,
   legendFrameStyle:'solid', legendFrameWidth:1, legendFrameColor:'#7d898f', legendFrameRadius:2, legendFrameFill:'#ffffff',
   legendShadow:true, legendShadowX:2, legendShadowY:3, legendShadowBlur:3, legendShadowOpacity:.28,
@@ -1581,7 +1581,7 @@ function prepareChartData(){
         toast(`检测到各组标准差相差较大（最大约为最小的 ${Math.round(ratio0)} 倍），方差可能不齐；建议多重比较改用 Games-Howell`,6000)}}}
 }
 
-function errorValue(r){const et=state.chart.settings.errorType||state.design.errorType;return et==='se'?r.se:et==='ci'?r.ci:r.sd}
+function errorValue(r){const et=state.chart.settings.errorType||state.design.errorType;if(et==='custom')return Number(state.chart.settings.errorCustomValue)||0;return et==='se'?r.se:et==='ci'?r.ci:r.sd}
 
 function lettersForComparisons(items,mse,df,method){
   method=method||'duncan';
@@ -2658,6 +2658,9 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   return out;
 }
 
+// 柱边框颜色：auto=跟随柱色加深，custom=自定义（可黑色）
+function barStrokeColor(c){const s=state.chart.settings;return s.barBorderColorMode==='custom'?(s.barBorderColor||'#000000'):darken(c,.25)}
+
 // 簇内系列布局：返回每个系列的相对偏移 off（相对簇中心）与单柱槽宽 barW
 function seriesSubLayout(gs,groupW){
   const s=state.chart.settings,barW=groupW/gs.length,bgap=s.barGap||0;
@@ -2689,7 +2692,7 @@ function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
   }else{
     const groupW=xStep*s.categoryWidth,subL=seriesSubLayout(gs,groupW),barW=subL.barW;
     xvals.forEach((x,i)=>gs.forEach((g,gi)=>{const d=model.byKey.get(`${String(x)}${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off,yy=y(d.mean),base=y(Math.max(b.min,0)),barBottom=base,h=Math.max(0,barBottom-yy),c=colors[gi%colors.length];
-      out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${yy}" width="${w}" height="${h}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}"/>`;
+      out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${yy}" width="${w}" height="${h}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${barStrokeColor(c)}" stroke-width="${s.barBorderWidth}"/>`;
       const cx=xx+w/2,e=Math.abs(y(d.mean+d.error)-yy);out+=errorSvg(cx,yy,e,c,gi);if(s.letters&&d.letter)out+=letterSvg(cx,yy-e-s.letterOffset,d.letter,d.x,d.group);
     }));
     if(s.barLineMode){gs.forEach((g,gi)=>{if(getSeriesStyle(gi).barLine===false)return;const c=colors[gi%colors.length],pts=[];xvals.forEach((x,i)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off;pts.push([xx+w/2,y(d.mean)])});if(pts.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;if(s.barLineMarker)pts.forEach(p=>out+=markerSvg(p[0],p[1],c,gi))})}
@@ -2724,8 +2727,8 @@ function renderBrokenPlot(W,H,M,plotW,plotH,xvals,gs,colors){
   if(state.chart.type==='bar'){
     const groupW=xStep*s.categoryWidth,subL=seriesSubLayout(gs,groupW),barW=subL.barW;
     xvals.forEach((x,i)=>gs.forEach((g,gi)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const c=colors[gi%colors.length],w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off,cx=xx+w/2;
-      if(d.mean>loMin){const topVal=Math.min(d.mean,loMax),ly=yLower(topVal),lh=Math.max(0,axisY-Math.max(.5,s.axisWidth/2)-ly);out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${ly}" width="${w}" height="${lh}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}" clip-path="url(#clipLower)"/>`}
-      if(d.mean>=hiMin){const uy=yUpper(d.mean),uh=upperBottom-uy;out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${uy}" width="${w}" height="${uh}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}" clip-path="url(#clipUpper)"/>`;const e=Math.abs(yUpper(d.mean+d.error)-uy);out+=errorSvg(cx,uy,e,c,gi,'clipUpper');if(s.letters&&d.letter)out+=letterSvg(cx,uy-e-s.letterOffset,d.letter,d.x,d.group)}
+      if(d.mean>loMin){const topVal=Math.min(d.mean,loMax),ly=yLower(topVal),lh=Math.max(0,axisY-Math.max(.5,s.axisWidth/2)-ly);out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${ly}" width="${w}" height="${lh}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${barStrokeColor(c)}" stroke-width="${s.barBorderWidth}" clip-path="url(#clipLower)"/>`}
+      if(d.mean>=hiMin){const uy=yUpper(d.mean),uh=upperBottom-uy;out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${uy}" width="${w}" height="${uh}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${barStrokeColor(c)}" stroke-width="${s.barBorderWidth}" clip-path="url(#clipUpper)"/>`;const e=Math.abs(yUpper(d.mean+d.error)-uy);out+=errorSvg(cx,uy,e,c,gi,'clipUpper');if(s.letters&&d.letter)out+=letterSvg(cx,uy-e-s.letterOffset,d.letter,d.x,d.group)}
     }));
     if(s.barLineMode){gs.forEach((g,gi)=>{if(getSeriesStyle(gi).barLine===false)return;const c=colors[gi%colors.length],upper=[],lower=[];xvals.forEach((x,i)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off,cx=xx+w/2;if(d.mean>=hiMin)upper.push([cx,yUpper(d.mean)]);else if(d.mean<=loMax)lower.push([cx,yLower(d.mean)])});if(upper.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${upper.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clipUpper)"/>`;if(lower.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${lower.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clipLower)"/>`;if(s.barLineMarker){upper.forEach(p=>out+=markerSvg(p[0],p[1],c,gi));lower.forEach(p=>out+=markerSvg(p[0],p[1],c,gi))}})}
   }else{
@@ -3088,14 +3091,16 @@ function renderProperties(){
     const _lineFields=_isB3?[]:[rangeField('lineWidth','全系列折线粗细',.5,7,.1),rangeField('markerSize','全系列标记大小',1,16,.2)];
     const _seriesLineFields=_isB3?[]:[rangeField(`series:${idx}:lineWidth`,'本系列折线粗细',.5,7,.1),rangeField(`series:${idx}:markerSize`,'本系列标记大小',1,16,.2),markerShapeGrid(idx),selectField(`series:${idx}:markerFill`,'本系列标记填充',[['white','白色空心'],['series','同系列颜色']])];
     const _lineModeField=(_isWf||_isB3)?[]:[selectField('lineMode','折线连接方式',[['straight','直线连接'],['smooth','平滑连接']])];
-    const _barFields=_isWf?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1)];
+    const _barFields=_isWf?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
+    const _barBorderColor=(_isWf||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
     html=(_isB3?'':'<div class="object-property-section"><h3>全系列样式</h3></div>'+fieldGroup(_lineFields))+fieldGroup([
     colorField(`palette:${idx}`,'当前系列颜色'),..._seriesLineFields,
     ..._lineModeField,
     ..._barFields,
+    ..._barBorderColor,
     ...(_t==='bar'?[checkField('barLineMode','柱线组合（柱顶叠加均值趋势线）'),checkField(`series:${idx}:barLine`,'本系列趋势折线'),rangeField('barLineWidth','趋势线粗细',.8,5,.1),checkField('barLineMarker','趋势线数据点')]:[])
   ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
-  else if(id==='error'){name='误差棒';html=fieldGroup([selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI']]),rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']])]);}
+  else if(id==='error'){name='误差棒';const isCustom=getSettingValue('errorType')==='custom';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'');}
   else if(id==='legend'){name='图例内容';
     html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
   else if(id==='legend-frame'){name='图例边框';html=fieldGroup([
@@ -3197,7 +3202,7 @@ function bindPropertyInputs(){
       state.chart.settings.legendColumns=value==='vertical'?1:Math.max(2,Math.min(chartGroups().length||3,3));
       renderProperties();
     }
-    const o=$(`[data-out="${cssEscape(k)}"]`);if(o)o.textContent=value??'';if(k==='letterScheme'||k==='errorType'||k==='postHoc')prepareChartData();renderChart();
+    const o=$(`[data-out="${cssEscape(k)}"]`);if(o)o.textContent=value??'';if(k==='letterScheme'||k==='errorType'||k==='errorCustomValue'||k==='postHoc')prepareChartData();renderChart();
   };
   $$('[data-setting]').forEach(el=>{el.addEventListener('input',()=>applyPropertyInput(el));el.addEventListener('change',()=>applyPropertyInput(el))});
   $$('[data-orientation-setting]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -3296,7 +3301,7 @@ function styleButtons(){var st='padding:4px 10px;font-size:12px;cursor:pointer;b
   +'<input type="file" id="styleFile" accept=".json" style="display:none"></div>'
   +'<div class="hint">把当前图的颜色、坐标、字体、误差棒等参数存成 JSON，下次画同类图直接导入，不用逐个重调。</div>'}
 function buildMethodNote(){const s=state.chart.settings;const et=s.errorType||'sd';
-  const etxt=et==='se'?'标准误（SEM）':et==='ci'?'95% 置信区间（CI）':'标准差（SD）';
+  const etxt=et==='se'?'标准误（SEM）':et==='ci'?'95% 置信区间（CI）':et==='custom'?('固定误差（单侧 '+s.errorCustomValue+'）'):'标准差（SD）';
   const pm={duncan:'Duncan',tukey:'Tukey HSD',snk:'S-N-K',lsd:'LSD',bonferroni:'Bonferroni',gameshowell:'Games-Howell'}[s.postHoc]||'Duncan';
   const ltx=s.letterScheme==='twoWay'?'双因素主效应比较（大写字母对应横轴因素、小写对应分组因素，如 Aa、Bb）':'单因素组内比较（每个横轴分组内比较各系列）';
   return '数据以平均值±'+etxt+'表示。采用方差分析（ANOVA）进行多组比较，事后多重比较采用 '+pm+' 法，显著性水平 α=0.05。柱（点）上不同字母表示组间差异显著（P<0.05），相同字母表示差异不显著。本图显著性分析方式：'+ltx+'。';}
