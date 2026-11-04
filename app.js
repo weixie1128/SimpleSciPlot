@@ -95,7 +95,7 @@ const defaultChartSettings = {
   lineWidth:2.1, markerSize:4.7, markerShape:'circle', markerFill:'white', lineMode:'straight', lineOffset:0,
   barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barBorderColorMode:'auto', barBorderColor:'#000000', barLineMode:false,barLineWidth:1.8,barLineMarker:true,
   seriesSubEnabled:false, seriesSubGap:10, seriesSubAutoSize:6,
-  errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0, errorCustomValue:0.3,
+  errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0, errorCustomValue:0.3, customPointErrors:{},
   legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3,
   legendFrameStyle:'solid', legendFrameWidth:1, legendFrameColor:'#7d898f', legendFrameRadius:2, legendFrameFill:'#ffffff',
   legendShadow:true, legendShadowX:2, legendShadowY:3, legendShadowBlur:3, legendShadowOpacity:.28,
@@ -1572,6 +1572,7 @@ function prepareChartData(){
     });
   }
   const ml=state.chart.manualLetters;if(ml)rows.forEach(r=>{const k=r.x+'\u001f'+r.group;if(k in ml)r.letter=ml[k]});
+  if((state.chart.settings.errorType||state.design.errorType)==='custom-point'){const cpe=state.chart.settings.customPointErrors||{};rows.forEach(r=>{const k=r.x+'\u001f'+r.group;r.error=Number(cpe[k])||0});}
   state.chartData=rows;invalidateChartModel();syncChartText();
   const ph0=state.chart.settings.postHoc;
   if(ph0==='gameshowell'){state.chart._heteroWarned=null}
@@ -3100,7 +3101,7 @@ function renderProperties(){
     ..._barBorderColor,
     ...(_t==='bar'?[checkField('barLineMode','柱线组合（柱顶叠加均值趋势线）'),checkField(`series:${idx}:barLine`,'本系列趋势折线'),rangeField('barLineWidth','趋势线粗细',.8,5,.1),checkField('barLineMarker','趋势线数据点')]:[])
   ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
-  else if(id==='error'){name='误差棒';const isCustom=getSettingValue('errorType')==='custom';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'');}
+  else if(id==='error'){name='误差棒';const et=getSettingValue('errorType');const isCustom=et==='custom',isPoint=et==='custom-point';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值'],['custom-point','逐点自定义（在线表格）']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'')+(isPoint?customPointErrorTable()+'<div class="hint">在每个数据点一行的表格里填单侧误差长度，留空按 0 处理；各点误差相互独立。</div>':'');}
   else if(id==='legend'){name='图例内容';
     html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
   else if(id==='legend-frame'){name='图例边框';html=fieldGroup([
@@ -3120,6 +3121,7 @@ function renderProperties(){
   const rg=$('#regenMethodNote');if(rg)rg.onclick=()=>{delete state.chart.settings.methodNote;renderProperties()};
   const cp=$('#copyMethodNote');if(cp)cp.onclick=()=>{const a=$('#methodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
   const aas=$('#applyAutoSub');if(aas)aas.onclick=()=>{const N=Math.max(1,Number(state.chart.settings.seriesSubAutoSize)||1);chartGroups().forEach((_,gi)=>setSeriesSetting(gi,'subGroup',Math.floor(gi/N)+1));state.chart.settings.seriesSubEnabled=true;renderProperties();renderChart();toast('已按每 '+N+' 个系列编号')};
+  $$('[data-cpe]').forEach(inp=>{inp.addEventListener('input',()=>{const r=state.chartData[Number(inp.dataset.cpe)];if(!r)return;const k=r.x+'\u001f'+r.group;if(!state.chart.settings.customPointErrors)state.chart.settings.customPointErrors={};state.chart.settings.customPointErrors[k]=inp.value===''?0:Number(inp.value);prepareChartData();renderChart();})});
 }
 
 function markerShapeGrid(index){
@@ -3167,6 +3169,16 @@ function checkLegendFrameField(k,n){return`<label class="check-row"><input data-
 function displaySetting(k){return getSettingValue(k)}
 function breakPropertyBlock(){const s=state.chart.settings;return `<div class="subhead">真实断轴</div><label class="check-row"><input id="breakFromProp" type="checkbox" ${state.chart.breakAxis?'checked':''}>启用断轴</label><div class="two-col">${numberField('lowerMin','下段最小值',null,null,.01)}${numberField('lowerMax','下段最大值',null,null,.01)}${numberField('upperMin','上段最小值',null,null,.01)}${numberField('upperMax','上段最大值',null,null,.01)}</div>${rangeField('breakGap','两条断裂线间距',6,28,1)}${rangeField('lowerRatio','下段高度比例',.12,.42,.01)}<div class="hint">柱体空白断口与两条平行断裂线中心之间的距离完全一致；断裂线中心直接落在坐标轴端点上。</div>`}
 function paletteBlock(){ensurePalette(chartGroups().length);const count=Math.max(6,chartGroups().length);return`<div class="subhead">全部系列配色</div><div class="palette-grid">${state.chart.palette.slice(0,count).map((c,i)=>`<input type="color" data-palette="${i}" value="${c}" title="系列 ${i+1}">`).join('')}</div>`}
+function customPointErrorTable(){
+  const cpe=state.chart.settings.customPointErrors||{};
+  const body=state.chartData.map((r,i)=>{
+    const k=r.x+'\u001f'+r.group,v=(k in cpe)?cpe[k]:'';
+    const cell='style="padding:5px 7px;border-bottom:1px solid #e6ecef;white-space:nowrap"';
+    return `<tr><td ${cell}>${esc(r.x)}</td><td ${cell}>${esc(r.group)}</td><td ${cell}>${r.mean}</td><td ${cell}><input data-cpe="${i}" type="number" min="0" step=".0001" value="${v}" style="width:84px"></td></tr>`;
+  }).join('');
+  const hcell='style="padding:6px 7px;text-align:left;position:sticky;top:0;background:#f4f7f9;border-bottom:1px solid #d8e0e4"';
+  return `<div style="max-height:340px;overflow:auto;border:1px solid #d8e0e4;border-radius:6px;margin:6px 0"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th ${hcell}>类别</th><th ${hcell}>系列</th><th ${hcell}>均值</th><th ${hcell}>单侧误差</th></tr></thead><tbody>${body}</tbody></table></div>`;
+}
 function seriesSubGroupBlock(){
   const groups=chartGroups();
   const rows=groups.map((g,gi)=>{
@@ -3301,7 +3313,7 @@ function styleButtons(){var st='padding:4px 10px;font-size:12px;cursor:pointer;b
   +'<input type="file" id="styleFile" accept=".json" style="display:none"></div>'
   +'<div class="hint">把当前图的颜色、坐标、字体、误差棒等参数存成 JSON，下次画同类图直接导入，不用逐个重调。</div>'}
 function buildMethodNote(){const s=state.chart.settings;const et=s.errorType||'sd';
-  const etxt=et==='se'?'标准误（SEM）':et==='ci'?'95% 置信区间（CI）':et==='custom'?('固定误差（单侧 '+s.errorCustomValue+'）'):'标准差（SD）';
+  const etxt=et==='se'?'标准误（SEM）':et==='ci'?'95% 置信区间（CI）':et==='custom-point'?'逐点自定义误差':et==='custom'?('固定误差（单侧 '+s.errorCustomValue+'）'):'标准差（SD）';
   const pm={duncan:'Duncan',tukey:'Tukey HSD',snk:'S-N-K',lsd:'LSD',bonferroni:'Bonferroni',gameshowell:'Games-Howell'}[s.postHoc]||'Duncan';
   const ltx=s.letterScheme==='twoWay'?'双因素主效应比较（大写字母对应横轴因素、小写对应分组因素，如 Aa、Bb）':'单因素组内比较（每个横轴分组内比较各系列）';
   return '数据以平均值±'+etxt+'表示。采用方差分析（ANOVA）进行多组比较，事后多重比较采用 '+pm+' 法，显著性水平 α=0.05。柱（点）上不同字母表示组间差异显著（P<0.05），相同字母表示差异不显著。本图显著性分析方式：'+ltx+'。';}
