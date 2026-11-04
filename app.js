@@ -94,6 +94,7 @@ const defaultChartSettings = {
   xUnitSource:'auto', xUnitTarget:'auto', xScaleMode:'auto', xAxisMin:null, xAxisMax:null, xAxisSegments:10, xTickDecimals:'auto', xTickRound:true, xScale:'linear', xTickStep:null,
   lineWidth:2.1, markerSize:4.7, markerShape:'circle', markerFill:'white', lineMode:'straight', lineOffset:0,
   barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barLineMode:false,barLineWidth:1.8,barLineMarker:true,
+  seriesSubEnabled:false, seriesSubGap:10, seriesSubAutoSize:6,
   errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0,
   legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3,
   legendFrameStyle:'solid', legendFrameWidth:1, legendFrameColor:'#7d898f', legendFrameRadius:2, legendFrameFill:'#ffffff',
@@ -226,9 +227,8 @@ function normalizeTextSettings(){
 }
 
 function init(){
-  const restoredAt=restoreAutosavedProject();
-  if(restoredAt===null){restoreProjectName();applyLastPalette();}
-  else if(restoredAt)updateAutosaveBadge('已恢复上次编辑');
+  restoreProjectName();
+  applyLastPalette();
   normalizeTextSettings();
   bindNavigation();
   bindWorkflow();
@@ -242,13 +242,9 @@ function init(){
   fillDesignForm();
   renderDesignPreview();
   renderDataPreview();
-  bindAutosave();
-  bindShortcuts();
-  history.last=stateSnapshot();
-  if(restoredAt)toast('已恢复上次编辑'+(restoredAt?' · '+new Date(restoredAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):''));
   showView('plan');
   ensureTourFab();
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v='+(window.FOODLAB_BUILD||'1.9.12')).catch(()=>{});
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js?v='+(window.FOODLAB_BUILD||'0.96.0')).catch(()=>{});
 }
 
 function bindNavigation(){
@@ -256,16 +252,6 @@ function bindNavigation(){
   $$('[data-open]').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.open)));
   $('#nextStepBtn').addEventListener('click',()=>showView(nextViewFor(state.view)));
   $('#saveProjectBtn').addEventListener('click',saveProject);
-  bindMobileNav();
-}
-
-function bindMobileNav(){
-  const toggle=$('#mobileNavToggle'),overlay=$('#mobileNavOverlay');
-  const setOpen=open=>{document.body.classList.toggle('mobile-nav-open',open);if(toggle)toggle.setAttribute('aria-expanded',open?'true':'false')};
-  if(toggle)toggle.addEventListener('click',()=>setOpen(!document.body.classList.contains('mobile-nav-open')));
-  if(overlay)overlay.addEventListener('click',()=>setOpen(false));
-  $$('#mainNav .nav-item').forEach(btn=>btn.addEventListener('click',()=>setOpen(false)));
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false)});
 }
 
 function nextViewFor(view){
@@ -588,7 +574,7 @@ function renderDesignPreview(){
 
 function designConfigRows(){
   const d=state.design,spec=state.workflow.mode==='experiment'?experimentTemplateSpec():null; return [
-    ['Configuration','Value'],['FoodLab Template Version','1.9.12'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
+    ['Configuration','Value'],['FoodLab Template Version','1.8.7'],['Experiment name',d.experimentName],['Research goal',state.workflow.goal],['Planned chart',workflowChartEnglishLabel(state.workflow.chartType)],['Measured variable',d.metricName],['Unit',d.metricUnit],
     ['Experimental design',d.designType==='two'?'Two-factor':'One-factor'],['Factor A',d.factorAName],['Factor A level source',d.factorALevelMode||'manual'],['Factor A levels',usesAutomaticXLevels(d)?'Read automatically from the first column':d.factorALevels.join('|')],['Factor B',d.factorBName],['Factor B levels',d.factorBLevels.join('|')],
     ['Independent replicates',d.parallelSamples],['Technical measurements per replicate',d.technicalRepeats],['Technical measurement aggregation',d.technicalAggregation||'mean'],['Selected technical measurement',d.selectedTechnical||1],['Error bar',d.errorType],['Data layout','中文矩阵表（行=变量1，列=平行或组名-编号）'],['Data layout description','第一列填变量1（组别/时间），后面列名带编号为独立平行（平行1、处理A-1）；同名列重复出现自动合并为重复测定。']
   ];
@@ -673,7 +659,7 @@ function processGalleryImported(rows,source){
   const normalized=normalizeGalleryRows(rows,galleryDef().schema);
   if(!normalized.length){showValidation('error','没有读取到有效数据',`当前需要 ${currentWorkflowSchema().name}。请使用平台生成的模板。`);return}
   state.gallery.rows=normalized;state.gallery.sourceName=source;analyzeGalleryData();renderDataPreview();
-  showValidation('success',`导入成功：${normalized.length} 行`,`${workflowChartLabel(state.workflow.chartType)} · ${currentWorkflowSchema().name} · ${source}`);toast('数据已导入并完成初步分析');scheduleHistory();
+  showValidation('success',`导入成功：${normalized.length} 行`,`${workflowChartLabel(state.workflow.chartType)} · ${currentWorkflowSchema().name} · ${source}`);toast('数据已导入并完成初步分析');
 }
 
 /* ---------- v0.21.0: in-page spreadsheet editor (no download needed) ---------- */
@@ -1119,7 +1105,6 @@ function finalizeImportedExperiment(parsed,errors,source,layout,inferred=null){
   const qw=state.dataWarnings||[];
   if(qw.length)showValidation('warning','初步分析完成，但有 '+qw.length+' 条数据提醒',qw.slice(0,3).join('；')+(qw.length>3?' 等':''));
   toast('数据已导入并完成初步分析');
-  scheduleHistory();
 }
 
 function parseDelimited(text){
@@ -2673,9 +2658,25 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   return out;
 }
 
+// 簇内系列布局：返回每个系列的相对偏移 off（相对簇中心）与单柱槽宽 barW
+function seriesSubLayout(gs,groupW){
+  const s=state.chart.settings,barW=groupW/gs.length,bgap=s.barGap||0;
+  if(!s.seriesSubEnabled){
+    return {barW,slots:gs.map((_,gi)=>({off:-groupW/2+gi*barW+bgap/2}))};
+  }
+  const subOf=gi=>Math.max(1,Math.round(Number(getSeriesStyle(gi).subGroup)||1));
+  const subGap=Number(s.seriesSubGap)||0;
+  let boundary=0;const offs=[];
+  for(let gi=0;gi<gs.length;gi++){
+    if(gi>0&&subOf(gi)!==subOf(gi-1))boundary++;
+    offs.push(gi*barW+boundary*subGap);
+  }
+  const totalW=gs.length*barW+boundary*subGap;
+  return {barW,slots:offs.map(off=>({off:off-totalW/2+bgap/2}))};
+}
+
 function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
   const s=state.chart.settings,model=getChartModel(),xCfg=experimentXAxisConfig(xvals,M,plotW),y=yValueMap(b,plotH,M.t),xStep=plotW/xvals.length,axisY=M.t+plotH;let out='';
-  if(s.plotBgVisible)out+='<rect x="'+M.l+'" y="'+M.t+'" width="'+plotW+'" height="'+plotH+'" fill="'+(s.plotBg||'#f5f7f8')+'"/>';
   const yTicks=chartYTicks(b),axes=renderNormalAxes(W,H,M,plotW,plotH,xvals,xStep,yTicks,y,axisY);
   if(isLineLike()){
     gs.forEach((g,gi)=>{
@@ -2686,12 +2687,12 @@ function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
       if(isLineChart()&&s.letters)positions.forEach(p=>{if(p.d.letter){const e=Math.abs(y(p.d.mean+p.d.error)-p.yy);out+=letterSvg(p.xx,p.yy-e-s.letterOffset,p.d.letter,p.d.x,p.d.group)}});
     });
   }else{
-    const groupW=xStep*s.categoryWidth,barW=groupW/gs.length;
-    xvals.forEach((x,i)=>gs.forEach((g,gi)=>{const d=model.byKey.get(`${String(x)}${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep-groupW/2+gi*barW+s.barGap/2,yy=y(d.mean),base=y(Math.max(b.min,0)),barBottom=base,h=Math.max(0,barBottom-yy),c=colors[gi%colors.length];
+    const groupW=xStep*s.categoryWidth,subL=seriesSubLayout(gs,groupW),barW=subL.barW;
+    xvals.forEach((x,i)=>gs.forEach((g,gi)=>{const d=model.byKey.get(`${String(x)}${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off,yy=y(d.mean),base=y(Math.max(b.min,0)),barBottom=base,h=Math.max(0,barBottom-yy),c=colors[gi%colors.length];
       out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${yy}" width="${w}" height="${h}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}"/>`;
       const cx=xx+w/2,e=Math.abs(y(d.mean+d.error)-yy);out+=errorSvg(cx,yy,e,c,gi);if(s.letters&&d.letter)out+=letterSvg(cx,yy-e-s.letterOffset,d.letter,d.x,d.group);
     }));
-    if(s.barLineMode){gs.forEach((g,gi)=>{if(getSeriesStyle(gi).barLine===false)return;const c=colors[gi%colors.length],pts=[];xvals.forEach((x,i)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep-groupW/2+gi*barW+s.barGap/2;pts.push([xx+w/2,y(d.mean)])});if(pts.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;if(s.barLineMarker)pts.forEach(p=>out+=markerSvg(p[0],p[1],c,gi))})}
+    if(s.barLineMode){gs.forEach((g,gi)=>{if(getSeriesStyle(gi).barLine===false)return;const c=colors[gi%colors.length],pts=[];xvals.forEach((x,i)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off;pts.push([xx+w/2,y(d.mean)])});if(pts.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${pts.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;if(s.barLineMarker)pts.forEach(p=>out+=markerSvg(p[0],p[1],c,gi))})}
   }
   out+=axes;out+=renderXAxisTopOverlay(M,plotW,axisY,xvals,xStep);return out;
 }
@@ -2721,12 +2722,12 @@ function renderBrokenPlot(W,H,M,plotW,plotH,xvals,gs,colors){
   out+=`<defs><clipPath id="clipUpper"><rect x="${M.l}" y="${M.t}" width="${plotW}" height="${upperH}"/></clipPath><clipPath id="clipLower"><rect x="${M.l}" y="${lowerTop}" width="${plotW}" height="${lowerH}"/></clipPath></defs>`;
   const axes=renderBrokenAxes(W,H,M,plotW,plotH,xvals,xStep,yLower,yUpper,upperBottom,lowerTop,axisY);
   if(state.chart.type==='bar'){
-    const groupW=xStep*s.categoryWidth,barW=groupW/gs.length;
-    xvals.forEach((x,i)=>gs.forEach((g,gi)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const c=colors[gi%colors.length],w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep-groupW/2+gi*barW+s.barGap/2,cx=xx+w/2;
+    const groupW=xStep*s.categoryWidth,subL=seriesSubLayout(gs,groupW),barW=subL.barW;
+    xvals.forEach((x,i)=>gs.forEach((g,gi)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const c=colors[gi%colors.length],w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off,cx=xx+w/2;
       if(d.mean>loMin){const topVal=Math.min(d.mean,loMax),ly=yLower(topVal),lh=Math.max(0,axisY-Math.max(.5,s.axisWidth/2)-ly);out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${ly}" width="${w}" height="${lh}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}" clip-path="url(#clipLower)"/>`}
       if(d.mean>=hiMin){const uy=yUpper(d.mean),uh=upperBottom-uy;out+=`<rect data-object="series" data-series="${gi}" class="chart-object" x="${xx}" y="${uy}" width="${w}" height="${uh}" fill="${c}" fill-opacity="${s.barOpacity}" stroke="${darken(c,.25)}" stroke-width="${s.barBorderWidth}" clip-path="url(#clipUpper)"/>`;const e=Math.abs(yUpper(d.mean+d.error)-uy);out+=errorSvg(cx,uy,e,c,gi,'clipUpper');if(s.letters&&d.letter)out+=letterSvg(cx,uy-e-s.letterOffset,d.letter,d.x,d.group)}
     }));
-    if(s.barLineMode){gs.forEach((g,gi)=>{if(getSeriesStyle(gi).barLine===false)return;const c=colors[gi%colors.length],upper=[],lower=[];xvals.forEach((x,i)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep-groupW/2+gi*barW+s.barGap/2,cx=xx+w/2;if(d.mean>=hiMin)upper.push([cx,yUpper(d.mean)]);else if(d.mean<=loMax)lower.push([cx,yLower(d.mean)])});if(upper.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${upper.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clipUpper)"/>`;if(lower.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${lower.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clipLower)"/>`;if(s.barLineMarker){upper.forEach(p=>out+=markerSvg(p[0],p[1],c,gi));lower.forEach(p=>out+=markerSvg(p[0],p[1],c,gi))}})}
+    if(s.barLineMode){gs.forEach((g,gi)=>{if(getSeriesStyle(gi).barLine===false)return;const c=colors[gi%colors.length],upper=[],lower=[];xvals.forEach((x,i)=>{const d=model.byKey.get(`${String(x)}\u0001${String(g)}`);if(!d)return;const w=Math.max(1,barW-s.barGap),xx=M.l+(i+.5)*xStep+subL.slots[gi].off,cx=xx+w/2;if(d.mean>=hiMin)upper.push([cx,yUpper(d.mean)]);else if(d.mean<=loMax)lower.push([cx,yLower(d.mean)])});if(upper.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${upper.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clipUpper)"/>`;if(lower.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${lower.map((p,i)=>(i?'L':'M')+p[0]+','+p[1]).join(' ')}" fill="none" stroke="${c}" stroke-width="${s.barLineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clipLower)"/>`;if(s.barLineMarker){upper.forEach(p=>out+=markerSvg(p[0],p[1],c,gi));lower.forEach(p=>out+=markerSvg(p[0],p[1],c,gi))}})}
   }else{
     gs.forEach((g,gi)=>{const c=colors[gi%colors.length],pts=model.byGroup.get(String(g))||[];
       ['upper','lower'].forEach(region=>{const mapped=pts.map(d=>({d,xx:xCfg?xCfg.pos(Number(convertXValue(d.x))):xBaseAt(model.xIndex.get(String(d.x))??0,xStep,M),region:d.mean>=hiMin?'upper':d.mean<=loMax?'lower':'gap'})).filter(p=>p.region===region);if(mapped.length>1){const yy=p=>region==='upper'?yUpper(p.d.mean):yLower(p.d.mean);const coords=mapped.map(p=>[p.xx,yy(p)]);out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${seriesPath(coords)}" fill="none" stroke="${c}" stroke-width="${getSeriesStyle(gi).lineWidth}" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#clip${region==='upper'?'Upper':'Lower'})"/>`}}
@@ -3093,7 +3094,7 @@ function renderProperties(){
     ..._lineModeField,
     ..._barFields,
     ...(_t==='bar'?[checkField('barLineMode','柱线组合（柱顶叠加均值趋势线）'),checkField(`series:${idx}:barLine`,'本系列趋势折线'),rangeField('barLineWidth','趋势线粗细',.8,5,.1),checkField('barLineMarker','趋势线数据点')]:[])
-  ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+paletteBlock();}
+  ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
   else if(id==='error'){name='误差棒';html=fieldGroup([selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI']]),rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']])]);}
   else if(id==='legend'){name='图例内容';
     html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
@@ -3113,6 +3114,7 @@ function renderProperties(){
   const mna=$('#methodNoteArea');if(mna)mna.oninput=()=>{state.chart.settings.methodNote=mna.value};
   const rg=$('#regenMethodNote');if(rg)rg.onclick=()=>{delete state.chart.settings.methodNote;renderProperties()};
   const cp=$('#copyMethodNote');if(cp)cp.onclick=()=>{const a=$('#methodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
+  const aas=$('#applyAutoSub');if(aas)aas.onclick=()=>{const N=Math.max(1,Number(state.chart.settings.seriesSubAutoSize)||1);chartGroups().forEach((_,gi)=>setSeriesSetting(gi,'subGroup',Math.floor(gi/N)+1));state.chart.settings.seriesSubEnabled=true;renderProperties();renderChart();toast('已按每 '+N+' 个系列编号')};
 }
 
 function markerShapeGrid(index){
@@ -3160,6 +3162,19 @@ function checkLegendFrameField(k,n){return`<label class="check-row"><input data-
 function displaySetting(k){return getSettingValue(k)}
 function breakPropertyBlock(){const s=state.chart.settings;return `<div class="subhead">真实断轴</div><label class="check-row"><input id="breakFromProp" type="checkbox" ${state.chart.breakAxis?'checked':''}>启用断轴</label><div class="two-col">${numberField('lowerMin','下段最小值',null,null,.01)}${numberField('lowerMax','下段最大值',null,null,.01)}${numberField('upperMin','上段最小值',null,null,.01)}${numberField('upperMax','上段最大值',null,null,.01)}</div>${rangeField('breakGap','两条断裂线间距',6,28,1)}${rangeField('lowerRatio','下段高度比例',.12,.42,.01)}<div class="hint">柱体空白断口与两条平行断裂线中心之间的距离完全一致；断裂线中心直接落在坐标轴端点上。</div>`}
 function paletteBlock(){ensurePalette(chartGroups().length);const count=Math.max(6,chartGroups().length);return`<div class="subhead">全部系列配色</div><div class="palette-grid">${state.chart.palette.slice(0,count).map((c,i)=>`<input type="color" data-palette="${i}" value="${c}" title="系列 ${i+1}">`).join('')}</div>`}
+function seriesSubGroupBlock(){
+  const groups=chartGroups();
+  const rows=groups.map((g,gi)=>{
+    const k=`series:${gi}:subGroup`,v=getSettingValue(k)??1;
+    return `<label class="check-row" style="display:flex;align-items:center;gap:8px"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g)}</span><input data-setting="${k}" type="number" min="1" step="1" value="${v}" style="width:64px;flex:none"></label>`;
+  }).join('');
+  return '<div class="object-property-section"><h3>系列内分组</h3></div>'
+    +fieldGroup([checkField('seriesSubEnabled','启用系列内分组（簇内再分小组）')])
+    +fieldGroup([rangeField('seriesSubGap','小组间距',0,40,1),rangeField('seriesSubAutoSize','自动分组大小（每 N 个一组）',1,20,1)])
+    +`<div style="border:1px solid #d8e0e4;border-radius:6px;padding:6px 8px;margin:6px 0">${rows}</div>`
+    +'<button type="button" id="applyAutoSub" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px;width:100%">按自动分组大小重新编号</button>'
+    +'<div class="hint">编号相同的系列紧贴排列，相邻编号不同处插入小组间距；整个簇仍居中在 X 刻度上方。</div>';
+}
 
 function bindPropertyInputs(){
   const applyPropertyInput=el=>{
@@ -3253,137 +3268,11 @@ function exportPng(){
 }
 
 function saveProject(){
-  const payload=projectPayload();
+  const payload={version:'1.8.7',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
   let localSaved=true;
-  try{localStorage.setItem('foodlab-project',JSON.stringify(payload));localStorage.setItem(AUTOSAVE_KEY,JSON.stringify(payload))}catch(_err){localSaved=false}
+  try{localStorage.setItem('foodlab-project',JSON.stringify(payload))}catch(_err){localSaved=false}
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`${safeFile(state.design.experimentName)}_FoodLab项目.json`);
   toast(localSaved?'项目已保存为 JSON，并同步保存在当前浏览器':'项目 JSON 已导出；浏览器本地存储不可用（配额已满或无痕模式），本次未同步到本机')
-}
-// ===== v1.9.12 项目持久化：自动保存、刷新恢复、JSON 导入 =====
-const AUTOSAVE_KEY='foodlab-project-autosave';
-let autosaveTimer=null,projectDirty=false;
-function projectPayload(){return {version:window.FOODLAB_BUILD||'1.9.12',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard}}
-function applyProjectSnapshot(p){
-  if(!p||typeof p!=='object'||!p.workflow||!p.design)return false;
-  state.workflow=Object.assign({},state.workflow,p.workflow);
-  state.design=Object.assign(structuredClone(defaultDesign),p.design);
-  state.rawData=Array.isArray(p.rawData)?p.rawData:[];
-  const c=p.chart||{},g=p.gallery||{},f=p.figureBoard||{};
-  state.chart=Object.assign({},state.chart,c,{
-    settings:Object.assign(structuredClone(defaultChartSettings),c.settings||{}),
-    palette:Array.isArray(c.palette)&&c.palette.length?c.palette:state.chart.palette,
-    legend:Object.assign({},state.chart.legend,c.legend||{}),
-    legendFrame:Object.assign({},state.chart.legendFrame,c.legendFrame||{}),
-    seriesStyles:c.seriesStyles||{},annotations:Array.isArray(c.annotations)?c.annotations:[],selectedAnnotation:null
-  });
-  state.gallery=Object.assign({},state.gallery,g,{
-    settings:Object.assign(structuredClone(defaultGallerySettings),g.settings||{}),
-    palette:Array.isArray(g.palette)&&g.palette.length?g.palette:state.gallery.palette,
-    rows:Array.isArray(g.rows)?g.rows:[],seriesStyles:g.seriesStyles||{},
-    annotations:Array.isArray(g.annotations)?g.annotations:[],selectedAnnotation:null
-  });
-  state.figureBoard=Object.assign({},state.figureBoard,f,{items:Array.isArray(f.items)?f.items:[],annotations:Array.isArray(f.annotations)?f.annotations:[],selectedAnnotation:null});
-  return true;
-}
-function restoreAutosavedProject(){
-  let p=null;
-  try{const raw=localStorage.getItem(AUTOSAVE_KEY)||localStorage.getItem('foodlab-project');if(raw)p=JSON.parse(raw)}catch(_err){return null}
-  if(!applyProjectSnapshot(p))return null;
-  normalizeTextSettings();
-  try{
-    if(state.workflow.mode==='experiment'){if(state.rawData.length)analyzeData()}
-    else if(state.gallery.rows.length)analyzeGalleryData();
-  }catch(_err){}
-  return p.savedAt||'';
-}
-function updateAutosaveBadge(text){const el=$('#autosaveState');if(el)el.textContent=text}
-function autosaveNow(){
-  clearTimeout(autosaveTimer);autosaveTimer=null;
-  const payload=projectPayload();
-  try{
-    localStorage.setItem(AUTOSAVE_KEY,JSON.stringify(payload));
-    projectDirty=false;
-    updateAutosaveBadge('已自动保存 '+new Date(payload.savedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
-  }catch(_err){updateAutosaveBadge('自动保存失败：浏览器存储已满')}
-}
-function scheduleAutosave(){projectDirty=true;clearTimeout(autosaveTimer);autosaveTimer=setTimeout(autosaveNow,900);scheduleHistory()}
-function bindAutosave(){
-  ['input','change'].forEach(name=>document.addEventListener(name,scheduleAutosave,true));
-  document.addEventListener('click',e=>{if(e.target.closest('button,[data-action],.layer-row,.chart-series-row'))scheduleAutosave()},true);
-  window.addEventListener('beforeunload',()=>{if(projectDirty)autosaveNow()});
-  const btn=$('#importProject'),input=$('#projectFileInput');
-  if(btn&&input){
-    btn.addEventListener('click',()=>input.click());
-    input.addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importProjectFile(f);e.target.value=''});
-  }
-}
-async function importProjectFile(file){
-  try{
-    const p=JSON.parse(await file.text());
-    if(!applyProjectSnapshot(p)){toast('无法识别该项目文件：不是 SimpleSciPlot 导出的 JSON');return}
-    normalizeTextSettings();
-    fillDesignForm();renderDesignPreview();renderDataPreview();
-    showView('data');
-    autosaveNow();
-    toast(`已导入项目「${state.design.experimentName||'未命名'}」`);
-  }catch(_err){toast('项目文件解析失败，请确认是本工具导出的 JSON 文件')}
-}
-// ===== v1.9.12 撤销/重做与快捷键 =====
-const history={past:[],future:[],last:null,timer:null,suspended:false};
-function stateSnapshot(){try{return JSON.stringify({workflow:state.workflow,design:state.design,rawData:state.rawData,chart:state.chart,gallery:state.gallery,figureBoard:state.figureBoard})}catch(_err){return null}}
-function updateHistoryButtons(){const u=$('#undoBtn'),r=$('#redoBtn');if(u)u.disabled=!history.past.length;if(r)r.disabled=!history.future.length}
-function recordHistory(){
-  history.timer=null;
-  if(history.suspended)return;
-  const snap=stateSnapshot();if(!snap)return;
-  if(history.last===snap){updateHistoryButtons();return}
-  if(history.last)history.past.push(history.last);
-  while(history.past.length>20)history.past.shift();
-  history.last=snap;history.future.length=0;updateHistoryButtons();
-}
-function scheduleHistory(){if(history.suspended)return;clearTimeout(history.timer);history.timer=setTimeout(recordHistory,500)}
-function restoreHistorySnapshot(snap){
-  history.suspended=true;
-  let ok=false;
-  try{
-    if(applyProjectSnapshot(JSON.parse(snap))){
-      normalizeTextSettings();
-      fillDesignForm();renderDesignPreview();renderDataPreview();
-      if(state.workflow.mode==='experiment'){if(state.rawData.length)analyzeData()}
-      else if(state.gallery.rows.length)analyzeGalleryData();
-      showView(state.view);
-      autosaveNow();
-      ok=true;
-    }
-  }catch(_err){ok=false}
-  history.suspended=false;
-  return ok;
-}
-function undo(){
-  if(!history.past.length){toast('没有可撤销的操作');return}
-  const cur=stateSnapshot(),prev=history.past.pop();
-  if(!restoreHistorySnapshot(prev)){history.past.push(prev);toast('撤销失败');return}
-  history.future.push(cur);history.last=prev;updateHistoryButtons();toast('已撤销');
-}
-function redo(){
-  if(!history.future.length){toast('没有可重做的操作');return}
-  const cur=stateSnapshot(),next=history.future.pop();
-  if(!restoreHistorySnapshot(next)){history.future.push(next);toast('重做失败');return}
-  history.past.push(cur);history.last=next;updateHistoryButtons();toast('已重做');
-}
-function bindShortcuts(){
-  const u=$('#undoBtn'),r=$('#redoBtn');
-  if(u)u.addEventListener('click',undo);
-  if(r)r.addEventListener('click',redo);
-  document.addEventListener('keydown',e=>{
-    if(!(e.ctrlKey||e.metaKey))return;
-    const t=e.target,typing=!!(t&&t.matches&&t.matches('input,textarea,select,[contenteditable="true"]'));
-    const k=String(e.key||'').toLowerCase();
-    if(k==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo()}
-    else if(k==='y'){if(typing)return;e.preventDefault();redo()}
-    else if(k==='s'){e.preventDefault();saveProject()}
-    else if(k==='e'){e.preventDefault();try{exportPng()}catch(_err){toast('当前视图没有可导出的图')}}
-  });
 }
 function paletteTools(){var st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
   return '<div class="subhead">配色与参数管理</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">'
@@ -4613,17 +4502,17 @@ const TOUR_STEPS={
     {target:'#goChart,#nextStepBtn',title:'③ 进入作图',text:'确认数据没问题，点这里进 Chart Studio 开始调图。'}
   ],
   chart:[
-    {target:'#layersList,[data-layer-id]',title:'① 左侧对象树',text:'想改图哪部分，就点这里：图题、坐标轴、图例、背景……点中哪个，右边就出哪个的设置。'},
+    {target:'#view-chart .object-tree,#objectTree,[data-layer-id]',title:'① 左侧对象树',text:'想改图哪部分，就点这里：图题、坐标轴、图例、背景……点中哪个，右边就出哪个的设置。'},
     {target:'#paperSvg,.chart-canvas,#chartCanvas',title:'② 中间画布',text:'图画在这里。图题、坐标轴、图例可以直接用鼠标拖动位置。'},
     {target:'#propertyEditor',title:'③ 右侧属性面板',text:'选中对象后，在这里调颜色、字号、粗细、显著性字母、误差棒等。'},
-    {target:'#journalTemplate,#layersList',title:'④ 配色与参数',text:'在这里换整套论文配色；左侧对象树里还有「配色参数」「图片参数」，可以存一套设置下次直接套用。'},
-    {target:'#view-chart .toolbar-actions,#addChartText,.canvas-toolbar',title:'⑤ 导出',text:'调好后在画布上方工具栏右侧点「导出 SVG / 导出 PNG」。SVG 是矢量图，PNG 选 300 dpi 直接贴论文。'}
+    {target:'#view-chart .property-section:has(#paletteFile),#view-chart',title:'④ 配色与参数',text:'左侧树里有「配色参数」「图片参数」，可以存一套配色和图设置，下次直接套用。'},
+    {target:'#exportSvgBtn,#exportPngBtn,.export-buttons,[data-export]',title:'⑤ 导出',text:'调好后点这里导出。SVG 是矢量图，PNG 选 300 dpi 直接贴论文。'}
   ],
   compose:[
-    {target:'#composeAddCurrent,#composeItemList',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
-    {target:'#composeStage,.compose-stage',title:'② 拼图画布',text:'多图自动排列，A/B/C/D 面板标签自动加，可直接拖动画布上的图调整位置。'},
-    {target:'#composeSettings',title:'③ 调间距',text:'在右侧「画布与布局」里调「面板间距」，想紧凑导出就勾「裁剪面板白边」。'},
-    {target:'#composeExportSvg,#composeExportPng',title:'④ 导出整图',text:'满意后在顶部右侧点「导出 SVG / 导出高清 PNG」，直接得到论文图版。'}
+    {target:'#addToCompose,.add-compose,[data-add-compose]',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
+    {target:'#composeCanvas,.compose-board,#composeSvg',title:'② 拼图画布',text:'多图自动排列，A/B/C/D 面板标签自动加。'},
+    {target:'#composeGap,[data-compose-gap]',title:'③ 调间距',text:'在这里调图与图之间的空白大小，紧凑导出会自动裁白边。'},
+    {target:'#exportComposeSvg,#exportComposePng',title:'④ 导出整图',text:'满意后导出整版拼图，直接是论文图版。'}
   ]
 };
 function tourCss(){if($('#tourCss'))return;const c=document.createElement('style');c.id='tourCss';c.textContent='#tourFab{position:fixed;right:18px;bottom:18px;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6aa6ff,#5b8def);color:#fff;border:none;font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:0;box-shadow:0 4px 14px rgba(91,141,239,.45);z-index:9998}#tourFab:hover{transform:scale(1.1)}#settingSearchWrap{position:relative;margin-left:14px;display:inline-block;vertical-align:middle}#settingSearch{padding:5px 10px;border:1px solid #c9d2d8;border-radius:14px;font-size:12px;width:150px;outline:none}#settingSearch:focus{border-color:#5b8def}#settingSearchDrop{position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid #e0e6ea;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:260px;overflow-y:auto;min-width:220px;z-index:50;display:none}#settingSearchDrop button{display:block;width:100%;text-align:left;padding:7px 12px;border:none;background:none;cursor:pointer;font-size:12px;color:#2a3340}#settingSearchDrop button:hover{background:#eef4ff}#settingSearchDrop button small{color:#8a969c;margin-left:6px}.tour-mask{position:fixed;inset:0;background:rgba(20,28,38,.55);z-index:9999;pointer-events:none}.tour-hl{outline:3px solid #ffd166;outline-offset:3px;border-radius:8px;position:relative;z-index:10000!important;transition:all .2s}.tour-bubble{position:fixed;z-index:10001;max-width:300px;max-height:80vh;overflow-y:auto;background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 10px 34px rgba(0,0,0,.28);font-size:13px;line-height:1.65;color:#2a3340}.tour-bubble h4{margin:0 0 6px;font-size:14px;color:#3a6fd8}.tour-bubble .tour-nav{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}.tour-bubble button{padding:5px 12px;border-radius:6px;border:1px solid #c9d2d8;background:#f4f7f9;cursor:pointer;font-size:12px}.tour-bubble .tour-next{background:#5b8def;color:#fff;border-color:#5b8def}.tour-bubble .tour-skip{color:#8a969c}';document.head.appendChild(c)}
