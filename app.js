@@ -1797,7 +1797,7 @@ function galleryBasePropertyHtml(id){
   if(id==='legend'){if(state.gallery.type==='heatmap')return gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','数字字号',8,30,1),gOrientationButtons('heatmapColorBarOrientation','排列方向')])+galleryDragHint('色带图例');return gallerySection('图例内容',[gCheck('legend','显示图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','字号',8,36,1),gSelect('legendWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗']]),gOrientationButtons('legendOrientation','排列方向'),gRange('legendColumns','横向列数',1,6,1)])+galleryDragHint('图例内容');}
   if(id==='legend-frame')return gallerySection('图例边框',[gSelect('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),gNumber('legendFrameX','水平位置',0,1800,1),gNumber('legendFrameY','垂直位置',0,1200,1),gCheck('legendFrameAutoSize','自动适应图例大小'),gNumber('legendFrameWidthBox','边框宽度',20,900,1),gNumber('legendFrameHeightBox','边框高度',20,600,1),gRange('legendFrameWidth','线条粗细',.5,5,.1),gColor('legendFrameColor','边框颜色'),gColor('legendFrameFill','底色'),gRange('legendFrameRadius','圆角',0,20,1)])+gallerySection('阴影',[gCheck('legendShadow','显示阴影'),gRange('legendShadowX','水平偏移',-10,14,1),gRange('legendShadowY','垂直偏移',-10,14,1),gRange('legendShadowBlur','模糊程度',0,12,.5),gRange('legendShadowOpacity','透明度',0,.7,.05)])+galleryDragHint('图例边框');
   if(id==='background')return gallerySection('背景',[gColor('background','整体背景颜色'),gCheck('plotBgVisible','显示绘图区底色'),gColor('plotBg','绘图区底色'),gCheck('gridEnabled','显示横网格线'),gCheck('gridVertical','显示纵网格线'),gColor('gridColor','网格线颜色'),gRange('gridWidth','网格线粗细',.3,3,.1)])+`<div class="hint">整体背景作用于整张图；绘图区底色与网格线只在 X/Y 轴围成的框内。</div>`;
-  if(id==='palette')return gallerySection('同色渐变',[monoGradientBlock('gmono')])+gallerySection('全部系列配色',[galleryPaletteBlock()||'<div class="hint">当前图形没有逐系列配色；热图的色阶请在左侧「色阶与数值」里设置。</div>'])+galleryPaletteButtons();
+  if(id==='palette')return gallerySection('全部系列配色',[galleryPaletteBlock()||'<div class="hint">当前图形没有逐系列配色；热图的色阶请在左侧「色阶与数值」里设置。</div>'])+galleryPaletteButtons();
   if(id==='style')return galleryStyleButtons();
   if(id==='methodnote'){const note=s.methodNoteCopy||galleryBuildMethodNote();return '<div class="subhead">方法说明（可编辑、可复制到论文）</div><textarea id="galleryMethodNoteArea" style="width:100%;min-height:220px;font-size:13px;line-height:1.7;padding:10px;border:1px solid #c9d2d8;border-radius:6px;resize:vertical;box-sizing:border-box" placeholder="自动生成方法说明...">'+esc(note)+'</textarea><div style="display:flex;gap:6px;margin-top:8px"><button type="button" id="galleryRegenMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">重新自动生成</button><button type="button" id="galleryCopyMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复制全部</button></div><div class="hint">这段文字不画到图上，供你复制进论文「材料与方法」；直接在框里改字，点空白处自动保存。</div>';}
   return'';
@@ -1947,12 +1947,6 @@ async function galleryImportPalette(file){try{var obj=JSON.parse(await readAsTex
 function galleryApplyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.gallery.palette=colors;state.gallery.seriesStyles={};clearModuleSeriesStyles();rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
-function applyGalleryMonoGradient(base){
-  const n=Math.max(1,galleryStudioSeriesNames().length),colors=monoGradient(base,n);
-  state.gallery.palette=colors;clearModuleSeriesStyles();
-  for(let i=0;i<n;i++)getGallerySeriesStyle(i).color=colors[i];
-  rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已生成同色渐变（'+n+' 色）');
-}
 function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:1,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s)};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-gallery-style'||!obj.settings)throw new Error('不是图参数文件');
@@ -2010,8 +2004,6 @@ function bindGalleryStudioPropertyInputs(){
   const gmna=$('#galleryMethodNoteArea');if(gmna)gmna.oninput=()=>{state.gallery.settings.methodNoteCopy=gmna.value};
   const grg=$('#galleryRegenMethodNote');if(grg)grg.onclick=()=>{delete state.gallery.settings.methodNoteCopy;renderGalleryStudioProperties()};
   const gcp=$('#galleryCopyMethodNote');if(gcp)gcp.onclick=()=>{const a=$('#galleryMethodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
-  $$('[data-gmono-gen]').forEach(b=>b.addEventListener('click',()=>{const inp=$('#gmonoBase');applyGalleryMonoGradient(inp?inp.value:'#4C72B0');}));
-  $$('[data-gmono-quick]').forEach(b=>b.addEventListener('click',()=>{const hex=b.dataset.gmonoQuick;const inp=$('#gmonoBase');if(inp)inp.value=hex;applyGalleryMonoGradient(hex);}));
 }
 function applyGalleryCanvasPreset(value){
   const s=state.gallery.settings,map={normal:[980,660],small:[760,540],square:[700,700],wide:[1080,620],tall:[820,760]};if(!map[value])return;
@@ -2170,20 +2162,6 @@ function hslToHex(h,s,l){
   s/=100;l/=100;const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2;let r=0,g=0,b=0;
   if(h<60){r=c;g=x}else if(h<120){r=x;g=c}else if(h<180){g=c;b=x}else if(h<240){g=x;b=c}else if(h<300){r=x;b=c}else{r=c;b=x}
   return '#'+[r,g,b].map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');
-}
-function hexToHsl(hex){
-  const h=String(hex).replace('#','');if(h.length!==6)return[0,0,0];
-  const r=parseInt(h.slice(0,2),16)/255,g=parseInt(h.slice(2,4),16)/255,b=parseInt(h.slice(4,6),16)/255;
-  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let hh=0,ss=0;const ll=(mx+mn)/2;
-  if(d!==0){ss=d/(1-Math.abs(2*ll-1));if(mx===r)hh=((g-b)/d)%6;else if(mx===g)hh=(b-r)/d+2;else hh=(r-g)/d+4;hh*=60;if(hh<0)hh+=360;}
-  return[hh,ss*100,ll*100];
-}
-// 同色渐变：固定色相，亮度从深到浅、饱和度由高略降，返回 n 个 hex（系列1最深）
-function monoGradient(hex,n){
-  const [H,S0]=hexToHsl(hex),out=[];
-  const Sdeep=Math.min(82,S0+8),Slight=Math.max(28,S0*0.55);
-  for(let i=0;i<n;i++){const t=n<=1?0:i/(n-1);const L=30+t*50;const S=Sdeep+(Slight-Sdeep)*t;out.push(hslToHex(H,S,L));}
-  return out;
 }
 function setCanvasSize(newW,newH){
   const s=state.chart.settings,oldW=Number(s.canvasWidth)||980,oldH=Number(s.canvasHeight)||660;
@@ -3122,7 +3100,7 @@ function renderProperties(){
     ..._barFields,
     ..._barBorderColor,
     ...(_t==='bar'?[checkField('barLineMode','柱线组合（柱顶叠加均值趋势线）'),checkField(`series:${idx}:barLine`,'本系列趋势折线'),rangeField('barLineWidth','趋势线粗细',.8,5,.1),checkField('barLineMarker','趋势线数据点')]:[])
-  ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
+  ])+swatchGrid()+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
   else if(id==='error'){name='误差棒';const et=getSettingValue('errorType');const isCustom=et==='custom',isPoint=et==='custom-point';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值'],['custom-point','逐点自定义（在线表格）']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'')+(isPoint?customPointErrorTable()+'<div class="hint">在每个数据点一行的表格里填单侧误差长度，留空按 0 处理；各点误差相互独立。</div>':'');}
   else if(id==='legend'){name='图例内容';
     html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
@@ -3193,13 +3171,20 @@ function numberLegendFrameField(k,n){return fieldWrap(`边框${n}`,`legendFrame:
 function checkLegendFrameField(k,n){return`<label class="check-row"><input data-setting="legendFrame:${k}" type="checkbox" ${state.chart.legendFrame[k]?'checked':''}>${n}</label>`}
 function displaySetting(k){return getSettingValue(k)}
 function breakPropertyBlock(){const s=state.chart.settings;return `<div class="subhead">真实断轴</div><label class="check-row"><input id="breakFromProp" type="checkbox" ${state.chart.breakAxis?'checked':''}>启用断轴</label><div class="two-col">${numberField('lowerMin','下段最小值',null,null,.01)}${numberField('lowerMax','下段最大值',null,null,.01)}${numberField('upperMin','上段最小值',null,null,.01)}${numberField('upperMax','上段最大值',null,null,.01)}</div>${rangeField('breakGap','两条断裂线间距',6,28,1)}${rangeField('lowerRatio','下段高度比例',.12,.42,.01)}<div class="hint">柱体空白断口与两条平行断裂线中心之间的距离完全一致；断裂线中心直接落在坐标轴端点上。</div>`}
-const MONO_QUICK=[['#4C72B0','蓝'],['#55A868','绿'],['#C44E52','红'],['#DD8452','橙'],['#8172B3','紫'],['#64B5CD','青'],['#7B95C6','莫兰迪蓝']];
-function monoGradientBlock(prefix){
-  const st='padding:4px 10px;font-size:12px;cursor:pointer;border:1px solid #c9d2d8;border-radius:4px;background:#f4f7f9';
-  const quick=MONO_QUICK.map(([c,nm])=>`<button type="button" data-${prefix}-quick="${c}" title="${nm}" style="width:22px;height:22px;border:1px solid #c9d2d8;border-radius:4px;background:${c};cursor:pointer"></button>`).join('');
-  return `<div class="subhead">同色渐变</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0"><input type="color" id="${prefix}Base" value="#4C72B0" title="基色（决定色相）"><button type="button" data-${prefix}-gen="1" style="${st}">生成渐变（深→浅）</button></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin:4px 0">${quick}</div><div class="hint">固定色相，亮度从深到浅、饱和度轻微变化；数量与当前系列数一致，系列1最深。</div>`;
+const SWATCH_GRAYS=['#ffffff','#d9d9d9','#bfbfbf','#999999','#666666','#333333','#000000'];
+const SWATCH_HUES=[0,30,45,60,120,150,175,195,215,255,280,330];
+const SWATCH_L=[88,77,65,53,42,32];
+function swatchGrid(){
+  const cell=hex=>`<button type="button" data-swatch="${hex}" title="${hex}" style="width:100%;aspect-ratio:1;border:1px solid #d2d8dc;border-radius:3px;background:${hex};cursor:pointer;padding:0"></button>`;
+  const grays=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px">${SWATCH_GRAYS.map(cell).join('')}</div>`;
+  const rows=SWATCH_L.map((L,li)=>{
+    const t=li/(SWATCH_L.length-1),S=30+t*52;
+    const cells=SWATCH_HUES.map(H=>cell(hslToHex(H,S,L))).join('');
+    return `<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-bottom:3px">${cells}</div>`;
+  }).join('');
+  return `<div class="subhead">选色（点击色块）</div><div style="margin:5px 0">${grays}${rows}</div>`;
 }
-function paletteBlock(){ensurePalette(chartGroups().length);const count=Math.max(6,chartGroups().length);return monoGradientBlock('mono')+`<div class="subhead">全部系列配色</div><div class="palette-grid">${state.chart.palette.slice(0,count).map((c,i)=>`<input type="color" data-palette="${i}" value="${c}" title="系列 ${i+1}">`).join('')}</div>`}
+function paletteBlock(){ensurePalette(chartGroups().length);const count=Math.max(6,chartGroups().length);return`<div class="subhead">全部系列配色</div><div class="palette-grid">${state.chart.palette.slice(0,count).map((c,i)=>`<input type="color" data-palette="${i}" value="${c}" title="系列 ${i+1}">`).join('')}</div>`}
 function customPointErrorTable(){
   const cpe=state.chart.settings.customPointErrors||{};
   const body=state.chartData.map((r,i)=>{
@@ -3264,9 +3249,12 @@ function bindPropertyInputs(){
     else if(act==='paste-hex')applyHexString(prompt('粘贴一行 HEX（逗号分隔，例：#7B95C6,#49C2D9）：')||'');
     else if(act==='save-style')exportStyle();
     else if(act==='load-style')$('#styleFile').click();
-    else if(act==='mono-generate')applyMonoGradient($('#monoBase')?$('#monoBase').value:'#4C72B0');
   }));
-  $$('[data-mono-quick]').forEach(btn=>btn.addEventListener('click',()=>{const hex=btn.dataset.monoQuick;const base=$('#monoBase');if(base)base.value=hex;applyMonoGradient(hex);}));
+  $$('[data-swatch]').forEach(btn=>btn.addEventListener('click',()=>{
+    const hex=btn.dataset.swatch,idx=clamp(state.chart.selectedSeries,0,Math.max(0,chartGroups().length-1));
+    state.chart.palette[idx]=hex;ensurePalette(chartGroups().length);rememberPalette(state.chart.palette);
+    renderProperties();renderChart();
+  }));
   $('#paletteFile')?.addEventListener('change',async e=>{const f=e.target.files[0];if(f)await importPalette(f);e.target.value=''});
   $('#styleFile')?.addEventListener('change',async e=>{const f=e.target.files[0];if(f)await importStyle(f);e.target.value=''});
 }
@@ -3362,10 +3350,6 @@ async function importPalette(file){try{var obj=JSON.parse(await readAsText(file)
 function applyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.chart.palette=colors;ensurePalette(chartGroups().length);rememberPalette(colors);renderProperties();renderChart();toast('已应用 '+colors.length+' 个颜色')}
-function applyMonoGradient(base){
-  const n=Math.max(1,chartGroups().length);
-  state.chart.palette=monoGradient(base,n);ensurePalette(n);rememberPalette(state.chart.palette);renderProperties();renderChart();toast('已生成同色渐变（'+n+' 色）');
-}
 function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),seriesStyles:Object.assign({},state.chart.seriesStyles||{}),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function importStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-style'||!obj.settings)throw new Error('不是图参数文件');
