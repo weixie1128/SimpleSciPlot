@@ -3095,12 +3095,12 @@ function renderProperties(){
     const _barFields=_isWf?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
     const _barBorderColor=(_isWf||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
     html=(_isB3?'':'<div class="object-property-section"><h3>全系列样式</h3></div>'+fieldGroup(_lineFields))+fieldGroup([
-    colorField(`palette:${idx}`,'当前系列颜色'),..._seriesLineFields,
+    seriesColorPicker(idx),..._seriesLineFields,
     ..._lineModeField,
     ..._barFields,
     ..._barBorderColor,
     ...(_t==='bar'?[checkField('barLineMode','柱线组合（柱顶叠加均值趋势线）'),checkField(`series:${idx}:barLine`,'本系列趋势折线'),rangeField('barLineWidth','趋势线粗细',.8,5,.1),checkField('barLineMarker','趋势线数据点')]:[])
-  ])+swatchGrid()+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
+  ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
   else if(id==='error'){name='误差棒';const et=getSettingValue('errorType');const isCustom=et==='custom',isPoint=et==='custom-point';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值'],['custom-point','逐点自定义（在线表格）']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'')+(isPoint?customPointErrorTable()+'<div class="hint">在每个数据点一行的表格里填单侧误差长度，留空按 0 处理；各点误差相互独立。</div>':'');}
   else if(id==='legend'){name='图例内容';
     html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
@@ -3182,7 +3182,19 @@ function swatchGrid(){
     const cells=SWATCH_HUES.map(H=>cell(hslToHex(H,S,L))).join('');
     return `<div style="display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-bottom:3px">${cells}</div>`;
   }).join('');
-  return `<div class="subhead">选色（点击色块）</div><div style="margin:5px 0">${grays}${rows}</div>`;
+  return `<div style="margin:2px 0">${grays}${rows}</div>`;
+}
+// 当前系列颜色选择器：点击色块弹出含网格的浮层（原生 color picker 无法定制，故自建浮层）
+function seriesColorPicker(idx){
+  const key=`palette:${idx}`,v=getSettingValue(key);
+  return `<div class="color-picker" data-picker="${key}">
+    <div class="field"><label><span>当前系列颜色</span><output data-out="${key}">${displaySetting(key)}</output></label>
+      <button type="button" class="color-trigger" data-color-trigger="${key}" style="background:${v}" title="点击选色" aria-label="点击选色"></button></div>
+    <div class="color-popover" data-color-popover="${key}">
+      <div class="popover-title">选色（点击色块）</div>${swatchGrid()}
+      <div class="popover-custom"><span>精细自定义</span><input type="color" data-setting="${key}" value="${v}"></div>
+    </div>
+  </div>`;
 }
 function paletteBlock(){ensurePalette(chartGroups().length);const count=Math.max(6,chartGroups().length);return`<div class="subhead">全部系列配色</div><div class="palette-grid">${state.chart.palette.slice(0,count).map((c,i)=>`<input type="color" data-palette="${i}" value="${c}" title="系列 ${i+1}">`).join('')}</div>`}
 function customPointErrorTable(){
@@ -3250,11 +3262,30 @@ function bindPropertyInputs(){
     else if(act==='save-style')exportStyle();
     else if(act==='load-style')$('#styleFile').click();
   }));
-  $$('[data-swatch]').forEach(btn=>btn.addEventListener('click',()=>{
-    const hex=btn.dataset.swatch,idx=clamp(state.chart.selectedSeries,0,Math.max(0,chartGroups().length-1));
-    state.chart.palette[idx]=hex;ensurePalette(chartGroups().length);rememberPalette(state.chart.palette);
-    renderProperties();renderChart();
+  const closeAllPopovers=()=>$$('.color-popover.open').forEach(p=>p.classList.remove('open'));
+  $$('[data-color-trigger]').forEach(trg=>trg.addEventListener('click',ev=>{
+    ev.stopPropagation();
+    const key=trg.dataset.colorTrigger,pop=document.querySelector(`[data-color-popover="${cssEscape(key)}"]`);
+    const willOpen=!(pop&&pop.classList.contains('open'));closeAllPopovers();
+    if(pop&&willOpen)pop.classList.add('open');
   }));
+  $$('[data-swatch]').forEach(btn=>btn.addEventListener('click',()=>{
+    const hex=btn.dataset.swatch,picker=btn.closest('.color-picker');if(!picker)return;
+    const idx=Number(picker.dataset.picker.split(':')[1]);
+    state.chart.palette[idx]=hex;ensurePalette(chartGroups().length);rememberPalette(state.chart.palette);
+    const trg=picker.querySelector('.color-trigger');if(trg)trg.style.background=hex;
+    const custom=picker.querySelector('.popover-custom input[type=color]');if(custom)custom.value=hex;
+    const out=picker.querySelector(`[data-out="${cssEscape(picker.dataset.picker)}"]`);if(out)out.textContent=hex;
+    closeAllPopovers();renderChart();
+  }));
+  $$('.popover-custom input[type=color]').forEach(inp=>inp.addEventListener('input',()=>{
+    const picker=inp.closest('.color-picker'),trg=picker?picker.querySelector('.color-trigger'):null;
+    if(trg)trg.style.background=inp.value;
+  }));
+  if(!window._colorPopoverBound){window._colorPopoverBound=true;
+    document.addEventListener('click',ev=>{if(!ev.target.closest('.color-picker'))$$('.color-popover.open').forEach(p=>p.classList.remove('open'));});
+    document.addEventListener('keydown',ev=>{if(ev.key==='Escape')$$('.color-popover.open').forEach(p=>p.classList.remove('open'));});
+  }
   $('#paletteFile')?.addEventListener('change',async e=>{const f=e.target.files[0];if(f)await importPalette(f);e.target.value=''});
   $('#styleFile')?.addEventListener('change',async e=>{const f=e.target.files[0];if(f)await importStyle(f);e.target.value=''});
 }
