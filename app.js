@@ -3332,12 +3332,13 @@ async function importPalette(file){try{var obj=JSON.parse(await readAsText(file)
 function applyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.chart.palette=colors;ensurePalette(chartGroups().length);rememberPalette(colors);renderProperties();renderChart();toast('已应用 '+colors.length+' 个颜色')}
-function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:1,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
-  download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'FoodLab_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
+function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),seriesStyles:Object.assign({},state.chart.seriesStyles||{}),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
+  download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function importStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-style'||!obj.settings)throw new Error('不是图参数文件');
     Object.assign(state.chart.settings,obj.settings);if(Array.isArray(obj.palette)&&obj.palette.length){state.chart.palette=obj.palette;ensurePalette(chartGroups().length)}
+    if(obj.seriesStyles&&typeof obj.seriesStyles==='object'){if(!state.chart.seriesStyles)state.chart.seriesStyles={};Object.assign(state.chart.seriesStyles,obj.seriesStyles)}
     if(obj.legend)Object.assign(state.chart.legend,obj.legend);if(obj.legendFrame)Object.assign(state.chart.legendFrame,obj.legendFrame);
-    renderProperties();renderChart();toast('图参数已套用')}
+    prepareChartData();renderProperties();renderChart();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
 function applyLastPalette(){try{var raw=localStorage.getItem('foodlab-last-palette');if(!raw)return;var colors=JSON.parse(raw);if(!Array.isArray(colors)||!colors.length)return;
   state.chart.palette=colors;}catch(_e){}}
