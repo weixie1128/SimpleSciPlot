@@ -1244,8 +1244,15 @@ function descriptiveStats(rows){
 function oneWayAnova(rows,key='a'){
   const groupsMap=new Map();rows.forEach(r=>{const g=r[key];if(!groupsMap.has(g))groupsMap.set(g,[]);groupsMap.get(g).push(r.value)});
   const groups=[...groupsMap.entries()].map(([label,values])=>({label,values,n:values.length,mean:mean(values)})), all=rows.map(r=>r.value), grand=mean(all);
+  if(groups.length<2)return{kind:'one',balanced:false,groups,grand,message:'仅检测到 1 个组别，无法进行单因素 ANOVA（至少需要 2 个组别）。描述统计仍可使用。',rows:[],mse:null,dfError:null,pMain:null};
   const ssBetween=groups.reduce((s,g)=>s+g.n*(g.mean-grand)**2,0), ssWithin=groups.reduce((s,g)=>s+g.values.reduce((q,v)=>q+(v-g.mean)**2,0),0);
-  const df1=groups.length-1,df2=all.length-groups.length,ms1=ssBetween/df1,ms2=ssWithin/df2,F=ms1/ms2,p=fSurvival(F,df1,df2);
+  const df1=groups.length-1,df2=all.length-groups.length;
+  if(df2<=0)return{kind:'one',balanced:false,groups,grand,message:'每个组别只有 1 个观测（无重复），无法估计误差项，ANOVA 不输出 F 与 p 值。',rows:[
+    {source:state.design.factorAName,ss:ssBetween,df:df1,ms:null,F:null,p:null},
+    {source:'误差',ss:ssWithin,df:df2,ms:null,F:null,p:null},
+    {source:'总计',ss:ssBetween+ssWithin,df:all.length-1,ms:null,F:null,p:null}
+  ],mse:null,dfError:df2,pMain:null};
+  const ms1=ssBetween/df1,ms2=ssWithin/df2,F=ms1/ms2,p=fSurvival(F,df1,df2);
   return{kind:'one',balanced:new Set(groups.map(g=>g.n)).size===1,groups,grand,rows:[
     {source:state.design.factorAName,ss:ssBetween,df:df1,ms:ms1,F,p},
     {source:'误差',ss:ssWithin,df:df2,ms:ms2,F:null,p:null},
@@ -1358,6 +1365,7 @@ function renderAnovaTable(){
   const a=state.analysis;$('#anovaMethodText').textContent=(state.design.designType==='two'?'平衡设计双因素 ANOVA，含交互作用。':'单因素 ANOVA。')+` 同一样品的技术测定按“${aggregationLabel()}”汇总，R1、R2、R3 等独立平行作为统计单元。`;
   let html='<thead><tr><th>变异来源</th><th>SS</th><th>df</th><th>MS</th><th>F</th><th>p</th></tr></thead><tbody>';
   if(!a)html+='<tr><td colspan="6" class="empty-row">暂无统计结果</td></tr>';
+  else if(a.message&&!a.rows.length)html+=`<tr><td colspan="6" class="empty-row">${esc(a.message)}</td></tr>`;
   else if(a.kind==='two'&&(!a.balanced||a.noReplicates))html+=`<tr><td colspan="6" class="empty-row">${esc(a.message)}</td></tr>`;
   else a.rows.forEach(r=>html+=`<tr><td>${esc(r.source)}</td><td>${formatNumber(r.ss,5)}</td><td>${r.df}</td><td>${r.ms==null?'—':formatNumber(r.ms,5)}</td><td>${r.F==null?'—':formatNumber(r.F,3)}</td><td>${r.p==null?'—':formatP(r.p)}</td></tr>`);
   $('#anovaTable').innerHTML=html+'</tbody>';
@@ -3832,7 +3840,7 @@ function analyzeMatrix(rows){
 function analyzeRadar(rows){
   const groups=[...new Set(rows.map(r=>r.Group))],indicators=[...new Set(rows.map(r=>r.Indicator))];
   const table=groups.map(g=>({Group:g,Indicators:rows.filter(r=>r.Group===g).length,Mean:mean(rows.filter(r=>r.Group===g).map(r=>r.Value))}));
-  const ranges=Object.fromEntries(indicators.map(ind=>{const vals=rows.filter(r=>r.Indicator===ind).map(r=>r.Value).filter(Number.isFinite);return[ind,{min:Math.min(...vals),max:Math.max(...vals)}]}));
+  const ranges=Object.fromEntries(indicators.map(ind=>{const vals=rows.filter(r=>r.Indicator===ind).map(r=>r.Value).filter(Number.isFinite);return[ind,{min:vals.length?Math.min(...vals):0,max:vals.length?Math.max(...vals):1}]}));
   const leaders=indicators.map(ind=>{
     const vals=groups.map(g=>({group:g,value:(rows.find(r=>r.Group===g&&r.Indicator===ind)||{}).Value})).filter(x=>Number.isFinite(x.value)).sort((a,b)=>b.value-a.value);
     const top=vals[0],second=vals[1];

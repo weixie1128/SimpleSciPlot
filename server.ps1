@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $MyInvocation.MyCommand.Path))
 $port = 8787
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
@@ -36,9 +36,13 @@ try {
         $header = "HTTP/1.1 200 OK`r`nContent-Type: $type`r`nContent-Length: $($body.Length)`r`nCache-Control: no-cache`r`nConnection: close`r`n`r`n"
       }
       $headerBytes = [Text.Encoding]::ASCII.GetBytes($header)
-      $stream.Write($headerBytes,0,$headerBytes.Length)
-      $stream.Write($body,0,$body.Length)
-      $stream.Flush()
+      try {
+        $stream.Write($headerBytes,0,$headerBytes.Length)
+        $stream.Write($body,0,$body.Length)
+        $stream.Flush()
+      } catch [IO.IOException] {
+        # 客户端已断开连接（如浏览器取消请求），忽略并继续处理下一个请求
+      }
     } finally { $client.Close() }
   }
 } finally { $listener.Stop() }
