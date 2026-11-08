@@ -478,6 +478,10 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 #view-chart .segmented button,#view-chart .toolbar-actions button{color:var(--ink-2);transition:background var(--t-fast) var(--ease-out),color var(--t-fast) var(--ease-out),border-color var(--t-fast) var(--ease-out)}
 #view-chart .toolbar-actions button{border-radius:var(--r-sm);border-color:#dfe7e4}
 #view-chart .toolbar-actions button:hover{border-color:#a9cabb;background:var(--surface-1)}
+#view-chart .toolbar-actions .export-format{display:inline-flex;align-items:center}
+#view-chart .toolbar-actions .export-format select{height:30px;padding:0 6px;border:1px solid #dfe7e4;border-radius:var(--r-sm);background:#fff;color:var(--ink-2);font-size:var(--fs-caption);cursor:pointer}
+#view-chart .toolbar-actions .export-format select:hover{border-color:#a9cabb}
+#view-chart .toolbar-actions .export-format select:focus{outline:none;border-color:#5b8def}
 #view-chart .chart-stage{border-radius:var(--r-md);border-color:#eef3f1}
 #view-chart .stage-tip,#view-compose .stage-tip{color:var(--ink-3);font-size:var(--fs-caption)}
 #view-chart .method-badge,#view-compose .method-badge{border-radius:var(--r-sm);background:var(--surface-1);border-color:#dfe8e4;color:var(--ink-2);font-size:var(--fs-caption)}

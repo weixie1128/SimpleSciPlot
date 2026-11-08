@@ -1432,7 +1432,8 @@ function bindChartUi(){
   $('#journalTemplate').addEventListener('change',e=>{if(state.chart.mode==='gallery'){const t=templates[e.target.value]||templates.foodchem;state.gallery.settings.fontEnglish=t.fontEnglish;state.gallery.settings.fontChinese=t.fontChinese;state.gallery.settings.axisWidth=t.axis;state.gallery.settings.frameWidth=Math.max(1,t.axis-.1);state.gallery.palette=[...t.colors];state.gallery.seriesStyles={}}else applyTemplate(e.target.value);renderChartStudio()});
   $('#xFactorSelect').addEventListener('change',e=>{state.chart.xFactor=e.target.value;prepareChartData();autoScaleChart();renderChartStudio()});
   $('#refreshChart').addEventListener('click',()=>{analyzeData();prepareChartData();autoScaleChart();renderChartStudio();toast('图表已按当前统计结果更新')});
-  $('#exportSvg').addEventListener('click',exportSvg);$('#exportPng').addEventListener('click',exportPng);
+  const fmtSel=$('#exportFormat');if(fmtSel){fmtSel.value=state.chart.settings.exportFormat||'png';fmtSel.addEventListener('change',()=>{state.chart.settings.exportFormat=fmtSel.value})}
+  $('#exportNow')?.addEventListener('click',exportCurrentChart);
   $('#addChartText')?.addEventListener('click',()=>addChartAnnotation('text'));
   $('#addChartArrow')?.addEventListener('click',()=>addChartAnnotation('arrow'));
   $('#addPeakLabel')?.addEventListener('click',()=>addChartAnnotation('peak'));
@@ -3335,15 +3336,61 @@ function computeSvgContentBoxFromString(str,pad){
   }catch(_e){return null}finally{if(holder&&holder.parentNode)holder.parentNode.removeChild(holder)}
 }
 function exportSvg(){const svg=$('#paperSvg');if(!svg)return;const copy=cleanAnnotationEditorArtifacts(svg.cloneNode(true));copy.setAttribute('xmlns','http://www.w3.org/2000/svg');if(state.chart.settings.tightExport!==false){try{const vb=computeSvgContentBox(svg,exportPaddingValue());if(vb)copy.setAttribute('viewBox',vb.join(' '))}catch(_e){}}const name=state.chart.mode==='gallery'?workflowChartLabel(state.workflow.chartType):state.design.metricName;download(new Blob([new XMLSerializer().serializeToString(copy)],{type:'image/svg+xml;charset=utf-8'}),`${safeFile(state.design.experimentName)}_${safeFile(name)}.svg`)}
-function exportPng(){
-  const svg=$('#paperSvg');if(!svg)return;
+function chartExportFileName(){const name=state.chart.mode==='gallery'?workflowChartLabel(state.workflow.chartType):state.design.metricName;return `${safeFile(state.design.experimentName)}_${safeFile(name)}`}
+function exportCurrentChart(){const fmt=($('#exportFormat')?.value)||'png';if(fmt==='svg'){exportSvg();return}if(fmt==='tiff'){exportTiff();return}if(fmt==='eps'){exportEps();return}if(fmt==='pdf'){exportPdf();return}exportPng()}
+// 把当前画布按导出的 DPI 栅格化，供 PNG/TIFF/EPS/PDF 共用。
+function chartRasterCanvas(cb){
+  const svg=$('#paperSvg');if(!svg){cb(null);return}
   const galleryMode=state.chart.mode==='gallery',W=galleryMode?Number(state.gallery.settings.width):chartDimensions().W,H=galleryMode?Number(state.gallery.settings.height):chartDimensions().H,dpi=galleryMode?Number(state.gallery.settings.dpi||300):Number(state.chart.settings.pngDpi||300),scale=dpi/96;
   let cw=W,ch=H;const copy=cleanAnnotationEditorArtifacts(svg.cloneNode(true));
   if(state.chart.settings.tightExport!==false){try{const vb=computeSvgContentBox(svg,exportPaddingValue());if(vb){cw=vb[2];ch=vb[3];copy.setAttribute('viewBox',vb.join(' '))}}catch(_e){}}
   copy.setAttribute('width',cw);copy.setAttribute('height',ch);
   const xml=new XMLSerializer().serializeToString(copy),blob=new Blob([xml],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),img=new Image();
-  img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=Math.round(cw*scale);canvas.height=Math.round(ch*scale);const ctx=canvas.getContext('2d');ctx.fillStyle=galleryMode?state.gallery.settings.background:state.chart.settings.background;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);const name=galleryMode?workflowChartLabel(state.workflow.chartType):state.design.metricName;canvas.toBlob(b=>download(b,`${safeFile(state.design.experimentName)}_${safeFile(name)}_${dpi}dpi.png`),'image/png');URL.revokeObjectURL(url)};img.src=url;
+  img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=Math.round(cw*scale);canvas.height=Math.round(ch*scale);const ctx=canvas.getContext('2d');ctx.fillStyle=galleryMode?state.gallery.settings.background:state.chart.settings.background;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);cb(canvas,{dpi,cw,ch})};
+  img.onerror=()=>{URL.revokeObjectURL(url);cb(null);toast('栅格化失败，请改用 SVG 导出')};
+  img.src=url;
 }
+function exportPng(){chartRasterCanvas((canvas,meta)=>{if(!canvas)return;canvas.toBlob(b=>{if(b)download(b,`${chartExportFileName()}_${meta.dpi}dpi.png`)},'image/png')})}
+// 无压缩 RGB TIFF（期刊通用的无损位图格式）。
+function encodeTiffBlob(canvas,dpi){
+  const w=canvas.width,h=canvas.height,src=canvas.getContext('2d').getImageData(0,0,w,h).data,px=new Uint8Array(w*h*3);
+  for(let i=0,j=0;i<src.length;i+=4,j+=3){px[j]=src[i];px[j+1]=src[i+1];px[j+2]=src[i+2]}
+  const count=13,ifd=8,data=ifd+2+count*12+4,bits=data,xres=bits+6,yres=xres+8,pix=yres+8,size=pix+w*h*3;
+  const buf=new ArrayBuffer(size),v=new DataView(buf),u=new Uint8Array(buf);
+  u[0]=73;u[1]=73;v.setUint16(2,42,true);v.setUint32(4,ifd,true);
+  let p=ifd;v.setUint16(p,count,true);p+=2;
+  const put=(tag,type,cnt,val)=>{v.setUint16(p,tag,true);v.setUint16(p+2,type,true);v.setUint32(p+4,cnt,true);if(type===3&&cnt===1)v.setUint16(p+8,val,true);else v.setUint32(p+8,val,true);p+=12};
+  put(256,3,1,w);put(257,3,1,h);put(258,3,3,bits);put(259,3,1,1);put(262,3,1,2);put(273,4,1,pix);put(277,3,1,3);put(278,4,1,h);put(279,4,1,w*h*3);put(282,5,1,xres);put(283,5,1,yres);put(284,3,1,1);put(296,3,1,2);
+  v.setUint32(p,0,true);
+  v.setUint16(bits,8,true);v.setUint16(bits+2,8,true);v.setUint16(bits+4,8,true);
+  const rd=Math.max(1,Math.round(dpi||300));v.setUint32(xres,rd,true);v.setUint32(xres+4,1,true);v.setUint32(yres,rd,true);v.setUint32(yres+4,1,true);
+  u.set(px,pix);
+  return new Blob([buf],{type:'image/tiff'});
+}
+function exportTiff(){chartRasterCanvas((canvas,meta)=>{if(!canvas)return;try{download(encodeTiffBlob(canvas,meta.dpi),chartExportFileName()+'.tiff')}catch(_e){toast('TIFF 导出失败')}})}
+function canvasToJpegBytes(canvas,quality){return new Promise(resolve=>canvas.toBlob(b=>{if(!b){resolve(null);return}const fr=new FileReader();fr.onload=()=>resolve(new Uint8Array(fr.result));fr.onerror=()=>resolve(null);fr.readAsArrayBuffer(b)},'image/jpeg',quality))}
+// EPS：把高分辨率 JPEG 以 DCTDecode 滤镜嵌入 PostScript（图像数据必须紧跟 colorimage 之后）。
+function encodeEpsBlob(jpeg,w,h){const head=`%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 ${w} ${h}\n%%HiResBoundingBox: 0 0 ${w} ${h}\n%%Creator: FoodLab Studio\n%%Title: (chart)\n%%EndComments\n%%BeginBinary: ${jpeg.length}\ngsave\n${w} ${h} 8 [${w} 0 0 -${h} 0 ${h}] currentfile /DCTDecode filter false 3 colorimage\n`,tail=`\ngrestore\nshowpage\n%%EndBinary\n%%EOF\n`;return new Blob([head,jpeg,tail],{type:'application/postscript'})}
+function exportEps(){chartRasterCanvas(async(canvas)=>{if(!canvas)return;const bytes=await canvasToJpegBytes(canvas,0.92);if(!bytes){toast('EPS 导出失败');return}download(encodeEpsBlob(bytes,canvas.width,canvas.height),chartExportFileName()+'.eps')})}
+// PDF：单页，页面尺寸按 DPI 换算成 pt，图像以 DCTDecode 嵌入。
+function buildPdfBlob(jpeg,w,h,dpi){
+  const d=Math.max(1,dpi||300),pw=Math.round(w*72/d*100)/100,ph=Math.round(h*72/d*100)/100;
+  const enc=s=>new TextEncoder().encode(s),chunks=[],offsets=[];let off=0;
+  const push=b=>{chunks.push(b);off+=b.length};
+  const start=n=>{offsets[n]=off;push(enc(`${n} 0 obj\n`))};
+  push(enc('%PDF-1.4\n'));
+  start(1);push(enc('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'));
+  start(2);push(enc('<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'));
+  start(3);push(enc(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`));
+  start(4);push(enc(`<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`));push(jpeg);push(enc('\nendstream\nendobj\n'));
+  const content=`q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q\n`;
+  start(5);push(enc(`<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`));
+  const xrefPos=off;let table='xref\n0 6\n0000000000 65535 f \n';
+  for(let i=1;i<=6;i++)table+=String(offsets[i]).padStart(10,'0')+' 00000 n \n';
+  push(enc(table));push(enc(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF\n`));
+  return new Blob(chunks,{type:'application/pdf'});
+}
+function exportPdf(){chartRasterCanvas(async(canvas,meta)=>{if(!canvas)return;const bytes=await canvasToJpegBytes(canvas,0.92);if(!bytes){toast('PDF 导出失败');return}download(buildPdfBlob(bytes,canvas.width,canvas.height,meta.dpi),chartExportFileName()+'.pdf')})}
 
 function saveProject(){
   const payload={version:'1.8.7',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};
@@ -4281,7 +4328,6 @@ function exportGalleryPng(){const svg=$('#gallerySvg');if(!svg){toast('请先生
 // ===== v0.7.6 论文拼图工作台：平台图表 + 本地图片 =====
 function bindCompose(){
   $('#addToFigure')?.addEventListener('click',()=>addCurrentChartToFigure(false));
-  $('#openCompose')?.addEventListener('click',()=>showView('compose'));
   $('#composeBackStudio')?.addEventListener('click',()=>showView('chart'));
   $('#composeAddText')?.addEventListener('click',()=>addComposeAnnotation('text'));
   $('#composeAddArrow')?.addEventListener('click',()=>addComposeAnnotation('arrow'));
@@ -4585,7 +4631,7 @@ const TOUR_STEPS={
     {target:'#paperSvg,.chart-canvas,#chartCanvas',title:'② 中间画布',text:'图画在这里。图题、坐标轴、图例可以直接用鼠标拖动位置。'},
     {target:'#propertyEditor',title:'③ 右侧属性面板',text:'选中对象后，在这里调颜色、字号、粗细、显著性字母、误差棒等。'},
     {target:'#view-chart .property-section:has(#paletteFile),#view-chart',title:'④ 配色与参数',text:'左侧树里有「配色参数」「图片参数」，可以存一套配色和图设置，下次直接套用。'},
-    {target:'#exportSvgBtn,#exportPngBtn,.export-buttons,[data-export]',title:'⑤ 导出',text:'调好后点这里导出。SVG 是矢量图，PNG 选 300 dpi 直接贴论文。'}
+    {target:'#exportFormat,#exportNow,.export-buttons,[data-export]',title:'⑤ 导出',text:'先在下拉里选格式：PNG/TIFF 是最常用的位图（300–600 dpi），SVG 为可缩放矢量图，EPS/PDF 为高分辨率位图封装。选好后点“导出”。'}
   ],
   compose:[
     {target:'#addToCompose,.add-compose,[data-add-compose]',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
