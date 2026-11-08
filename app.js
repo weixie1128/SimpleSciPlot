@@ -4631,7 +4631,7 @@ const TOUR_STEPS={
     {target:'#paperSvg,.chart-canvas,#chartCanvas',title:'② 中间画布',text:'图画在这里。图题、坐标轴、图例可以直接用鼠标拖动位置。'},
     {target:'#propertyEditor',title:'③ 右侧属性面板',text:'选中对象后，在这里调颜色、字号、粗细、显著性字母、误差棒等。'},
     {target:'#view-chart .property-section:has(#paletteFile),#view-chart',title:'④ 配色与参数',text:'左侧树里有「配色参数」「图片参数」，可以存一套配色和图设置，下次直接套用。'},
-    {target:'#exportFormat,#exportNow,.export-buttons,[data-export]',title:'⑤ 导出',text:'先在下拉里选格式：PNG/TIFF 是最常用的位图（300–600 dpi），SVG 为可缩放矢量图，EPS/PDF 为高分辨率位图封装。选好后点“导出”。'}
+    {target:'#exportFormat,#exportNow,.export-buttons,[data-export]',title:'⑤ 导出',text:'先在下拉里选格式：PNG/TIFF 是最常用的位图（300–600 dpi），SVG 为可缩放矢量图，EPS/PDF 为高分辨率位图封装。选好后点“一键导出”。'}
   ],
   compose:[
     {target:'#addToCompose,.add-compose,[data-add-compose]',title:'① 加入拼图',text:'把你之前做好的图一张张加进来。'},
