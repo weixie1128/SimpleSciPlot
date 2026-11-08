@@ -724,3 +724,55 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 .popover-title{font-size:12px;font-weight:700;color:#40515b;margin-bottom:6px}
 .popover-custom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:#6d7a82}
 .popover-custom input[type=color]{width:48px;height:32px;padding:2px;margin:0}
+
+/* ===== 数据分析工具箱（spectral-tools.js） ===== */
+body.st-lock{overflow:hidden}
+.st-overlay{position:fixed;inset:0;z-index:70;background:rgba(11,26,32,.45);display:flex;align-items:center;justify-content:center;padding:24px}
+.st-panel{width:min(1080px,96vw);height:min(86vh,880px);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(11,26,32,.28);display:flex;flex-direction:column;overflow:hidden}
+.st-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid var(--line);background:#fbfdfc}
+.st-head b{font-size:17px;display:block}
+.st-head small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.st-head-right{display:flex;align-items:center;gap:10px}
+.st-src{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#3d4f58}
+.st-src select{max-width:240px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:#fff;color:var(--text);font-size:13px}
+.st-icon{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;color:#4a5a63;font-size:18px;line-height:1;cursor:pointer}
+.st-icon:hover{border-color:#aebdc5;background:#f6f9fa}
+.st-tabs{display:flex;gap:6px;padding:10px 20px 0;border-bottom:1px solid var(--line);background:#fbfdfc}
+.st-tabs button{border:1px solid transparent;border-bottom:0;background:transparent;color:#5b6b74;padding:9px 14px;border-radius:9px 9px 0 0;font-size:13px;font-weight:700;cursor:pointer}
+.st-tabs button.active{background:#fff;border-color:var(--line);color:var(--accent)}
+.st-body{flex:1;min-height:0;overflow:auto;padding:18px 20px 22px;background:#fff}
+.st-pane{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.st-controls{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fbfcfc;position:sticky;top:0}
+.st-controls fieldset{border:0;border-top:1px solid #e8eef0;margin:0 0 10px;padding:10px 0 0}
+.st-controls fieldset:first-of-type{border-top:0;padding-top:2px}
+.st-controls legend{font-size:12px;font-weight:750;color:#2f5a4c;padding:0;margin-bottom:6px}
+.st-controls label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#4d5f68;margin:7px 0}
+.st-controls label select,.st-controls label input[type=number],.st-controls label input[type=text]{width:132px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12px;color:var(--text);background:#fff}
+.st-controls label.st-check{justify-content:flex-start;gap:7px}
+.st-check input{width:15px;height:15px;accent-color:var(--accent)}
+.st-note{font-size:11px;color:#7a8a92;line-height:1.6;margin:6px 0 8px}
+.st-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.st-btn{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:8px;padding:8px 11px;font-size:12px;cursor:pointer}
+.st-btn:hover{border-color:#aebdc5;background:#f7fafb}
+.st-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.st-btn.primary:hover{background:#095a47}
+.st-view{min-width:0;display:flex;flex-direction:column;gap:12px}
+.st-plot{border:1px solid #edf1f3;border-radius:10px;background:#fff;padding:6px}
+.st-plot-sm{padding:2px}
+.st-svg{display:block;width:100%;height:auto}
+.st-stat{font-size:12px;color:#5d6d76;line-height:1.7}
+.st-stat span{display:inline-block;margin-right:14px}
+.st-stat b{color:#1f4a3c}
+.st-table-wrap{border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:240px}
+.st-table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+.st-table th{background:#f5f8f9;text-align:left;white-space:nowrap}
+.st-table th,.st-table td{padding:7px 10px;border-bottom:1px solid #edf1f3}
+.st-table tbody tr:last-child td{border-bottom:0}
+.st-table tbody tr:hover{background:#fafcfc}
+.st-empty{padding:26px;text-align:center;color:#8898a0;font-size:13px}
+.st-empty-cell{text-align:center;color:#8898a0;padding:22px}
+.st-pane.hidden,.st-pane .hidden{display:none!important}
+@media(max-width:1080px){
+  .st-pane{grid-template-columns:1fr}
+  .st-controls{position:static}
+}
