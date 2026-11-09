@@ -814,3 +814,10 @@ body.st-lock{overflow:hidden}
 .quick-format-bar .quick-tools>button:hover{border-color:#9ec9bb;color:#166249;background:#f6fbf9}
 .quick-format-bar .quick-tools>button:focus-visible{outline:none;border-color:#2ba07f;box-shadow:0 0 0 3px rgba(43,160,127,.16)}
 #view-chart .quick-format-bar .quick-tools>span{font-size:var(--fs-caption,12px);color:var(--ink-2,#52616a)}
+
+/* v1.9.33 basic statistics: assumption diagnostics, effect size, nonparametric */
+#view-statistics .stats-diagnostics{padding:22px;margin-top:15px}
+#view-statistics .stats-grid.stats-secondary{margin-top:15px}
+#view-statistics .stats-grid.stats-secondary>.card{padding:22px}
+#view-statistics .pair-table{margin-top:12px}
+#view-statistics .stats-grid.stats-secondary .small-note{margin-top:10px}

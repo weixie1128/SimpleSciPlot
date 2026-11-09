@@ -1308,10 +1308,13 @@ function renderStatistics(){
   $('#summaryCards').innerHTML=warnBanner+[
     ['原始测定值',state.rawData.length||'—'],['独立平行样本',state.analysisRows.length||'—'],['实验组合',desc.length||'—'],['分析模型',!a?'—':a.continuous?'连续趋势摘要':a.noReplicates?'无重复·仅描述统计':a.kind==='two'?'双因素 ANOVA':'单因素 ANOVA']
   ].map(([n,v])=>`<div class="summary-card"><span>${n}</span><b>${v}</b></div>`).join('');
-  renderDescriptiveTable();renderAnovaTable();renderInterpretation();
+  renderDescriptiveTable();renderAnovaTable();renderAssumptionAndInference();renderInterpretation();
 }
 function renderGalleryWorkflowStatistics(){
   state.gallery.type=state.workflow.chartType;analyzeGalleryData();
+  ['assumptionCard','effectCard','nonparamCard'].forEach(id=>{const el=$('#'+id);if(el)el.style.display='none'});
+  ['assumptionTable','effectTable','nonparamTable','nonparamPairTable'].forEach(id=>{const t=$('#'+id);if(t)t.innerHTML=''});
+  ['assumptionNoteLine','effectNoteLine','nonparamNoteLine'].forEach(id=>{const t=$('#'+id);if(t)t.textContent=''});
   const def=galleryDef(),schema=gallerySchema(),a=state.gallery.analysis;
   $('#statsDesignLine').textContent=`${state.design.experimentName} · ${def.name} · ${schema.name} · 初步分析`;
   const summary=a?.summary||[['数据行',state.gallery.rows.length],['图形',def.name],['模板',schema.name],['状态',state.gallery.rows.length?'已分析':'待导入']];
@@ -1371,6 +1374,237 @@ function renderAnovaTable(){
   $('#anovaTable').innerHTML=html+'</tbody>';
 }
 
+/* ===== v1.9.33：初步分析的统计假设诊断、效应量与无参数检验 =====
+ * 正态性：Shapiro–Wilk（Royston 1995 / AS R94，3 ≤ n ≤ 5000）
+ * 方差齐性：Levene（均值）与 Brown–Forsythe（中位数）
+ * 效应量：η²、偏 η²、ω²、Cohen's d
+ * 非参数：Kruskal–Wallis + Mann–Whitney（Holm），双因素为 Scheirer–Ray–Hare
+ */
+function swPoly(x,c){let p=c[c.length-1];for(let i=c.length-2;i>=0;i--)p=p*x+c[i];return p}
+// Acklam 标准正态分位数近似（Shapiro–Wilk 需要 Φ⁻¹，项目内无现成实现）
+function invNorm(p){
+  if(!(p>0&&p<1))return p<=0?-Infinity:Infinity;
+  // 系数按 Horner 的常数项在前排列（Acklam 2003 分段有理逼近）
+  const a=[2.5066282746310002,-3.066479806614716e1,1.383577518672690e2,-2.759285104469687e2,2.209460984245205e2,-3.969683028665376e1];
+  const b=[1,-1.328068155288572e1,6.680131188771972e1,-1.556989798598866e2,1.615858368580409e2,-5.447609879822406e1];
+  const c=[2.938163982698783,4.374664141464968,-2.549732539343734,-2.400758277161838,-3.223964580411365e-1,-7.784894002430293e-3];
+  const d=[1,3.754408661907416,2.445134137142996,3.224671290700398e-1,7.784695709041462e-3];
+  const pl=.02425;
+  if(p<pl){const q=Math.sqrt(-2*Math.log(p));return swPoly(q,c)/swPoly(q,d)}
+  if(p<=1-pl){const q=p-.5,r=q*q;return swPoly(r,a)*q/swPoly(r,b)}
+  const q=Math.sqrt(-2*Math.log(1-p));return -swPoly(q,c)/swPoly(q,d)
+}
+function shapiroWilk(values){
+  const xs=[...values].map(Number).filter(v=>Number.isFinite(v)).sort((p,q)=>p-q),n=xs.length;
+  if(n<3||n>5000)return null;
+  if(xs[n-1]-xs[0]<=1e-19)return null;
+  const nn2=Math.floor(n/2),coef=[];
+  if(n===3)coef[1]=0.70710678;
+  else{
+    const an25=n+.25,m=[];
+    let summ2=0;
+    for(let i=1;i<=nn2;i++){m[i]=invNorm((i-.375)/an25);summ2+=m[i]*m[i]}
+    summ2*=2;
+    const ssumm2=Math.sqrt(summ2),rsn=1/Math.sqrt(n);
+    const a1=swPoly(rsn,[0,.221157,-.147981,-2.07119,4.434685,-2.706056])-m[1]/ssumm2;
+    let fac,i1;
+    if(n>5){
+      i1=3;
+      const a2=-m[2]/ssumm2+swPoly(rsn,[0,.042981,-.293762,-1.752461,5.682633,-3.582633]);
+      fac=Math.sqrt((summ2-2*m[1]*m[1]-2*m[2]*m[2])/(1-2*a1*a1-2*a2*a2));
+      coef[2]=a2;
+    }else{
+      i1=2;
+      fac=Math.sqrt((summ2-2*m[1]*m[1])/(1-2*a1*a1));
+    }
+    coef[1]=a1;
+    for(let i=i1;i<=nn2;i++)coef[i]=m[i]/(-fac);
+  }
+  const range=xs[n-1]-xs[0],raw=new Array(n);
+  for(let i=0;i<n;i++){const j=n-1-i;raw[i]=i<j?-coef[1+i]:(i>j?coef[1+j]:0)}
+  const sa=raw.reduce((s,v)=>s+v,0)/n;
+  let sx=0;for(let i=0;i<n;i++)sx+=xs[i]/range;sx/=n;
+  let ssa=0,ssx=0,sax=0;
+  for(let i=0;i<n;i++){const ai=raw[i]-sa,xi=xs[i]/range-sx;ssa+=ai*ai;ssx+=xi*xi;sax+=ai*xi}
+  if(!(ssa>0&&ssx>0))return null;
+  const w1=(ssa*ssx-sax*sax)/(ssa*ssx),w=1-w1;
+  let p;
+  if(n===3){
+    const pw=(6/Math.PI)*(Math.asin(Math.sqrt(Math.max(0,w)))-Math.asin(Math.sqrt(.75)));
+    p=Math.max(0,pw);
+  }
+  else{
+    const y=Math.log(Math.max(w1,1e-300)),xx=Math.log(n);
+    if(n<=11){
+      const gamma=-2.273+.459*n;
+      if(y>=gamma)p=1e-99;
+      else{
+        const yy=-Math.log(gamma-y);
+        const mm=swPoly(n,[.544,-.39978,.025054,-6.714e-4]);
+        const ss=Math.exp(swPoly(n,[1.3822,-.77857,.062767,-.0020322]));
+        p=1-normalCdf((yy-mm)/ss);
+      }
+    }else{
+      const mm=swPoly(xx,[-1.5861,-.31082,-.083751,.0038915]);
+      const ss=Math.exp(swPoly(xx,[-.4803,-.082676,.0030302]));
+      p=1-normalCdf((y-mm)/ss);
+    }
+  }
+  return{w,p:clamp(p,0,1)};
+}
+// Levene / Brown–Forsythe：对 |x − 组中心| 做单因素 ANOVA
+function leveneTest(groups,useMedian){
+  const usable=groups.filter(g=>g.values.length>=2);
+  if(usable.length<2)return null;
+  const z=usable.map(g=>{const c=useMedian?median(g.values):mean(g.values);return g.values.map(v=>Math.abs(v-c))});
+  const all=z.flat(),N=all.length,k=usable.length,gm=mean(all),df1=k-1,df2=N-k;
+  if(df2<=0)return null;
+  const ssb=z.reduce((s,arr)=>s+arr.length*(mean(arr)-gm)**2,0);
+  const ssw=z.reduce((s,arr)=>s+arr.reduce((q,v)=>q+(v-mean(arr))**2,0),0);
+  if(!(ssw>0))return null;
+  const F=(ssb/df1)/(ssw/df2);
+  return{F,p:fSurvival(F,df1,df2),df1,df2,N,k};
+}
+function effectSizeRows(a){
+  if(!a||!a.rows||!a.rows.length)return[];
+  const total=a.rows.find(r=>r.source==='总计'),err=a.rows.find(r=>r.source==='误差');
+  const sst=total?total.ss:null,sse=err&&Number.isFinite(err.ss)?err.ss:null;
+  if(!Number.isFinite(sst)||sst<=0)return[];
+  return a.rows.filter(r=>r.F!=null&&Number.isFinite(r.ss)&&Number.isFinite(r.df)).map(r=>{
+    const eta=r.ss/sst,pEta=sse!=null&&r.ss+sse>0?r.ss/(r.ss+sse):eta;
+    const omega=Number.isFinite(a.mse)?Math.max(0,(r.ss-r.df*a.mse)/(sst+a.mse)):null;
+    return{source:r.source,eta,pEta,omega,df:r.df};
+  });
+}
+function effectMagnitude(v){
+  if(!Number.isFinite(v))return'—';
+  return v<.01?'可忽略':v<.06?'小':v<.14?'中':'大';
+}
+function cohensMagnitude(d){
+  const a=Math.abs(d);
+  return a<.2?'可忽略':a<.5?'小':a<.8?'中':'大';
+}
+function maxCohensD(desc,design){
+  const rows=(desc||[]).filter(r=>Number.isFinite(r.mean)&&Number.isFinite(r.sd)&&r.n>1),labelOf=r=>design&&design.designType==='two'?`${r.a} · ${r.b}`:String(r.a);
+  let best=null;
+  for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){
+    const p=rows[i],q=rows[j],den=p.n+q.n-2;
+    if(den<=0)continue;
+    const sp=Math.sqrt(((p.n-1)*p.sd*p.sd+(q.n-1)*q.sd*q.sd)/den);
+    if(!(sp>0))continue;
+    const d=Math.abs(p.mean-q.mean)/sp;
+    if(!best||d>best.d)best={d,aLabel:labelOf(p),bLabel:labelOf(q)};
+  }
+  return best;
+}
+// 双因素设计的非参数替代：Scheirer–Ray–Hare（对秩做双因素 ANOVA 再换算为 H）
+function scheirerRayHare(rows){
+  const valid=(rows||[]).filter(r=>Number.isFinite(Number(r.value)));
+  if(valid.length<4)return null;
+  const {ranks}=averageRanks(valid.map(r=>Number(r.value)));
+  const mapped=valid.map((r,i)=>({a:r.a,b:r.b,value:ranks[i]}));
+  const base=twoWayAnova(mapped);
+  if(!base||base.continuous||!base.balanced||base.noReplicates||!base.rows.length)return null;
+  const N=valid.length,S2=ranks.reduce((s,r)=>s+(r-(N+1)/2)**2,0)/(N-1);
+  if(!(S2>0))return null;
+  const out=base.rows.filter(r=>r.F!=null&&Number.isFinite(r.ss)).map(r=>({source:r.source,H:r.ss/S2,df:r.df,p:chiSquareSurvival(r.ss/S2,r.df)}));
+  return out.length?{rows:out,N}:null;
+}
+function assumptionGroups(desc,d){
+  if(!desc||!desc.length)return[];
+  if(d.designType==='two'){
+    return desc.filter(r=>r.values&&r.values.length).map(r=>({label:`${r.a} · ${r.b}`,values:r.values,n:r.values.length,mean:r.mean}));
+  }
+  const map=new Map();
+  desc.forEach(r=>{const k=String(r.a);if(!map.has(k))map.set(k,[]);map.get(k).push(...(r.values||[]))});
+  return [...map.entries()].map(([label,values])=>({label,values,n:values.length,mean:values.length?mean(values):NaN})).sort((x,y)=>levelIndex(x.label,d.factorALevels)-levelIndex(y.label,d.factorALevels));
+}
+function renderAssumptionAndInference(){
+  ['assumptionCard','effectCard','nonparamCard'].forEach(id=>{const el=$('#'+id);if(el)el.style.display=''});
+  const a=state.analysis,d=state.design,desc=state.descriptive||[];
+  const groups=assumptionGroups(desc,d);
+  $('#assumptionMethodText').textContent=d.designType==='two'?'按因素组合检验正态性与方差齐性，样本量足够的组合才输出结果。':'按因素水平检验正态性（Shapiro–Wilk）与方差齐性（Levene / Brown–Forsythe）。';
+  let html='<thead><tr><th>检验</th><th>对象</th><th>样本量</th><th>统计量</th><th>p</th><th>结论</th></tr></thead><tbody>';
+  const normRows=[],shown=groups.slice(0,15);
+  shown.forEach(g=>{
+    if(g.n<3){
+      normRows.push({label:g.label,n:g.n,sw:null});
+      html+=`<tr><td>Shapiro–Wilk</td><td>${esc(g.label)}</td><td>${g.n}</td><td>—</td><td>—</td><td>样本量不足（n&lt;3）</td></tr>`;
+      return;
+    }
+    const sw=shapiroWilk(g.values);
+    normRows.push({label:g.label,n:g.n,sw});
+    html+=`<tr><td>Shapiro–Wilk</td><td>${esc(g.label)}</td><td>${g.n}</td><td>${sw?`W = ${formatNumber(sw.w,4)}`:'—'}</td><td>${sw?formatP(sw.p):'—'}</td><td>${sw?(sw.p<.05?'偏离正态':'未见偏离正态'):'组内取值全相同，无法检验'}</td></tr>`;
+  });
+  if(groups.length>shown.length)html+=`<tr><td colspan="6" class="empty-row">共 ${groups.length} 组，仅显示前 ${shown.length} 组；检验与效应量计算仍使用全部数据。</td></tr>`;
+  const levMean=groups.length>=2?leveneTest(groups,false):null;
+  const levMed=groups.length>=2?leveneTest(groups,true):null;
+  const totalN=groups.reduce((s,g)=>s+g.n,0);
+  if(levMean)html+=`<tr><td>Levene（基于均值）</td><td>${groups.length} 个组</td><td>${levMean.N}</td><td>F(${levMean.df1}, ${levMean.df2}) = ${formatNumber(levMean.F,3)}</td><td>${formatP(levMean.p)}</td><td>${levMean.p<.05?'方差不齐':'方差齐'}</td></tr>`;
+  if(levMed)html+=`<tr><td>Brown–Forsythe（基于中位数）</td><td>${groups.length} 个组</td><td>${levMed.N}</td><td>F(${levMed.df1}, ${levMed.df2}) = ${formatNumber(levMed.F,3)}</td><td>${formatP(levMed.p)}</td><td>${levMed.p<.05?'方差不齐':'方差齐'}</td></tr>`;
+  let welch=null;
+  if(d.designType!=='two'&&levMed&&levMed.p<.05&&groups.length>=2){
+    welch=welchAnova(groups.map(g=>({label:g.label,values:g.values,n:g.n,mean:g.mean})));
+    if(welch)html+=`<tr><td>Welch ANOVA（参考）</td><td>${groups.length} 个组</td><td>${totalN}</td><td>F(${welch.df1}, ${formatNumber(welch.df2,1)}) = ${formatNumber(welch.statistic,3)}</td><td>${formatP(welch.pMain)}</td><td>方差不齐时的替代检验</td></tr>`;
+  }
+  if(!groups.length)html+='<tr><td colspan="6" class="empty-row">请先导入原始数据</td></tr>';
+  $('#assumptionTable').innerHTML=html+'</tbody>';
+
+  const eff=effectSizeRows(a);
+  let ehtml='<thead><tr><th>效应</th><th>η²</th><th>偏 η²</th><th>ω²</th><th>判读（η²）</th></tr></thead><tbody>';
+  if(!eff.length)ehtml+=`<tr><td colspan="5" class="empty-row">${a?(a.message||'当前模型没有可估计的效应量（需要组间重复与误差项）'):'暂无统计结果'}</td></tr>`;
+  else eff.forEach(r=>ehtml+=`<tr><td>${esc(r.source)}</td><td>${formatNumber(r.eta,3)}</td><td>${formatNumber(r.pEta,3)}</td><td>${r.omega==null?'—':formatNumber(r.omega,3)}</td><td>${effectMagnitude(r.eta)}</td></tr>`);
+  $('#effectTable').innerHTML=ehtml+'</tbody>';
+  const cd=maxCohensD(desc,d);
+  $('#effectNoteLine').textContent=(cd?`最大组间差异：${cd.aLabel} vs ${cd.bLabel}，Cohen's d = ${formatNumber(cd.d,2)}（${cohensMagnitude(cd.d)}）。`:'当前没有两个以上可比较的组，无法计算 Cohen\'s d。')+'判读阈值：η² 0.01 / 0.06 / 0.14 与 |d| 0.2 / 0.5 / 0.8 分别对应小 / 中 / 大效应。';
+
+  let nhtml='<thead><tr><th>检验</th><th>统计量</th><th>df</th><th>p</th><th>结论</th></tr></thead><tbody>',phtml='<thead><tr><th>两两比较</th><th>U</th><th>z</th><th>原始 p</th><th>Holm p</th><th>标记</th></tr></thead><tbody>';
+  let pairs=[],npText='';
+  if(d.designType==='two'){
+    const srh=scheirerRayHare(state.analysisRows);
+    if(srh)srh.rows.forEach(r=>nhtml+=`<tr><td>Scheirer–Ray–Hare · ${esc(r.source)}</td><td>H = ${formatNumber(r.H,3)}</td><td>${r.df}</td><td>${formatP(r.p)}</td><td>${r.p<.05?'差异显著':'未检出差异'}</td></tr>`);
+    else nhtml+='<tr><td colspan="5" class="empty-row">当前双因素数据不满足 Scheirer–Ray–Hare 的平衡设计要求</td></tr>';
+    phtml+='<tr><td colspan="6" class="empty-row">双因素设计请参考上方秩检验；两两比较需先明确比较层级。</td></tr>';
+    npText='秩检验基于全部观测值的秩，双因素设计使用 Scheirer–Ray–Hare；不要求正态分布。';
+  }else{
+    const kw=groups.length>=2?kruskalWallis(groups):null;
+    if(kw){
+      nhtml+=`<tr><td>Kruskal–Wallis</td><td>H = ${formatNumber(kw.statistic,3)}</td><td>${kw.df1}</td><td>${formatP(kw.pMain)}</td><td>${kw.pMain<.05?'差异显著':'未检出差异'}</td></tr>`;
+      pairs=mannWhitneyPairwise(groups);
+      phtml+=pairs.slice(0,20).map(r=>`<tr><td>${esc(r.a)} vs ${esc(r.b)}</td><td>${formatNumber(r.U,1)}</td><td>${formatNumber(r.z,3)}</td><td>${formatP(r.pRaw)}</td><td>${formatP(r.p)}</td><td>${r.stars}</td></tr>`).join('');
+      if(pairs.length>20)phtml+=`<tr><td colspan="6" class="empty-row">共 ${pairs.length} 组两两比较，仅显示前 20 组。</td></tr>`;
+      npText=`秩和检验不要求正态分布，适合等级数据或明显偏离正态的连续数据；两两比较使用 Mann–Whitney U 与 Holm 校正控制多重比较错误率。`;
+    }else{
+      nhtml+='<tr><td colspan="5" class="empty-row">至少需要 2 个组、每组至少有观测值</td></tr>';
+      phtml+='<tr><td colspan="6" class="empty-row">组数不足，无法进行两两比较</td></tr>';
+      npText='当前组数不足，无法计算秩和检验。';
+    }
+  }
+  $('#nonparamTable').innerHTML=nhtml+'</tbody>';
+  $('#nonparamPairTable').innerHTML=phtml+'</tbody>';
+  $('#nonparamNoteLine').textContent=npText;
+
+  const tested=normRows.filter(r=>r.sw),bad=tested.filter(r=>r.sw.p<.05),paragraphs=[];
+  if(tested.length){
+    if(bad.length)paragraphs.push(`正态性检验（Shapiro–Wilk）显示 ${bad.length}/${tested.length} 个组偏离正态（p < 0.05，${bad.slice(0,3).map(r=>r.label).join('、')}${bad.length>3?' 等':''}），F 检验的 p 值可能偏乐观，建议同时参考 Kruskal–Wallis 非参数结果。`);
+    else paragraphs.push(`各组 Shapiro–Wilk 检验均未见明显偏离正态（p > 0.05）。`);
+  }
+  const lev=levMed||levMean;
+  if(lev){
+    paragraphs.push(`Levene 方差齐性检验（Brown–Forsythe，基于中位数）${lev.p<.05?'提示各组方差不齐':'未见方差不齐'}（F = ${formatNumber(lev.F,3)}，p = ${formatP(lev.p)}）。${lev.p<.05?'建议以 Welch ANOVA 或 Games–Howell 事后比较的结果作为主结论。':'可直接采用 ANOVA 的 F 检验结果。'}`);
+  }
+  if(eff.length){
+    const top=eff.slice().sort((x,y)=>y.eta-x.eta)[0];
+    paragraphs.push(`效应量方面，${top.source} 的 η² = ${formatNumber(top.eta,3)}（${effectMagnitude(top.eta)}效应）${cd?`；最大组间差异 ${cd.aLabel} vs ${cd.bLabel} 的 Cohen's d = ${formatNumber(cd.d,2)}（${cohensMagnitude(cd.d)}效应）`:''}。`);
+  }
+  if(d.designType!=='two'&&groups.length>=2){
+    const kw=kruskalWallis(groups);
+    if(kw)paragraphs.push(`非参数 Kruskal–Wallis 检验${kw.pMain<.05?'显示组间差异显著':'未检出组间差异'}（H = ${formatNumber(kw.statistic,3)}，df = ${kw.df1}，${formatPText(kw.pMain)}）。`);
+  }
+  $('#assumptionNoteLine').textContent=lev?(lev.p<.05?'方差不齐：优先参考 Welch ANOVA 或非参数检验。':'参数检验前提基本满足，可直接采用 ANOVA 结果。'):'样本量不足，暂不能检验方差齐性。';
+  state.assumptionSummary={paragraphs,normRows,levMean,levMed,eff,cd,welch};
+}
+
 function interpretationParagraphs(){
   const a=state.analysis,d=state.design;if(!a)return null;
   // v1.8.4：3D 瀑布图在「每个横轴位置只有 1 个测定值」（无重复误差项，
@@ -1397,6 +1631,8 @@ function interpretationParagraphs(){
       d.factorBLevels.forEach(b=>{const series=state.descriptive.filter(r=>r.b===b).sort((x,y)=>levelIndex(x.a,d.factorALevels)-levelIndex(y.a,d.factorALevels));if(series.length>1){const c=series.at(-1).mean-series[0].mean;paragraphs.push(`${b} 条件下，${d.metricName} 从 ${series[0].a} 到 ${series.at(-1).a} 总体${c>0?'增加':c<0?'降低':'保持稳定'} ${formatNumber(Math.abs(c),3)}${d.metricUnit?` ${d.metricUnit}`:''}。`)}});
     }
   }
+  const asum=state.assumptionSummary;
+  if(asum&&Array.isArray(asum.paragraphs))paragraphs.push(...asum.paragraphs);
   return paragraphs;
 }
 /* v1.8.4：瀑布图信号摘要——基于描述统计的「横轴位置 × 层」组合均值（每个位置 1 个值），
@@ -3492,6 +3728,10 @@ function buildBundleDocx(png,pxW,pxH,dpi){
   const project=(state.design&&state.design.experimentName)||'未命名项目';
   const chartName=state.chart.mode==='gallery'?workflowChartLabel(state.workflow.chartType):(state.design.metricName||'图表');
   const raw=bundleRawTable(),desc=bundleDomTable('#descriptiveTable'),test=bundleDomTable('#anovaTable');
+  const assumption=bundleDomTable('#assumptionTable'),effect=bundleDomTable('#effectTable'),np=bundleDomTable('#nonparamTable'),npPair=bundleDomTable('#nonparamPairTable');
+  const noteA=(document.querySelector('#assumptionNoteLine')?.textContent||'').trim();
+  const noteE=(document.querySelector('#effectNoteLine')?.textContent||'').trim();
+  const noteN=(document.querySelector('#nonparamNoteLine')?.textContent||'').trim();
   const method=(document.querySelector('#anovaMethodText')?.textContent||'').trim();
   const interp=(document.querySelector('#interpretationText')?.textContent||'').trim();
   const d=Math.max(72,Number(dpi)||300);
@@ -3515,6 +3755,22 @@ function buildBundleDocx(png,pxW,pxH,dpi){
   if((test&&test.rows.length)||method){
     body+=bundlePara('检验或模型结果'+(method?('：'+method):''),{size:18,color:'6B7280'});
     if(test&&test.rows.length)body+=bundleTable(test.heads,test.rows);
+  }
+  if(assumption&&assumption.rows.length){
+    body+=bundlePara('统计假设与诊断',{size:18,color:'6B7280'});
+    body+=bundleTable(assumption.heads,assumption.rows);
+    if(noteA)body+=bundlePara(noteA,{size:16,color:'6B7280'});
+  }
+  if(effect&&effect.rows.length){
+    body+=bundlePara('效应量',{size:18,color:'6B7280'});
+    body+=bundleTable(effect.heads,effect.rows);
+    if(noteE)body+=bundlePara(noteE,{size:16,color:'6B7280'});
+  }
+  if(np&&np.rows.length){
+    body+=bundlePara('非参数检验',{size:18,color:'6B7280'});
+    body+=bundleTable(np.heads,np.rows);
+    if(npPair&&npPair.rows.length)body+=bundleTable(npPair.heads,npPair.rows);
+    if(noteN)body+=bundlePara(noteN,{size:16,color:'6B7280'});
   }
   if(interp&&interp!=='暂无可解释结果。'){
     body+=bundlePara('自动文字解读',{size:18,color:'6B7280'});
