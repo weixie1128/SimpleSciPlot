@@ -2345,6 +2345,7 @@ function applySp1SpecToGallery(spec){
   if(fr.border!=null)s.frameMode=fr.border?'box':'lb';
   if(mk.shape)s.markerShape=mk.shape;
   if(mk.radius!=null){s.markerSize=px(mk.radius,s.markerSize);s.pointSize=px(mk.radius,s.pointSize)}
+  if(spec.specific&&spec.specific.line&&spec.specific.line.markerFill)s.markerFill=spec.specific.line.markerFill;
 }
 function galleryPropGroup(items){return items.join('')}
 function gColor(k,l){return gWrap(l,k,`<input data-gsetting="${k}" type="color" value="${state.gallery.settings[k]}">`)}
@@ -4033,7 +4034,21 @@ function applySp1Spec(spec){
   if(fr.border!=null)s.frameMode=fr.border?'box':'lb';
   if(mk.shape)s.markerShape=mk.shape;
   if(mk.radius!=null)s.markerSize=px(mk.radius,s.markerSize);
-  if(sp.bar&&sp.bar.widthRatio!=null)s.categoryWidth=Number(sp.bar.widthRatio);
+  if(sp.bar){
+    if(sp.bar.widthRatio!=null)s.categoryWidth=Number(sp.bar.widthRatio);
+    if(sp.bar.gap!=null)s.barGap=px(sp.bar.gap,s.barGap);
+  }
+  if(sp.errorbar&&sp.errorbar.capWidth!=null)s.errorCap=px(sp.errorbar.capWidth,s.errorCap);
+  if(spec.letters){
+    if(spec.letters.size!=null)s.letterSize=px(spec.letters.size,s.letterSize);
+    if(spec.letters.weight)s.letterWeight=spec.letters.weight==='bold'?700:spec.letters.weight==='medium'?500:400;
+  }
+  if(sp.line){
+    if(sp.line.smooth!=null)s.lineMode=sp.line.smooth?'smooth':'straight';
+    else if(sp.line.lineMode)s.lineMode=sp.line.lineMode;
+    if(sp.line.markerFill)s.markerFill=sp.line.markerFill;
+    if(sp.line.lineOffset!=null)s.lineOffset=px(sp.line.lineOffset,s.lineOffset);
+  }
 }
 function applyLastPalette(){try{var raw=localStorage.getItem('foodlab-last-palette');if(!raw)return;var colors=JSON.parse(raw);if(!Array.isArray(colors)||!colors.length)return;
   state.chart.palette=colors;}catch(_e){}}

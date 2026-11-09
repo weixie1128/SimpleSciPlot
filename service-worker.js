@@ -1,5 +1,5 @@
-﻿const CACHE='simplesciplot-1.9.35';
-const ASSETS=['./','./index.html','./styles.css?v=1.9.35','./boot-guard-v0154.js?v=1.9.35','./app.js?v=1.9.35','./chart-fixes.js?v=1.9.35','./template-fixes.js?v=1.9.35','./spectral-tools.js?v=1.9.35','./assets/xlsx.full.min.js'];
+﻿const CACHE='simplesciplot-1.9.36';
+const ASSETS=['./','./index.html','./styles.css?v=1.9.36','./boot-guard-v0154.js?v=1.9.36','./app.js?v=1.9.36','./chart-fixes.js?v=1.9.36','./template-fixes.js?v=1.9.36','./spectral-tools.js?v=1.9.36','./assets/xlsx.full.min.js'];
 const same=q=>new URL(q.url).origin===self.location.origin;
 async function put(q,r){if(!r||!r.ok||r.type==='opaque')return;try{await(await caches.open(CACHE)).put(q,r.clone())}catch(e){}}
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await Promise.allSettled(ASSETS.map(a=>c.add(a)));await self.skipWaiting()})())});
