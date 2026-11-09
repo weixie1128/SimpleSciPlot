@@ -821,3 +821,14 @@ body.st-lock{overflow:hidden}
 #view-statistics .stats-grid.stats-secondary>.card{padding:22px}
 #view-statistics .pair-table{margin-top:12px}
 #view-statistics .stats-grid.stats-secondary .small-note{margin-top:10px}
+/* v1.9.33 命名面板 */
+#view-statistics .stats-naming{padding:22px;margin-top:14px}
+#view-statistics .naming-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 18px;margin-top:6px}
+#view-statistics .naming-item{display:flex;flex-direction:column;gap:4px}
+#view-statistics .naming-item>span{font-size:11px;font-weight:700;color:#52616a;letter-spacing:.02em}
+#view-statistics .naming-item input{height:34px;padding:0 10px;border:1px solid var(--line,#e1e8e5);border-radius:7px;background:#fff;color:#22313a;font:inherit;font-size:13px}
+#view-statistics .naming-item input:focus{outline:none;border-color:var(--brand,#3a8778);box-shadow:0 0 0 3px rgba(58,135,120,.12)}
+#view-statistics .naming-item.small{grid-column:auto}
+@media (max-width: 820px){#view-statistics .naming-grid{grid-template-columns:1fr 1fr}}
+@media (max-width: 560px){#view-statistics .naming-grid{grid-template-columns:1fr}}
+

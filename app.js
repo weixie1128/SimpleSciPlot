@@ -235,6 +235,7 @@ function init(){
   bindDesign();
   bindData();
   bindStatistics();
+  bindNamingControls();
   bindChartUi();
   setPropertiesPanelCollapsed(false);
   bindGallery();
@@ -1093,6 +1094,8 @@ function finalizeImportedExperiment(parsed,errors,source,layout,inferred=null){
   if(!state.design.factorALevels.length||!observedA.every(x=>state.design.factorALevels.includes(x)))state.design.factorALevels=observedA;
   if((state.workflow.chartType==='line'||state.workflow.chartType==='curve'||state.design.designType==='two'))state.design.factorALevelMode='auto';
   if(observedB.some(Boolean)){state.design.designType='two';state.design.factorBLevels=observedB;if(!state.design.factorBName)state.design.factorBName='因素 B'}else{state.design.designType='one';state.design.factorBLevels=['']}
+  // 布局已定型后，再尝试从 parsed 值反推 metricName/metricUnit（只在 design 还是默认值时覆盖）
+  inferNamingFromParsed(parsed);
   const perCell=new Map();parsed.forEach(r=>{const k=`${r.a}\u0001${r.b}`;if(!perCell.has(k))perCell.set(k,new Map());const samples=perCell.get(k);if(!samples.has(r.parallel))samples.set(r.parallel,new Set());samples.get(r.parallel).add(r.technical)});
   const sampleCounts=[...perCell.values()].map(m=>m.size),techCounts=[...perCell.values()].flatMap(m=>[...m.values()].map(v=>v.size));
   if(sampleCounts.length)state.design.parallelSamples=Math.max(...sampleCounts);if(techCounts.length)state.design.technicalRepeats=Math.max(...techCounts);
@@ -1303,6 +1306,7 @@ function renderStatistics(){
   if(state.workflow.mode==='gallery'){renderGalleryWorkflowStatistics();return}
   const d=state.design,a=state.analysis,desc=state.descriptive;
   $('#statsDesignLine').textContent=`${d.experimentName} · ${d.metricName}${d.metricUnit?` (${d.metricUnit})`:''} · ${d.designType==='two'?`${d.factorAName} × ${d.factorBName}`:d.factorAName} · ${d.parallelSamples} 个独立平行${d.technicalRepeats>1?` × ${d.technicalRepeats} 次技术测定（${aggregationLabel(d)}）`:''} · ${workflowChartLabel(state.workflow.chartType)}`;
+  renderNamingCard();
   const qw=state.dataWarnings||[];
   const warnBanner=qw.length?`<div style="grid-column:1/-1;border:1px solid #e0a800;background:#fff8e6;color:#7a5b00;border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.6"><b>数据提醒（${qw.length}）：</b>${esc(qw.slice(0,8).join('；'))}${qw.length>8?' 等':''}</div>`:'';
   $('#summaryCards').innerHTML=warnBanner+[
@@ -1310,9 +1314,94 @@ function renderStatistics(){
   ].map(([n,v])=>`<div class="summary-card"><span>${n}</span><b>${v}</b></div>`).join('');
   renderDescriptiveTable();renderAnovaTable();renderAssumptionAndInference();renderInterpretation();
 }
+
+/* ===== v1.9.33 命名面板：让坐标轴标题改不掉的问题消失 =====
+ * 设计思路：data import 时尽量从表头推断 metricName/metricUnit/factorBName；
+ *          在初步分析视图给用户可见入口直接编辑；改完立刻联动 design + analysis + chart。
+ */
+const NAMING_DEFAULTS={metricName:['指标值','指标','Value','数值','Moisture content'],factorAName:['因素 A','因素A','变量1','组名','样品名','处理组'],factorBName:['因素 B','因素B','组别','Group']};
+function inferNamingFromParsed(parsed){
+  if(!parsed?.length)return;
+  // 先做一个简单的 a/b 聚类：如果某个 a 值看起来像 "xxx (%)" 或含单位括号，那它其实是 metric 名不是 a 水平
+  const aNames=[...new Set(parsed.map(r=>String(r.a)).filter(Boolean))];
+  const bNames=[...new Set(parsed.map(r=>String(r.b)).filter(Boolean))];
+  // 扫描 a 和 b 的值，提取常见单位（括号或结尾）
+  const scanUnit=names=>{
+    const found=new Map();names.forEach(n=>{const s=splitLabelAndUnit(n);if(s.unit)found.set(s.unit,(found.get(s.unit)||0)+1)});
+    return [...found.entries()].sort((x,y)=>y[1]-x[1]);
+  };
+  const unitsA=scanUnit(aNames),unitsB=scanUnit(bNames);
+  const d=state.design,note=[];
+  // 如果 metricName 还是旧默认，尝试从 a/b 的值反推（不保证可靠），但绝不覆盖用户显式填的值
+  const isDefaultMetric=!d.metricName||NAMING_DEFAULTS.metricName.includes(d.metricName)||d.metricName==='Value';
+  const isDefaultA=!d.factorAName||NAMING_DEFAULTS.factorAName.includes(d.factorAName);
+  const isDefaultB=!d.factorBName||NAMING_DEFAULTS.factorBName.includes(d.factorBName);
+  // 单位：谁有单位就用谁；如果两边都有，看 count
+  let pickedUnit='',pickedLabel='';
+  if(unitsA[0]&&(!unitsB[0]||unitsA[0][1]>=unitsB[0][1])){
+    pickedUnit=unitsA[0][0];
+    const firstWith=aNames.find(n=>splitLabelAndUnit(n).unit===pickedUnit);
+    pickedLabel=splitLabelAndUnit(firstWith).label;
+    // 清理 aNames 里包含单位括号的项，避免污染 factorA
+  }else if(unitsB[0]){
+    pickedUnit=unitsB[0][0];
+    const firstWith=bNames.find(n=>splitLabelAndUnit(n).unit===pickedUnit);
+    pickedLabel=splitLabelAndUnit(firstWith).label;
+  }
+  if(isDefaultMetric&&pickedLabel){d.metricName=pickedLabel;note.push(`从数据值反推指标为「${pickedLabel}」`)}
+  if(pickedUnit&&(!d.metricUnit||d.metricUnit.toLowerCase()!==pickedUnit.toLowerCase())){d.metricUnit=pickedUnit;note.push(`从数据值反推单位为「${pickedUnit}」`)}
+  // factorB 兜底：如果设计是双因素但 factorBName 还是默认
+  if(d.designType==='two'&&isDefaultB&&bNames.some(n=>!NAMING_DEFAULTS.factorBName.includes(n))){
+    // 选第一个看起来有语义的 b 水平做 factorBName 的候选不行，因为 bNames 就是水平本身。
+    // 这里只做一件事：如果 aNames 全是数字 / 带单位的，那 factorAName 可能是 "时间 / 浓度" 等定量因素，把默认 factorAName 改成更合适的名（保留原值）。
+  }
+  state.namingInferNote=note.join('；')||'';
+}
+function renderNamingCard(){
+  const d=state.design;
+  const wrap=$('#nameFactorBWrap');
+  if(wrap)wrap.style.display=d.designType==='two'?'':'none';
+  $('#nameExperiment').value=d.experimentName||'';
+  $('#nameMetric').value=d.metricName||'';
+  $('#nameUnit').value=d.metricUnit||'';
+  $('#nameFactorA').value=d.factorAName||'';
+  $('#nameFactorB').value=d.factorBName||'';
+  $('#namingInferNote').textContent=state.namingInferNote||'';
+}
+function applyNamingFromForm(){
+  const d=state.design,s=state.chart.settings;
+  const prevA=d.factorAName,prevB=d.factorBName,prevM=d.metricName,prevU=d.metricUnit;
+  d.experimentName=$('#nameExperiment').value.trim()||d.experimentName;
+  d.metricName=$('#nameMetric').value.trim()||d.metricName;
+  d.metricUnit=$('#nameUnit').value.trim()||d.metricUnit;
+  d.factorAName=$('#nameFactorA').value.trim()||d.factorAName;
+  if(d.designType==='two')d.factorBName=$('#nameFactorB').value.trim()||d.factorBName;
+  // 如果 factor / metric 发生变化，说明是用户主动"重新命名"，Chart Studio 里那些基于旧 design 推导出来的
+  // xTitle / yTitle / title 应该随之更新——清掉它们让 syncChartText 重新推导。
+  if(prevA!==d.factorAName||prevB!==d.factorBName||prevM!==d.metricName||prevU!==d.metricUnit){
+    const prevAutoX=prevA+(prevB&&state.chart.xFactor!=='A'?prevB:'');
+    const prevAutoY=prevM+(prevU?` (${prevU})`:'');
+    const prevAutoTitle=prevM;
+    // 只在用户没显式改过（仍等于之前 design 推导值）时才清掉，保留真正的手动定制
+    if(s.xTitle===prevAutoX)s.xTitle='';
+    if(s.yTitle===prevAutoY)s.yTitle='';
+    if(s.title===prevAutoTitle||s.title==='Moisture content')s.title='';
+  }
+  analyzeData();renderStatistics();
+  state.chart.mode=state.workflow.mode;invalidateChartModel();syncChartText();renderChart();
+  toast('命名已应用');
+}
+function bindNamingControls(){
+  $('#applyNaming')?.addEventListener('click',()=>{try{applyNamingFromForm()}catch(err){console.error(err);toast('应用失败：'+err.message)}});
+  $('#resetNamingInfer')?.addEventListener('click',()=>{inferNamingFromParsed(state.rawData);renderNamingCard();toast('已重新从数据推断')});
+  ['nameExperiment','nameMetric','nameUnit','nameFactorA','nameFactorB'].forEach(id=>{
+    const el=$('#'+id);if(!el)return;
+    el.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();applyNamingFromForm()}});
+  });
+}
 function renderGalleryWorkflowStatistics(){
   state.gallery.type=state.workflow.chartType;analyzeGalleryData();
-  ['assumptionCard','effectCard','nonparamCard'].forEach(id=>{const el=$('#'+id);if(el)el.style.display='none'});
+  ['statsNamingCard','assumptionCard','effectCard','nonparamCard'].forEach(id=>{const el=$('#'+id);if(el)el.style.display='none'});
   ['assumptionTable','effectTable','nonparamTable','nonparamPairTable'].forEach(id=>{const t=$('#'+id);if(t)t.innerHTML=''});
   ['assumptionNoteLine','effectNoteLine','nonparamNoteLine'].forEach(id=>{const t=$('#'+id);if(t)t.textContent=''});
   const def=galleryDef(),schema=gallerySchema(),a=state.gallery.analysis;
@@ -1520,7 +1609,7 @@ function assumptionGroups(desc,d){
   return [...map.entries()].map(([label,values])=>({label,values,n:values.length,mean:values.length?mean(values):NaN})).sort((x,y)=>levelIndex(x.label,d.factorALevels)-levelIndex(y.label,d.factorALevels));
 }
 function renderAssumptionAndInference(){
-  ['assumptionCard','effectCard','nonparamCard'].forEach(id=>{const el=$('#'+id);if(el)el.style.display=''});
+  ['statsNamingCard','assumptionCard','effectCard','nonparamCard'].forEach(id=>{const el=$('#'+id);if(el)el.style.display=''});
   const a=state.analysis,d=state.design,desc=state.descriptive||[];
   const groups=assumptionGroups(desc,d);
   $('#assumptionMethodText').textContent=d.designType==='two'?'按因素组合检验正态性与方差齐性，样本量足够的组合才输出结果。':'按因素水平检验正态性（Shapiro–Wilk）与方差齐性（Levene / Brown–Forsythe）。';
@@ -1872,17 +1961,47 @@ function absorbSets(sets){
 function sameSet(a,b){return a.size===b.size&&[...a].every(x=>b.has(x))}function isSubset(a,b){return a.size<=b.size&&[...a].every(x=>b.has(x))}
 function indexLetter(i){let s='';do{s=String.fromCharCode(97+i%26)+s;i=Math.floor(i/26)-1}while(i>=0);return s}
 
+function splitLabelAndUnit(label){
+  const s=String(label??'').trim();if(!s)return{label:'',unit:''};
+  // 优先抓 括号 里的单位 (xxx) / （xxx）
+  let m=s.match(/[（(]([^（()）\[\]]{1,20})[)）]/);
+  if(m){const prefix=s.slice(0,m.index).trim();if(prefix)return{label:prefix,unit:m[1].trim()}}
+  // 否则抓 开头/结尾 常见单位字符（字母 + 可选上标下标 / 点 / /）
+  m=s.match(/^([\u4e00-\u9fa5\u3000-\u303f\w\s·\-/]+?)\s+((?:g|mg|μg|µg|ng|kg|%|mM|μm|µM|mg·L|g·L|mL|cm|mm|m|s|min|h|d|℃|°C|kJ|kcal|pH|AW|aw|N)[-⁰¹²³⁴-⁹\/·\w]*)$/i);
+  if(m)return{label:m[1].trim(),unit:m[2].trim()};
+  return{label:s,unit:''};
+}
+function inferredMetricFromParsed(parsed,sourceLayout){
+  if(!parsed?.length)return null;
+  // 长表里 value 本身是裸值，没有列头；这时只能在 finalize 时从 state.design.metricName 模板兜底。
+  // 其他布局（wide-matrix / grouped-parallel-auto-xlsx / group-column-matrix）的 inferred 字段里有 factorB 级别名；
+  // metric 本身仍然没有显式列头，所以这里只做一件事：如果 state.design.metricName 还是旧默认（'指标值'/'Value'/'Moisture content'），
+  // 就尝试从 factor 名字反向推 metric（只有当它们确实是因素时保持原样），否则不动。
+  return null;
+}
+
 function syncChartText(){
-  const isWf=state.chart.type==='waterfall';
-  if(isWf)state.chart.xFactor='A';
   const d=state.design,s=state.chart.settings;
-  if(!s.title||s.title==='Moisture content')s.title=d.metricName;
-  if(isWf){
-    if(!s.wfTitlesReady){s.xTitle=d.factorAName||'';s.yTitle=d.metricName+(d.metricUnit?` (${d.metricUnit})`:'');s.wfTitlesReady=true;}
-  }else{
-    s.xTitle=state.chart.xFactor==='A'?d.factorAName:(d.factorBName||d.factorAName);
-    s.yTitle=d.metricName+(d.metricUnit?` (${d.metricUnit})`:'');
+  const autoX=state.chart.xFactor==='A'?d.factorAName:(d.factorBName||d.factorAName);
+  const autoY=d.metricName+(d.metricUnit?` (${d.metricUnit})`:'');
+  const autoTitle=d.metricName;
+  // 只有当用户没改过（或被锁定/为空/等于旧 design 推导值）时才覆盖——修 v1.9.33 引入的"改不掉"
+  const changedX=s.xTitle&&s.xTitle!==autoX;
+  const changedY=s.yTitle&&s.yTitle!==autoY;
+  const changedTitle=s.title&&s.title!==autoTitle&&s.title!=='Moisture content';
+  // waterfall 有独立 flag，保持不变
+  if(state.chart.type==='waterfall'){
+    if(!s.wfTitlesReady){
+      s.xTitle=changedX?s.xTitle:(d.factorAName||'');
+      s.yTitle=changedY?s.yTitle:autoY;
+      s.wfTitlesReady=true;
+    }
+    state.chart.xFactor='A';
+    return;
   }
+  if(!changedX)s.xTitle=autoX;
+  if(!changedY)s.yTitle=autoY;
+  if(!changedTitle)s.title=autoTitle;
 }
 
 function autoScaleChart(){
