@@ -312,7 +312,7 @@ function bindWorkflow(){
     if(!hasData){toast('当前图形需要对应数据模板，请先在数据导入步骤加载数据。');showView('data');return}
     renderChartStudio();
   });
-  $('#openGuideFromStudio')?.addEventListener('click',()=>showView('plan'));
+  $('#exportBundle')?.addEventListener('click',()=>{exportBundle().catch(err=>{console.error(err);toast('综合导出失败，请重试')})});
   syncWorkflowControls();
 }
 function syncWorkflowControls(){
@@ -3391,6 +3391,161 @@ function buildPdfBlob(jpeg,w,h,dpi){
   return new Blob(chunks,{type:'application/pdf'});
 }
 function exportPdf(){chartRasterCanvas(async(canvas,meta)=>{if(!canvas)return;const bytes=await canvasToJpegBytes(canvas,0.92);if(!bytes){toast('PDF 导出失败');return}download(buildPdfBlob(bytes,canvas.width,canvas.height,meta.dpi),chartExportFileName()+'.pdf')})}
+
+/* ===== v1.9.32 综合导出：一个 .docx 内含论文图片 + 原始数据表 + 统计学分析 ===== */
+function bundleXmlEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+let _bundleCrcTable=null;
+function bundleCrc32(bytes){
+  if(!_bundleCrcTable){_bundleCrcTable=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);_bundleCrcTable[n]=c>>>0}}
+  let c=0xFFFFFFFF;for(let i=0;i<bytes.length;i++)c=_bundleCrcTable[(c^bytes[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;
+}
+// 以 STORE（不压缩）方式写 ZIP，避免依赖任何 zip 库
+function bundleZip(entries){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const dosTime=0x6000,dosDate=0x5021;
+  entries.forEach(e=>{
+    const name=enc.encode(e.name),data=e.data instanceof Uint8Array?e.data:enc.encode(String(e.data)),crc=bundleCrc32(data);
+    const lh=new Uint8Array(30+name.length),lv=new DataView(lh.buffer);
+    lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(6,0x0800,true);lv.setUint16(8,0,true);
+    lv.setUint16(10,dosTime,true);lv.setUint16(12,dosDate,true);lv.setUint32(14,crc,true);
+    lv.setUint32(18,data.length,true);lv.setUint32(22,data.length,true);lv.setUint16(26,name.length,true);lv.setUint16(28,0,true);
+    lh.set(name,30);
+    const cd=new Uint8Array(46+name.length),cv=new DataView(cd.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);cv.setUint16(10,0,true);
+    cv.setUint16(12,dosTime,true);cv.setUint16(14,dosDate,true);cv.setUint32(16,crc,true);
+    cv.setUint32(20,data.length,true);cv.setUint32(24,data.length,true);cv.setUint16(28,name.length,true);cv.setUint16(30,0,true);
+    cv.setUint16(32,0,true);cv.setUint16(34,0,true);cv.setUint16(36,0,true);cv.setUint32(38,0,true);cv.setUint32(42,off,true);
+    cd.set(name,46);
+    parts.push(lh,data);central.push(cd);off+=lh.length+data.length;
+  });
+  const cdSize=central.reduce((s,c)=>s+c.length,0),end=new Uint8Array(22),ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(8,entries.length,true);ev.setUint16(10,entries.length,true);
+  ev.setUint32(12,cdSize,true);ev.setUint32(16,off,true);
+  return new Blob(parts.concat(central,[end]),{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+const BUNDLE_TEXT_W=9026;
+function bundleRun(text,opt){
+  const o=opt||{};
+  const rPr='<w:rPr>'+(o.bold?'<w:b/>':'')+(o.size?'<w:sz w:val="'+o.size+'"/>':'')+'<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="宋体"/>'+(o.color?'<w:color w:val="'+o.color+'"/>':'')+'</w:rPr>';
+  return '<w:r>'+rPr+'<w:t xml:space="preserve">'+bundleXmlEsc(text)+'</w:t></w:r>';
+}
+function bundlePara(text,opt){
+  const o=opt||{};
+  return '<w:p><w:pPr>'+(o.align?'<w:jc w:val="'+o.align+'"/>':'')+'</w:pPr>'+(text==null?'':bundleRun(text,o))+'</w:p>';
+}
+function bundleTable(headers,rows){
+  const n=Math.max(1,headers.length),w=Math.floor(BUNDLE_TEXT_W/n);
+  const border='<w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/></w:tblBorders>';
+  const cell=(v,h)=>'<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="'+(h?'F1F5F4':'FFFFFF')+'"/></w:tcPr><w:p>'+(h?'<w:pPr><w:jc w:val="center"/></w:pPr>':'')+bundleRun(v,{bold:h,size:18})+'</w:p></w:tc>';
+  let out='<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>'+border+'</w:tblPr><w:tblGrid>'+headers.map(()=>'<w:gridCol w:w="'+w+'"/>').join('')+'</w:tblGrid>';
+  out+='<w:tr><w:trPr><w:tblHeader/></w:trPr>'+headers.map(h=>cell(h,true)).join('')+'</w:tr>';
+  rows.forEach(r=>{out+='<w:tr>'+headers.map((_,i)=>cell(r[i],false)).join('')+'</w:tr>'});
+  return out+'</w:tbl>';
+}
+function bundleImageXml(cx,cy){
+  return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+    +'<wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="Figure 1"/>'
+    +'<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+    +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'
+    +'<pic:nvPicPr><pic:cNvPr id="0" name="figure.png"/><pic:cNvPicPr/></pic:nvPicPr>'
+    +'<pic:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+    +'<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+    +'</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+}
+function bundleDomTable(sel){
+  try{
+    const t=document.querySelector(sel);if(!t)return null;
+    const heads=[...t.querySelectorAll('thead th,thead td')].map(c=>c.textContent.trim()).filter(Boolean);
+    const rows=[...t.querySelectorAll('tbody tr')].map(tr=>[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim()));
+    const clean=rows.filter(r=>r.length>1||(r[0]&&!/empty-row|尚未|仅预览|暂无/.test(r[0])));
+    if(!clean.length)return null;
+    if(!heads.length)return {heads:clean[0].map((_,i)=>'列'+(i+1)),rows:clean};
+    return {heads,rows:clean};
+  }catch(_e){return null}
+}
+function bundleRawTable(){
+  try{
+    const type=state.workflow.chartType,ser=state.spectrum&&state.spectrum.data&&state.spectrum.data.series;
+    if(type==='spectrum'&&ser&&ser.length){
+      const rows=[];
+      ser.forEach((s,si)=>(s.points||[]).forEach(p=>rows.push([s.name||('曲线 '+(si+1)),s.group||'',formatNumber(p.x,4),formatNumber(p.y,4)])));
+      return {title:'原始数据（光谱曲线）',headers:['曲线名称','分组','X','Y'],rows};
+    }
+    if(state.workflow.mode==='experiment'&&state.rawData&&state.rawData.length){
+      const two=state.design.designType==='two';
+      const headers=['样品编号',state.design.factorAName||'变量 1',...(two?[state.design.factorBName||'变量 2']:[]),'平行样本','重复测定',(state.design.metricName||'数值')+(state.design.metricUnit?' ('+state.design.metricUnit+')':'')];
+      const rows=state.rawData.map(r=>[r.sampleId,r.a,...(two?[r.b]:[]),r.parallel==null?'':r.parallel,r.technical==null?'':r.technical,formatNumber(r.value,4)]);
+      return {title:'原始数据',headers,rows};
+    }
+    const g=state.gallery&&state.gallery.rows;
+    if(g&&g.length){
+      const headers=Object.keys(g[0]);
+      return {title:'原始数据',headers,rows:g.map(r=>headers.map(h=>r[h]==null?'':String(r[h]))).slice(0,20000)};
+    }
+  }catch(_e){}
+  const preview=bundleDomTable('#dataPreviewTable');
+  return preview?{title:'原始数据（预览）',headers:preview.heads,rows:preview.rows}:null;
+}
+function buildBundleDocx(png,pxW,pxH,dpi){
+  const pad=n=>String(n).padStart(2,'0'),now=new Date();
+  const stamp=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+  const project=(state.design&&state.design.experimentName)||'未命名项目';
+  const chartName=state.chart.mode==='gallery'?workflowChartLabel(state.workflow.chartType):(state.design.metricName||'图表');
+  const raw=bundleRawTable(),desc=bundleDomTable('#descriptiveTable'),test=bundleDomTable('#anovaTable');
+  const method=(document.querySelector('#anovaMethodText')?.textContent||'').trim();
+  const interp=(document.querySelector('#interpretationText')?.textContent||'').trim();
+  const d=Math.max(72,Number(dpi)||300);
+  const cx=5760000,cy=Math.max(1,Math.round(cx*pxH/Math.max(1,pxW)));
+  let body='';
+  body+=bundlePara(project+' · '+chartName,{align:'center',bold:true,size:32});
+  body+=bundlePara('导出时间 '+stamp+'　|　图形 '+pxW+' × '+pxH+' px @ '+d+' dpi',{align:'center',size:18,color:'6B7280'});
+  body+=bundlePara('');
+  body+=bundlePara('一、论文图片',{bold:true,size:24});
+  body+=bundleImageXml(cx,cy);
+  body+=bundlePara('图 1　'+chartName,{align:'center',size:18,color:'6B7280'});
+  body+=bundlePara('');
+  body+=bundlePara('二、原始数据',{bold:true,size:24});
+  if(raw&&raw.rows.length){
+    body+=bundlePara(raw.title+'（共 '+raw.rows.length+' 行）',{size:18,color:'6B7280'});
+    body+=bundleTable(raw.headers,raw.rows);
+  }else body+=bundlePara('当前图形没有可导出的原始数据。',{size:18,color:'6B7280'});
+  body+=bundlePara('');
+  body+=bundlePara('三、统计学分析',{bold:true,size:24});
+  if(desc&&desc.rows.length){body+=bundlePara('描述统计 / 数据摘要',{size:18,color:'6B7280'});body+=bundleTable(desc.heads,desc.rows);}
+  if((test&&test.rows.length)||method){
+    body+=bundlePara('检验或模型结果'+(method?('：'+method):''),{size:18,color:'6B7280'});
+    if(test&&test.rows.length)body+=bundleTable(test.heads,test.rows);
+  }
+  if(interp&&interp!=='暂无可解释结果。'){
+    body+=bundlePara('自动文字解读',{size:18,color:'6B7280'});
+    interp.split(/\n+/).map(s=>s.trim()).filter(Boolean).forEach(s=>body+=bundlePara(s,{size:20}));
+  }
+  if(!(desc&&desc.rows.length)&&!(test&&test.rows.length)&&!method&&(!interp||interp==='暂无可解释结果。'))body+=bundlePara('当前图形暂无统计学分析结果。',{size:18,color:'6B7280'});
+  body+=bundlePara('');
+  body+=bundlePara('本文件由 SimpleSciPlot 自动生成；统计结果用于初筛，正式投稿前请复核统计假设、独立性与样本量。',{size:16,color:'9CA3AF'});
+  body+='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="851" w:footer="992" w:gutter="0"/></w:sectPr>';
+
+  const docXml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'+body+'</w:body></w:document>';
+  return bundleZip([
+    {name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
+    {name:'word/document.xml',data:docXml},
+    {name:'word/_rels/document.xml.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/></Relationships>'},
+    {name:'word/media/image1.png',data:png}
+  ]);
+}
+async function exportBundle(){
+  let shot=null;
+  try{shot=await new Promise(res=>{chartRasterCanvas((canvas,meta)=>res(canvas?{canvas,meta}:null))})}catch(_e){shot=null}
+  if(!shot){toast('综合导出失败：图形尚未生成');return}
+  const png=await new Promise(res=>{shot.canvas.toBlob(b=>{if(!b){res(null);return}Promise.resolve(b.arrayBuffer()).then(x=>res(new Uint8Array(x)),()=>res(null))},'image/png')});
+  if(!png||!png.length){toast('综合导出失败：图片编码出错');return}
+  try{
+    download(buildBundleDocx(png,shot.canvas.width,shot.canvas.height,(shot.meta&&shot.meta.dpi)||state.chart.settings.pngDpi||300),chartExportFileName()+'_综合导出.docx');
+    toast('已导出综合文件：论文图片 + 原始数据 + 统计学分析');
+  }catch(err){console.error(err);toast('综合导出失败，请重试')}
+}
 
 function saveProject(){
   const payload={version:'1.8.7',savedAt:new Date().toISOString(),workflow:state.workflow,design:state.design,rawData:state.rawData,gallery:state.gallery,chart:state.chart,figureBoard:state.figureBoard};

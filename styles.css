@@ -807,3 +807,10 @@ body.st-lock{overflow:hidden}
   .sidebar-res{margin:12px 4px 0}
   .res-pop{position:fixed;left:12px;right:12px;bottom:12px;width:auto;max-height:70vh}
 }
+/* v1.9.32 Chart Studio「数据分析」入口（从顶部移入字体与画布设置区） */
+.quick-format-bar .quick-tools{display:flex;flex-direction:column;gap:4px;min-width:0}
+.quick-format-bar .quick-tools>span{font-size:11px;font-weight:700;color:#52616a}
+.quick-format-bar .quick-tools>button{height:34px;width:100%;padding:0 10px;border:1px solid var(--line,#e1e8e5);border-radius:7px;background:#fff;color:#22313a;font:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:border-color .15s ease,color .15s ease,background .15s ease}
+.quick-format-bar .quick-tools>button:hover{border-color:#9ec9bb;color:#166249;background:#f6fbf9}
+.quick-format-bar .quick-tools>button:focus-visible{outline:none;border-color:#2ba07f;box-shadow:0 0 0 3px rgba(43,160,127,.16)}
+#view-chart .quick-format-bar .quick-tools>span{font-size:var(--fs-caption,12px);color:var(--ink-2,#52616a)}
