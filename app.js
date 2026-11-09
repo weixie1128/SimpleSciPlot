@@ -2313,10 +2313,39 @@ function galleryApplyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(
   state.gallery.palette=colors;state.gallery.seriesStyles={};clearModuleSeriesStyles();rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
 function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:1,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s)};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
-async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-gallery-style'||!obj.settings)throw new Error('不是图参数文件');
+async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));
+    if(obj.protocol==='sp1'||(obj.meta&&obj.meta.chartType&&obj.colors&&Array.isArray(obj.colors.series))){
+      applySp1SpecToGallery(obj);state.gallery.seriesStyles={};clearModuleSeriesStyles();ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('已套用 StyleGrab 样式（sp1）');return;
+    }
+    if(obj.type!=='foodlab-gallery-style'||!obj.settings)throw new Error('不是图参数文件');
     Object.assign(state.gallery.settings,obj.settings);if(Array.isArray(obj.palette)&&obj.palette.length){state.gallery.palette=obj.palette}
     state.gallery.seriesStyles={};clearModuleSeriesStyles();ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
+// sp1 spec → 画廊模式图参数
+function applySp1SpecToGallery(spec){
+  var s=state.gallery.settings,W=Number(s.width)||980;
+  var c=spec.colors||{},st=spec.strokes||{},t=spec.text||{},tk=spec.ticks||{},g=spec.grid||{},lg=spec.legend||{},fr=spec.frame||{},mk=spec.markers||{};
+  function px(u,d){var n=Number(u);return isFinite(n)?Math.round(n*W*100)/100:d}
+  if(Array.isArray(c.series)&&c.series.length)state.gallery.palette=c.series.slice(0,12).map(String);
+  if(c.background)s.background=c.background;
+  if(c.axis){s.axisColor=c.axis;s.frameColor=c.axis}
+  if(c.text){s.titleColor=c.text;s.xTitleColor=c.text;s.yTitleColor=c.text;s.xTickColor=c.text;s.yTickColor=c.text}
+  if(c.grid)s.gridColor=c.grid;
+  if(st.axis!=null)s.axisWidth=px(st.axis,s.axisWidth);
+  if(st.series!=null)s.lineWidth=px(st.series,s.lineWidth);
+  if(st.grid!=null)s.gridWidth=px(st.grid,s.gridWidth);
+  if(t.title!=null)s.titleSize=px(t.title,s.titleSize);
+  if(t.axisTitle!=null){s.xTitleSize=px(t.axisTitle,s.xTitleSize);s.yTitleSize=px(t.axisTitle,s.yTitleSize)}
+  if(t.tickLabel!=null){s.xTickSize=px(t.tickLabel,s.xTickSize);s.yTickSize=px(t.tickLabel,s.yTickSize)}
+  if(t.legend!=null)s.legendFontSize=px(t.legend,s.legendFontSize);
+  if(t.family==='serif')s.fontEnglish='Times New Roman';else if(t.family==='condensed')s.fontEnglish='Arial Narrow';else if(t.family)s.fontEnglish='Arial';
+  if(tk.length!=null)s.tickLength=px(tk.length,s.tickLength);
+  if(g.mode){s.gridEnabled=(g.mode==='h'||g.mode==='both');s.gridVertical=(g.mode==='v'||g.mode==='both')}
+  if(lg.visible!=null)s.legend=!!lg.visible;
+  if(fr.border!=null)s.frameMode=fr.border?'box':'lb';
+  if(mk.shape)s.markerShape=mk.shape;
+  if(mk.radius!=null){s.markerSize=px(mk.radius,s.markerSize);s.pointSize=px(mk.radius,s.pointSize)}
+}
 function galleryPropGroup(items){return items.join('')}
 function gColor(k,l){return gWrap(l,k,`<input data-gsetting="${k}" type="color" value="${state.gallery.settings[k]}">`)}
 function gHeatColor(k,l){const v=state.gallery.settings[k];return `<div class="field heat-color-field"><label><span>${l}</span><output data-gout="${k}">${esc(v)}</output></label><div class="color-pair"><input data-gsetting="${k}" type="color" value="${v}"><input data-gsetting="${k}" data-color-text="${k}" type="text" value="${v}" maxlength="7" spellcheck="false"></div></div>`}
@@ -3968,12 +3997,44 @@ function applyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a
   state.chart.palette=colors;ensurePalette(chartGroups().length);rememberPalette(colors);renderProperties();renderChart();toast('已应用 '+colors.length+' 个颜色')}
 function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),seriesStyles:Object.assign({},state.chart.seriesStyles||{}),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
-async function importStyle(file){try{var obj=JSON.parse(await readAsText(file));if(obj.type!=='foodlab-style'||!obj.settings)throw new Error('不是图参数文件');
+async function importStyle(file){try{var obj=JSON.parse(await readAsText(file));
+    if(obj.protocol==='sp1'||(obj.meta&&obj.meta.chartType&&obj.colors&&Array.isArray(obj.colors.series))){
+      applySp1Spec(obj);prepareChartData();renderProperties();renderChart();toast('已套用 StyleGrab 样式（sp1）');return;
+    }
+    if(obj.type!=='foodlab-style'||!obj.settings)throw new Error('不是图参数文件');
     Object.assign(state.chart.settings,obj.settings);if(Array.isArray(obj.palette)&&obj.palette.length){state.chart.palette=obj.palette;ensurePalette(chartGroups().length)}
     if(obj.seriesStyles&&typeof obj.seriesStyles==='object'){if(!state.chart.seriesStyles)state.chart.seriesStyles={};Object.assign(state.chart.seriesStyles,obj.seriesStyles)}
     if(obj.legend)Object.assign(state.chart.legend,obj.legend);if(obj.legendFrame)Object.assign(state.chart.legendFrame,obj.legendFrame);
     prepareChartData();renderProperties();renderChart();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
+// 将 StyleGrab 的 sp1 spec 映射到 SimpleSciPlot 图参数（sp1 长度单位=画布宽比例 → 主站 px）
+function applySp1Spec(spec){
+  var s=state.chart.settings,W=Number(s.canvasWidth)||980;
+  var c=spec.colors||{},st=spec.strokes||{},t=spec.text||{},tk=spec.ticks||{},g=spec.grid||{},lg=spec.legend||{},fr=spec.frame||{},mk=spec.markers||{},sp=spec.specific||{};
+  function px(u,d){var n=Number(u);return isFinite(n)?Math.round(n*W*100)/100:d}
+  if(Array.isArray(c.series)&&c.series.length){state.chart.palette=c.series.slice(0,12).map(String);ensurePalette(chartGroups().length)}
+  if(c.background)s.background=c.background;
+  if(c.axis){s.axisColor=c.axis;s.frameColor=c.axis}
+  if(c.text){s.titleColor=c.text;s.xTitleColor=c.text;s.yTitleColor=c.text;s.xTickColor=c.text;s.yTickColor=c.text}
+  if(c.grid)s.gridColor=c.grid;
+  if(st.axis!=null)s.axisWidth=px(st.axis,s.axisWidth);
+  if(st.series!=null)s.lineWidth=px(st.series,s.lineWidth);
+  if(st.errorbar!=null)s.errorWidth=px(st.errorbar,s.errorWidth);
+  if(st.grid!=null)s.gridWidth=px(st.grid,s.gridWidth);
+  if(st.markerEdge!=null)s.barBorderWidth=px(st.markerEdge,s.barBorderWidth);
+  if(t.title!=null)s.titleSize=px(t.title,s.titleSize);
+  if(t.axisTitle!=null){s.xTitleSize=px(t.axisTitle,s.xTitleSize);s.yTitleSize=px(t.axisTitle,s.yTitleSize)}
+  if(t.tickLabel!=null){s.xTickSize=px(t.tickLabel,s.xTickSize);s.yTickSize=px(t.tickLabel,s.yTickSize)}
+  if(t.legend!=null)s.legendSize=px(t.legend,s.legendSize);
+  if(t.family==='serif')s.fontEnglish='Times New Roman';else if(t.family==='condensed')s.fontEnglish='Arial Narrow';else if(t.family)s.fontEnglish='Arial';
+  if(tk.length!=null)s.tickLength=px(tk.length,s.tickLength);
+  if(g.mode){s.gridEnabled=(g.mode==='h'||g.mode==='both');s.gridVertical=(g.mode==='v'||g.mode==='both')}
+  if(lg.visible!=null)s.legendVisible=!!lg.visible;
+  if(fr.border!=null)s.frameMode=fr.border?'box':'lb';
+  if(mk.shape)s.markerShape=mk.shape;
+  if(mk.radius!=null)s.markerSize=px(mk.radius,s.markerSize);
+  if(sp.bar&&sp.bar.widthRatio!=null)s.categoryWidth=Number(sp.bar.widthRatio);
+}
 function applyLastPalette(){try{var raw=localStorage.getItem('foodlab-last-palette');if(!raw)return;var colors=JSON.parse(raw);if(!Array.isArray(colors)||!colors.length)return;
   state.chart.palette=colors;}catch(_e){}}
 
