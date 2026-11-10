@@ -2910,9 +2910,9 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
   const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
   const KD=K+tD;
-  let A=clamp(Number(s.b3Azim)||-34,-72,-6)*Math.PI/180;
+  let A=clamp(Number(s.b3Azim)||-34,-150,-5)*Math.PI/180;
   if(s.b3ViewDir==='left')A=-A; // 纵深方向镜像
-  const E=clamp(Number(s.b3Elev)||26,12,55)*Math.PI/180;
+  const E=clamp(Number(s.b3Elev)||26,5,80)*Math.PI/180;
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
   const M={l:104,r:42,t:58,b:102};
   const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
@@ -3043,8 +3043,9 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     if(s.wfZTitleVisible&&s.wfZAxisTitle){
       const mid=P(zEdgeNx,0,K/2),ang=zAng;
       const titleGap = labelGap + s.wfZTitleSize*1.1;
-      const tx=mid[0]+nxO*titleGap,ty=mid[1]+nyO*titleGap;
-      out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.wfZTitleSize}" font-weight="${s.wfZTitleWeight||400}" fill="${s.wfZTitleColor||ac}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
+      const tx0=mid[0]+nxO*titleGap,ty0=mid[1]+nyO*titleGap;
+      const tx=s.b3ZTitleX!=null?s.b3ZTitleX:tx0,ty=s.b3ZTitleY!=null?s.b3ZTitleY:ty0;
+      out+=`<text data-object="axis-z" data-drag="zTitle" class="chart-object draggable" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.wfZTitleSize}" font-weight="${s.wfZTitleWeight||400}" fill="${s.wfZTitleColor||ac}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
     }
   }
   // 9) 轴标题
@@ -3316,8 +3317,8 @@ function bindBar3DRotateGesture(svg){
   bg.addEventListener('pointerdown',e=>{
     if(e.button!=null&&e.button!==0)return;
     const s=state.chart.settings,isB3=ct==='bar3d';
-    const azim0=clamp(Number(isB3?s.b3Azim:s.wfAzim)||(isB3?-34:-39),-72,-6);
-    const elev0=clamp(Number(isB3?s.b3Elev:s.wfElev)||26,12,55);
+    const azim0=clamp(Number(isB3?s.b3Azim:s.wfAzim)||(isB3?-34:-39),isB3?-150:-72,isB3?-5:-6);
+    const elev0=clamp(Number(isB3?s.b3Elev:s.wfElev)||26,isB3?5:12,isB3?80:55);
     const px0=e.clientX,py0=e.clientY;let moved=false;
     b3GestureMoved=false;
     const move=ev=>{
@@ -3325,8 +3326,8 @@ function bindBar3DRotateGesture(svg){
       if(!moved&&Math.hypot(dx,dy)<3)return;
       moved=true;b3GestureMoved=true;
       if(isB3){
-        s.b3Azim=Math.round(clamp(azim0+dx*.35,-72,-6));
-        s.b3Elev=Math.round(clamp(elev0-dy*.35,12,55));
+        s.b3Azim=Math.round(clamp(azim0+dx*.35,-150,-5));
+        s.b3Elev=Math.round(clamp(elev0-dy*.35,5,80));
       }else{
         s.wfAzim=Math.round(clamp(azim0+dx*.35,-72,-6));
         s.wfElev=Math.round(clamp(elev0-dy*.35,12,55));
@@ -3346,7 +3347,7 @@ function bindDraggables(){
       // v1.8.5：3D 图例/色条双击回到默认位置
       if(el.dataset.drag==='b3legend'){state.chart.settings.b3LegendX=null;state.chart.settings.b3LegendY=null;renderChart()}
       if(el.dataset.drag==='wflegend'){state.chart.settings.wfLegendX=null;state.chart.settings.wfLegendY=null;renderChart()}
-      if(el.dataset.drag==='zTitle'){state.chart.settings.wfZTitleX=null;state.chart.settings.wfZTitleY=null;renderChart()}
+      if(el.dataset.drag==='zTitle'){state.chart.settings.wfZTitleX=null;state.chart.settings.wfZTitleY=null;state.chart.settings.b3ZTitleX=null;state.chart.settings.b3ZTitleY=null;renderChart()}
     });
     el.addEventListener('pointerdown',e=>{
       if(e.target.closest('[data-annotation-handle]'))return;
@@ -3370,7 +3371,9 @@ function dragSnapshot(key,el=null){
   if(key==='legendFrame')return{x:state.chart.legendFrame.x,y:state.chart.legendFrame.y};
   if(key==='title')return{x:s.titleX,y:s.titleY};if(key==='subtitle')return{x:s.subtitleX,y:s.subtitleY};
   if(key==='zTitle'){
-    if(s.wfZTitleX!=null&&s.wfZTitleY!=null)return{x:s.wfZTitleX,y:s.wfZTitleY};
+    const zb=(state.chart.type==='bar3d')?'b3':'wf';
+    const zx=s[zb+'ZTitleX'],zy=s[zb+'ZTitleY'];
+    if(zx!=null&&zy!=null)return{x:zx,y:zy};
     const rm=(el?.getAttribute('transform')||'').match(/rotate\([-\d.]+[ ,]+([-\d.]+)[ ,]+([-\d.]+)\)/);
     if(rm)return{x:parseFloat(rm[1]),y:parseFloat(rm[2])};
     return{x:parseFloat(el?.getAttribute('x'))||0,y:parseFloat(el?.getAttribute('y'))||0};
@@ -3399,7 +3402,7 @@ function applyDrag(key,snap,dx,dy,el){
   else if(key==='zTitle'){
     const am=(el.getAttribute('transform')||'').match(/rotate\(([-\d.]+)/);
     const ang=am?parseFloat(am[1]):0;
-    s.wfZTitleX=x;s.wfZTitleY=y;
+    if(state.chart.type==='bar3d'){s.b3ZTitleX=x;s.b3ZTitleY=y}else{s.wfZTitleX=x;s.wfZTitleY=y}
     el.setAttribute('x',x);el.setAttribute('y',y);
     el.setAttribute('transform',`rotate(${ang} ${x} ${y})`);
   }
@@ -3505,8 +3508,8 @@ function renderProperties(){
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
-    rangeField('b3Azim','水平旋转角（方位）',-72,-6,1),
-    rangeField('b3Elev','俯仰角（仰角）',12,55,1),
+    rangeField('b3Azim','水平旋转角（方位）',-150,-5,1),
+    rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
     rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1),
