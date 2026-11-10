@@ -2669,7 +2669,7 @@ function renderXAxisTopOverlay(M,plotW,axisY,xvals,xStep){
   const s=state.chart.settings;
   const under=Number(s.axisWidth);
   let out=`<g data-object="axis-x" class="chart-object axis-top-overlay" fill="none" stroke-linecap="butt" pointer-events="all"><path d="M${M.l},${axisY} H${M.l+plotW}" stroke="${s.background}" stroke-width="${under}"/><path d="M${M.l},${axisY} H${M.l+plotW}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`;
-  if(s.showXTicks)experimentXAxisTickObjects(xvals,M,plotW).forEach(t=>{out+=`<line x1="${t.x}" x2="${t.x}" y1="${axisY-s.axisWidth}" y2="${axisY+s.tickLength}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`});
+  if(s.showXTicks)experimentXAxisTickObjects(xvals,M,plotW).forEach(t=>{out+=`<line x1="${t.x}" x2="${t.x}" y1="${axisY-s.axisWidth/2}" y2="${axisY+s.tickLength}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`});
   return out+'</g>';
 }
 
@@ -3098,13 +3098,13 @@ function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
 function renderNormalAxes(W,H,M,plotW,plotH,xvals,xStep,yTicks,y,axisY){
   const s=state.chart.settings;let out='';
   out+=`<g data-object="axis-y" class="chart-object" stroke="${s.axisColor}" stroke-width="${s.axisWidth}" fill="none"><path d="M${M.l},${M.t} V${axisY}"/>`;
-  if(s.showYTicks)yTicks.forEach(v=>{const yy=y(v);out+=`<line x1="${M.l-s.tickLength}" x2="${M.l+s.axisWidth}" y1="${yy}" y2="${yy}"/>`});out+='</g>';
+  if(s.showYTicks)yTicks.forEach(v=>{const yy=y(v);out+=`<line x1="${M.l-s.tickLength}" x2="${M.l+s.axisWidth/2}" y1="${yy}" y2="${yy}"/>`});out+='</g>';
   if(s.gridEnabled)out+='<g stroke="'+(s.gridColor||'#e3e7eb')+'" stroke-width="'+(s.gridWidth||1)+'">'+yTicks.map(v=>{const yy=y(v);return '<line x1="'+M.l+'" x2="'+(M.l+plotW)+'" y1="'+yy+'" y2="'+yy+'"/>'}).join('')+'</g>';
   const yStep=yTicks.length>1?yTicks[1]-yTicks[0]:1;
   yTicks.forEach(v=>out+=`<text data-object="axis-y" class="chart-object" x="${M.l-s.tickLength-6}" y="${y(v)+4}" text-anchor="end" font-size="${s.yTickSize}" font-weight="${s.yTickWeight||s.globalFontWeight||400}" fill="${s.yTickColor}">${isLogAxisY()?formatLogTick(v):formatAxisNumber(v,s.yTickDecimals,yStep,s.yTickRound)}</text>`);
   out+=`<g data-object="axis-x" class="chart-object" stroke="${s.axisColor}" stroke-width="${s.axisWidth}" fill="none"><path d="M${M.l},${axisY} H${M.l+plotW}"/>`;
   const tickObjects=experimentXAxisTickObjects(xvals,M,plotW);
-  if(s.showXTicks)tickObjects.forEach(t=>{out+=`<line x1="${t.x}" x2="${t.x}" y1="${axisY-s.axisWidth}" y2="${axisY+s.tickLength}"/>`});out+='</g>';
+  if(s.showXTicks)tickObjects.forEach(t=>{out+=`<line x1="${t.x}" x2="${t.x}" y1="${axisY-s.axisWidth/2}" y2="${axisY+s.tickLength}"/>`});out+='</g>';
   if(s.gridVertical)out+='<g stroke="'+(s.gridColor||'#e3e7eb')+'" stroke-width="'+(s.gridWidth||1)+'">'+tickObjects.map(t=>'<line x1="'+t.x+'" x2="'+t.x+'" y1="'+M.t+'" y2="'+axisY+'"/>').join('')+'</g>';
   const labels=tickObjects.map(t=>t.label),rotation=automaticXTickRotation(labels);
   tickObjects.forEach((t,j)=>{const layout={rotate:rotation,dy:(!s.xTickAutoRotate&&s.xTickStagger&&rotation===0?(j%2)*14:0),anchor:rotation<0?'end':rotation>0?'start':'middle'},yy=axisY+s.tickLength+18+layout.dy;out+=`<text data-object="axis-x" class="chart-object" x="${t.x}" y="${yy}" text-anchor="${layout.anchor}" font-size="${s.xTickSize}" font-weight="${s.xTickWeight||s.globalFontWeight||400}" fill="${s.xTickColor}" transform="rotate(${layout.rotate} ${t.x} ${yy})">${esc(t.label)}</text>`});
@@ -3142,14 +3142,14 @@ function renderBrokenAxes(W,H,M,plotW,plotH,xvals,xStep,yLower,yUpper,upperBotto
   const s=state.chart.settings,lowerTicks=makeTicks(s.lowerMin,s.lowerMax,null,3),upperTicks=makeTicks(s.upperMin,s.upperMax,null,4);let out='';
   out+=brokenVerticalGroup(M.l,M.t,axisY,upperBottom,lowerTop,'axis-y',s.axisColor,s.axisWidth);
   if(s.showYTicks){
-    lowerTicks.forEach(v=>{const yy=yLower(v);out+=`<line data-object="axis-y" class="chart-object" x1="${M.l-s.tickLength}" x2="${M.l+s.axisWidth}" y1="${yy}" y2="${yy}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`});
-    upperTicks.forEach(v=>{const yy=yUpper(v);out+=`<line data-object="axis-y" class="chart-object" x1="${M.l-s.tickLength}" x2="${M.l+s.axisWidth}" y1="${yy}" y2="${yy}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`})
+    lowerTicks.forEach(v=>{const yy=yLower(v);out+=`<line data-object="axis-y" class="chart-object" x1="${M.l-s.tickLength}" x2="${M.l+s.axisWidth/2}" y1="${yy}" y2="${yy}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`});
+    upperTicks.forEach(v=>{const yy=yUpper(v);out+=`<line data-object="axis-y" class="chart-object" x1="${M.l-s.tickLength}" x2="${M.l+s.axisWidth/2}" y1="${yy}" y2="${yy}" stroke="${s.axisColor}" stroke-width="${s.axisWidth}"/>`})
   }
   lowerTicks.forEach(v=>out+=`<text data-object="axis-y" class="chart-object" x="${M.l-s.tickLength-6}" y="${yLower(v)+4}" text-anchor="end" font-size="${s.yTickSize}" font-weight="${s.yTickWeight||s.globalFontWeight||400}" fill="${s.yTickColor}">${formatTick(v)}</text>`);
   upperTicks.forEach(v=>out+=`<text data-object="axis-y" class="chart-object" x="${M.l-s.tickLength-6}" y="${yUpper(v)+4}" text-anchor="end" font-size="${s.yTickSize}" font-weight="${s.yTickWeight||s.globalFontWeight||400}" fill="${s.yTickColor}">${formatTick(v)}</text>`);
   out+=`<g data-object="axis-x" class="chart-object" stroke="${s.axisColor}" stroke-width="${s.axisWidth}" fill="none"><path d="M${M.l},${axisY} H${M.l+plotW}"/>`;
   const tickObjects=experimentXAxisTickObjects(xvals,M,plotW);
-  if(s.showXTicks)tickObjects.forEach(t=>{out+=`<line x1="${t.x}" x2="${t.x}" y1="${axisY-s.axisWidth}" y2="${axisY+s.tickLength}"/>`});out+='</g>';
+  if(s.showXTicks)tickObjects.forEach(t=>{out+=`<line x1="${t.x}" x2="${t.x}" y1="${axisY-s.axisWidth/2}" y2="${axisY+s.tickLength}"/>`});out+='</g>';
   if(s.gridVertical)out+='<g stroke="'+(s.gridColor||'#e3e7eb')+'" stroke-width="'+(s.gridWidth||1)+'">'+tickObjects.map(t=>'<line x1="'+t.x+'" x2="'+t.x+'" y1="'+M.t+'" y2="'+axisY+'"/>').join('')+'</g>';
   const labels=tickObjects.map(t=>t.label),rotation=automaticXTickRotation(labels);
   tickObjects.forEach((t,j)=>{const layout={rotate:rotation,dy:(!s.xTickAutoRotate&&s.xTickStagger&&rotation===0?(j%2)*14:0),anchor:rotation<0?'end':rotation>0?'start':'middle'},yy=axisY+s.tickLength+18+layout.dy;out+=`<text data-object="axis-x" class="chart-object" x="${t.x}" y="${yy}" text-anchor="${layout.anchor}" font-size="${s.xTickSize}" font-weight="${s.xTickWeight||s.globalFontWeight||400}" fill="${s.xTickColor}" transform="rotate(${layout.rotate} ${t.x} ${yy})">${esc(t.label)}</text>`});
@@ -4619,7 +4619,7 @@ function commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,axisLog){
     if(s.frameMode==='lbr'||s.frameMode==='box')out+=`<g data-gobject="frame" class="chart-object" fill="none" stroke="${frame}" stroke-width="${fw}"><path d="M${p.l+p.w},${p.t} V${p.t+p.h}"/></g>`;
     if(s.frameMode==='box')out+=`<g data-gobject="frame" class="chart-object" fill="none" stroke="${frame}" stroke-width="${fw}"><path d="M${p.l},${p.t} H${p.l+p.w}"/></g>`;
   }
-  yTicks.forEach(v=>{const y=yMap(v);out+=`<g data-gobject="axis-y" class="chart-object">${s.showYTicks?`<line x1="${p.l-s.tickLength}" x2="${p.l+sw}" y1="${y}" y2="${y}" stroke="${axis}" stroke-width="${sw}"/>`:''}<text x="${p.l-s.tickLength-4}" y="${y+4}" text-anchor="end" font-size="${yTick}" font-weight="${s.yTickWeight}" fill="${s.yTickColor}">${axisLog&&axisLog.y?formatLogTick(v):formatTick(v)}</text></g>`});
+  yTicks.forEach(v=>{const y=yMap(v);out+=`<g data-gobject="axis-y" class="chart-object">${s.showYTicks?`<line x1="${p.l-s.tickLength}" x2="${p.l+sw/2}" y1="${y}" y2="${y}" stroke="${axis}" stroke-width="${sw}"/>`:''}<text x="${p.l-s.tickLength-4}" y="${y+4}" text-anchor="end" font-size="${yTick}" font-weight="${s.yTickWeight}" fill="${s.yTickColor}">${axisLog&&axisLog.y?formatLogTick(v):formatTick(v)}</text></g>`});
   // v0.23.0: broken-axis notch on both ends of the Y axis (and the right frame
   // when present). The break line is centred on the gap between the two halves.
   if(s.breakAxis&&Number.isFinite(Number(s.lowerMax))&&Number.isFinite(Number(s.upperMin))&&Number(s.upperMin)>Number(s.lowerMax)){
@@ -4633,7 +4633,7 @@ function commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,axisLog){
     const dy=(!s.xTickAutoRotate&&s.xTickStagger&&rot===0?(i%2)*14:0);
     const anchor=rot<0?'end':rot>0?'start':'middle';
     const yy=p.t+p.h+s.tickLength+16+dy;
-    out+=`<g data-gobject="axis-x" class="chart-object">${s.showXTicks?`<line x1="${x}" x2="${x}" y1="${p.t+p.h-sw}" y2="${p.t+p.h+s.tickLength}" stroke="${axis}" stroke-width="${sw}"/>`:''}<text x="${x}" y="${yy}" text-anchor="${anchor}" font-size="${xTick}" font-weight="${s.xTickWeight}" fill="${s.xTickColor}" transform="rotate(${rot} ${x} ${yy})">${axisLog&&axisLog.x?formatLogTick(v):esc(v)}</text></g>`});
+    out+=`<g data-gobject="axis-x" class="chart-object">${s.showXTicks?`<line x1="${x}" x2="${x}" y1="${p.t+p.h-sw/2}" y2="${p.t+p.h+s.tickLength}" stroke="${axis}" stroke-width="${sw}"/>`:''}<text x="${x}" y="${yy}" text-anchor="${anchor}" font-size="${xTick}" font-weight="${s.xTickWeight}" fill="${s.xTickColor}" transform="rotate(${rot} ${x} ${yy})">${axisLog&&axisLog.x?formatLogTick(v):esc(v)}</text></g>`});
   if(s.xTitleVisible&&s.xTitle)out+=`<text data-gobject="axis-x" data-gdrag="xTitle" class="chart-object draggable" x="${xTitleX}" y="${xTitleY}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight}" fill="${s.xTitleColor}">${esc(s.xTitle)}</text>`;if(s.yTitleVisible&&s.yTitle)out+=`<text data-gobject="axis-y" data-gdrag="yTitle" class="chart-object draggable" transform="translate(${yTitleX} ${yTitleY}) rotate(-90)" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;return out;
 }
 /* ===== v0.19.0 legend layout =====

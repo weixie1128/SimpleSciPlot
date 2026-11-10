@@ -353,7 +353,7 @@
     if (showYLabels) {
       yTicks.forEach(v => {
         const y = yMap(v);
-        out += `<line x1="${panel.l + sw}" x2="${panel.l - tick}" y1="${y}" y2="${y}" stroke="${axis}" stroke-width="${sw}"/>`;
+        out += `<line x1="${panel.l + sw/2}" x2="${panel.l - tick}" y1="${y}" y2="${y}" stroke="${axis}" stroke-width="${sw}"/>`;
         out += `<text x="${panel.l - tick - 5}" y="${y + ySize * 0.34}" text-anchor="end" font-size="${ySize}" font-weight="${yWeight}" fill="${s.yTickColor || axis}">${esc(prettyNumber(v, yStep))}</text>`;
       });
     }
@@ -363,7 +363,7 @@
         const first = i === 0, last = i === xTicks.length - 1;
         const anchor = first ? 'start' : last ? 'end' : 'middle';
         const dx = first ? 2 : last ? -2 : 0;
-        out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
+        out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw/2}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
         out += `<text x="${x + dx}" y="${panel.t + panel.h + tick + xSize + 4}" text-anchor="${anchor}" font-size="${xSize}" font-weight="${xWeight}" fill="${s.xTickColor || axis}">${esc(prettyNumber(v, xStep))}</text>`;
       });
       out += drawXAxisBreak(panel, geometry, s);
@@ -1003,12 +1003,12 @@
     }
     yTicks.forEach(v => {
       const y = yMap(v);
-      out += `<line x1="${panel.l - tick}" x2="${panel.l + sw}" y1="${y}" y2="${y}" stroke="${axis}" stroke-width="${sw}"/>`;
+      out += `<line x1="${panel.l - tick}" x2="${panel.l + sw/2}" y1="${y}" y2="${y}" stroke="${axis}" stroke-width="${sw}"/>`;
       out += `<text x="${panel.l - tick - 4}" y="${y + 4}" text-anchor="end" font-size="${ySize}" font-weight="${s.yTickWeight || 400}" fill="${s.yTickColor || axis}">${esc(formatTick(v))}</text>`;
     });
     xTicks.forEach(v => {
       const x = xMap(v);
-      out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
+      out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw/2}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
       out += `<text x="${x}" y="${panel.t + panel.h + tick + 16}" text-anchor="middle" font-size="${xSize}" font-weight="${s.xTickWeight || 400}" fill="${s.xTickColor || axis}">${esc(formatTick(v))}</text>`;
     });
     return out;
@@ -1096,7 +1096,7 @@
     const ticks = makeTicks(domain.min, domain.max, null, 7);
     const axis = s.axisColor || '#20262b';
     out += `<g data-gobject="axis-x" class="chart-object"><line x1="${xMap(domain.min)}" x2="${xMap(domain.max)}" y1="${axisY}" y2="${axisY}" stroke="${axis}" stroke-width="${s.axisWidth || 1.2}"/>`;
-    ticks.forEach(v => { const x = xMap(v); out += `<line x1="${x}" x2="${x}" y1="${axisY - (s.axisWidth || 1.2)}" y2="${axisY + s.tickLength}" stroke="${axis}" stroke-width="${s.axisWidth || 1.2}"/><text x="${x}" y="${axisY + s.tickLength + 16}" text-anchor="middle" font-size="${s.xTickSize || 12}" font-weight="${s.xTickWeight || 400}" fill="${s.xTickColor || axis}">${esc(formatTick(v))}</text>`; });
+    ticks.forEach(v => { const x = xMap(v); out += `<line x1="${x}" x2="${x}" y1="${axisY - (s.axisWidth || 1.2)/2}" y2="${axisY + s.tickLength}" stroke="${axis}" stroke-width="${s.axisWidth || 1.2}"/><text x="${x}" y="${axisY + s.tickLength + 16}" text-anchor="middle" font-size="${s.xTickSize || 12}" font-weight="${s.xTickWeight || 400}" fill="${s.xTickColor || axis}">${esc(formatTick(v))}</text>`; });
     out += `</g>`;
     if (s.xTitleVisible && s.xTitle) {
       const x = s.xTitleX ?? (p.l + p.w / 2), y = s.xTitleY ?? (H - 24);
