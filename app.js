@@ -109,6 +109,7 @@ const defaultChartSettings = {
   // v1.9.6：Z 轴独立完整设置
   wfZTitleVisible:true,wfZTitleSize:12,wfZTitleColor:'',wfZTitleWeight:400,
   wfZLabelColor:'',wfZLabelWeight:400,wfZShowTicks:true,wfZTickLength:7,
+  wfAzim:-39,wfElev:26,
   background:'#ffffff'
 };
 
@@ -2780,26 +2781,35 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   const yStepN=niceAxisStep(bmax-bmin,6),yTicksNice=[];
   for(let v=bmin;v<=bmax+yStepN*.5;v+=yStepN)yTicksNice.push(v);
   const model=getChartModel(),xs=wfXScale(xvals),K=gs.length-1;
-  const axisY=M.t+plotH,dx=M.dx,dy=M.dy;
+  const axisY=M.t+plotH;let dx=M.dx,dy=M.dy;
   const dir=s.wfViewDir==='left'?-1:1;
   const sideNx=dir>0?0:1,zEdgeNx=dir>0?1:0;
   const yN=v=>(Number(v)-bmin)/((bmax-bmin)||1);
+  // 视角：与 3D 柱状图同一套方位/仰角，默认值保持原有外观
+  const azm=((Number(s.wfAzim)||-39)*Math.PI)/180,elv=((Number(s.wfElev)||26)*Math.PI)/180;
+  dx*=Math.abs(Math.cos(azm))/Math.abs(Math.cos(-39*Math.PI/180));
+  dy*=Math.sin(elv)/Math.sin(26*Math.PI/180);
   const P=(nx,ny,k)=>[M.l+nx*plotW+dir*k*dx,axisY-ny*plotH-k*dy];
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
+  // 三面墙与网格独立配置，未单独设置时回退到统一值
+  const wcB=s.wfWallColorBack||wc,wcS=s.wfWallColorSide||wc,wcBot=s.wfWallColorBottom||wc;
+  const gcB=s.wfGridColorBack||gc,gcS=s.wfGridColorSide||gc,gcBot=s.wfGridColorBottom||gc;
+  const gwB=s.wfGridWidthBack!=null?+s.wfGridWidthBack:gw,gwS=s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw,gwBot=s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw;
+  const zlc=s.wfZeroLineColor||'',zlw=(s.wfZeroLineWidth!=null?+s.wfZeroLineWidth:0);
   let out='';
   // 1) 后墙 k=K
   out+='<g pointer-events="none">';
-  out+=wfPoly([P(0,0,K),P(1,0,K),P(1,1,K),P(0,1,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,K),P(t.n,1,K),gc,gw));
-  yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,K),P(1,ny,K),gc,gw);});
+  out+=wfPoly([P(0,0,K),P(1,0,K),P(1,1,K),P(0,1,K)],`fill="${wcB}" fill-opacity="${wo}" stroke="none"`);
+  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,K),P(t.n,1,K),gcB,gwB));
+  yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,K),P(1,ny,K),(zlw>0&&Math.abs(v)<1e-9)?(zlc||gcB):gcB,(zlw>0&&Math.abs(v)<1e-9)?zlw:gwB);});
   // 2) 侧墙 sideNx
-  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,K),P(sideNx,1,K),P(sideNx,1,0)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,K),gc,gw);});
-  for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),gc,gw);
+  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,K),P(sideNx,1,K),P(sideNx,1,0)],`fill="${wcS}" fill-opacity="${wo}" stroke="none"`);
+  yTicksNice.forEach(v=>{const ny=yN(v);if(ny>=0&&ny<=1)out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,K),(zlw>0&&Math.abs(v)<1e-9)?(zlc||gcS):gcS,(zlw>0&&Math.abs(v)<1e-9)?zlw:gwS);});
+  for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),gcS,gwS);
   // 3) 底面 ny=0
-  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,K),P(0,0,K)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,K),gc,gw));
-  for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gc,gw);
+  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,K),P(0,0,K)],`fill="${wcBot}" fill-opacity="${wo}" stroke="none"`);
+  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,K),gcBot,gwBot));
+  for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gcBot,gwBot);
   out+='</g>';
   // 4) 层片（后→前）
   const selK=(s.wfHighlightSelected&&state.chart.selectedSeries!=null)?Number(state.chart.selectedSeries):null;
@@ -2855,10 +2865,12 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
     out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(v,s.yTickDecimals,yStep,false)}</text>`;});
   // 8) Z 标签（zEdgeNx 斜边）
   if(K>=1&&s.wfZLabels){
+    const ztLen=(s.wfZTickLength!=null?+s.wfZTickLength:7);
+    const showZt=(s.wfZShowTicks!==false)&&ztLen>0;
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
-      const ox=dir>0?(11+((k%2)*18)):-(11+((k%2)*18));
-      const anchor=dir>0?'start':'end',lx=p[0]+ox,ly=p[1]+4,tickX=dir>0?p[0]+7:p[0]-7;
-      out+=wfLine(p,[tickX,p[1]],ac,aw);
+      const ox=dir>0?(ztLen+4+((k%2)*18)):-(ztLen+4+((k%2)*18));
+      const anchor=dir>0?'start':'end',lx=p[0]+ox,ly=p[1]+4,tickX=dir>0?p[0]+ztLen:p[0]-ztLen;
+      if(showZt)out+=wfLine(p,[tickX,p[1]],ac,aw);
       out+=`<text data-object="axis-z" class="chart-object" x="${lx.toFixed(1)}" y="${ly}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" fill="${ac}">${esc(gs[k])}</text>`;}
     if(s.wfZAxisTitle){
       const mid=P(zEdgeNx,0,K/2),ang=Math.atan2(-dy,dir*dx)*180/Math.PI,L=Math.hypot(dx,dy)||1,nxO=dir*dy/L,nyO=dx/L;
@@ -2948,17 +2960,17 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   let out=defs?`<defs>${defs}</defs>`:'';
   // 1) 后墙
   out+='<g pointer-events="none">';
-  out+=wfPoly([P(0,0,KD),P(1,0,KD),P(1,1,KD),P(0,1,KD)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,KD),P(t.n,1,KD),gc,gw));
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1)out+=wfLine(P(0,ny,KD),P(1,ny,KD),gc,gw);});
+  out+=wfPoly([P(0,0,KD),P(1,0,KD),P(1,1,KD),P(0,1,KD)],`fill="${s.wfWallColorBack||wc}" fill-opacity="${wo}" stroke="none"`);
+  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,KD),P(t.n,1,KD),s.wfGridColorBack||gc,s.wfGridWidthBack!=null?+s.wfGridWidthBack:gw));
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1){const zb=(s.wfZeroLineWidth>0&&Math.abs(vv)<1e-9);out+=wfLine(P(0,ny,KD),P(1,ny,KD),zb?(s.wfZeroLineColor||s.wfGridColorBack||gc):(s.wfGridColorBack||gc),zb?+s.wfZeroLineWidth:(s.wfGridWidthBack!=null?+s.wfGridWidthBack:gw));}});
   // 2) 侧墙
-  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,KD),P(sideNx,1,KD),P(sideNx,1,0)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1)out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,KD),gc,gw);});
-  for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),gc,gw);
+  out+=wfPoly([P(sideNx,0,0),P(sideNx,0,KD),P(sideNx,1,KD),P(sideNx,1,0)],`fill="${s.wfWallColorSide||wc}" fill-opacity="${wo}" stroke="none"`);
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1){const zb=(s.wfZeroLineWidth>0&&Math.abs(vv)<1e-9);out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,KD),zb?(s.wfZeroLineColor||s.wfGridColorSide||gc):(s.wfGridColorSide||gc),zb?+s.wfZeroLineWidth:(s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw));}});
+  for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),s.wfGridColorSide||gc,s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw);
   // 3) 底面
-  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,KD),P(0,0,KD)],`fill="${wc}" fill-opacity="${wo}" stroke="none"`);
-  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,KD),gc,gw));
-  for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),gc,gw);
+  out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,KD),P(0,0,KD)],`fill="${s.wfWallColorBottom||wc}" fill-opacity="${wo}" stroke="none"`);
+  xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,KD),s.wfGridColorBottom||gc,s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw));
+  for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),s.wfGridColorBottom||gc,s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw);
   out+='</g>';
   // 坐标轴盒与刻度线（必须画在柱体之前，避免轴线穿模、柱体与背景框线叠加）
   const ac=s.axisColor,aw=s.axisWidth;
@@ -3298,21 +3310,27 @@ function bindAnnotationEndpointHandles(svg,store,finish){
 // v1.8.5：3D 柱状图在图表空白处按住拖动即旋转视角（方位角/仰角），window 级监听保证重绘后手势不断
 let b3GestureMoved=false;
 function bindBar3DRotateGesture(svg){
-  if(state.chart.type!=='bar3d')return;
+  const ct=state.chart.type;
+  if(ct!=='bar3d'&&ct!=='waterfall')return;
   const bg=svg.querySelector('[data-object="background"]');if(!bg)return;
   bg.addEventListener('pointerdown',e=>{
     if(e.button!=null&&e.button!==0)return;
-    const s=state.chart.settings;
-    const azim0=clamp(Number(s.b3Azim)||-34,-72,-6);
-    const elev0=clamp(Number(s.b3Elev)||26,12,55);
+    const s=state.chart.settings,isB3=ct==='bar3d';
+    const azim0=clamp(Number(isB3?s.b3Azim:s.wfAzim)||(isB3?-34:-39),-72,-6);
+    const elev0=clamp(Number(isB3?s.b3Elev:s.wfElev)||26,12,55);
     const px0=e.clientX,py0=e.clientY;let moved=false;
     b3GestureMoved=false;
     const move=ev=>{
       const dx=ev.clientX-px0,dy=ev.clientY-py0;
       if(!moved&&Math.hypot(dx,dy)<3)return;
       moved=true;b3GestureMoved=true;
-      s.b3Azim=Math.round(clamp(azim0+dx*.35,-72,-6)); // v1.8.7：MATLAB 默认左前视角，方位角在 -72–-6° 内旋转
-      s.b3Elev=Math.round(clamp(elev0-dy*.35,12,55));
+      if(isB3){
+        s.b3Azim=Math.round(clamp(azim0+dx*.35,-72,-6));
+        s.b3Elev=Math.round(clamp(elev0-dy*.35,12,55));
+      }else{
+        s.wfAzim=Math.round(clamp(azim0+dx*.35,-72,-6));
+        s.wfElev=Math.round(clamp(elev0-dy*.35,12,55));
+      }
       renderChart();
     };
     const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);if(moved){setTimeout(()=>{b3GestureMoved=false},0);renderProperties();}};
@@ -3448,6 +3466,8 @@ function renderProperties(){
   else if(id==='waterfall3d'){name='3D 瀑布图';html=
 '<div class="object-property-section"><h3>三维坐标与纵深</h3></div>'+fieldGroup([
     selectField('wfViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
+    rangeField('wfAzim','水平旋转角（方位）',-72,-6,1),
+    rangeField('wfElev','俯仰角（仰角）',12,55,1),
     rangeField('wfLayerDx','层间水平错开（向右纵深）',0,220,1),
     rangeField('wfLayerDy','层间垂直错开（向上纵深）',0,220,1),
     checkField('wfZLabels','右侧 Z 轴与层标签')])
@@ -3466,10 +3486,21 @@ function renderProperties(){
     textField('wfZAxisTitle','Z 轴标题'),
     rangeField('wfZLabelSize','Z 轴标签字号',8,20,1)])
 +'<div class="object-property-section"><h3>墙面与网格</h3></div>'+fieldGroup([
-    colorField('wfWallColor','墙面底色'),
+    colorField('wfWallColor','统一墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
-    colorField('wfGridColor','网格线颜色'),
-    rangeField('wfGridWidth','网格线粗细',.2,2,.1)])
+    colorField('wfWallColorBack','后墙底色（留空＝统一）'),
+    colorField('wfWallColorSide','侧墙底色（留空＝统一）'),
+    colorField('wfWallColorBottom','底面底色（留空＝统一）'),
+    colorField('wfGridColor','统一网格线颜色'),
+    rangeField('wfGridWidth','统一网格线粗细',.1,2,.1),
+    colorField('wfGridColorBack','后墙网格颜色（留空＝统一）'),
+    rangeField('wfGridWidthBack','后墙网格粗细',.1,2,.1),
+    colorField('wfGridColorSide','侧墙网格颜色（留空＝统一）'),
+    rangeField('wfGridWidthSide','侧墙网格粗细',.1,2,.1),
+    colorField('wfGridColorBottom','底面网格颜色（留空＝统一）'),
+    rangeField('wfGridWidthBottom','底面网格粗细',.1,2,.1),
+    colorField('wfZeroLineColor','基准线（0 线）颜色'),
+    rangeField('wfZeroLineWidth','基准线加粗（0＝不加粗）',0,4,.1)])
 +'<div class="method-badge">X ＝ 横轴点（波长/时间），在“X 轴与横标题”里改；Y ＝ 数值（前左竖边），在“Y 轴与纵标题”里改；Z ＝ 层（右斜边，每列一个时间点/温度），在“Z 轴与标题”；图例设置在“图例内容”。</div>';
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
@@ -3489,10 +3520,21 @@ function renderProperties(){
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
 +'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条。</div>'
 +'<div class="object-property-section"><h3>墙面与网格</h3></div>'+fieldGroup([
-    colorField('wfWallColor','墙面底色'),
+    colorField('wfWallColor','统一墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
-    colorField('wfGridColor','网格线颜色'),
-    rangeField('wfGridWidth','网格线粗细',.2,2,.1)])
+    colorField('wfWallColorBack','后墙底色（留空＝统一）'),
+    colorField('wfWallColorSide','侧墙底色（留空＝统一）'),
+    colorField('wfWallColorBottom','底面底色（留空＝统一）'),
+    colorField('wfGridColor','统一网格线颜色'),
+    rangeField('wfGridWidth','统一网格线粗细',.1,2,.1),
+    colorField('wfGridColorBack','后墙网格颜色（留空＝统一）'),
+    rangeField('wfGridWidthBack','后墙网格粗细',.1,2,.1),
+    colorField('wfGridColorSide','侧墙网格颜色（留空＝统一）'),
+    rangeField('wfGridWidthSide','侧墙网格粗细',.1,2,.1),
+    colorField('wfGridColorBottom','底面网格颜色（留空＝统一）'),
+    rangeField('wfGridWidthBottom','底面网格粗细',.1,2,.1),
+    colorField('wfZeroLineColor','基准线（0 线）颜色'),
+    rangeField('wfZeroLineWidth','基准线加粗（0＝不加粗）',0,4,.1)])
 +'<div class="method-badge">X ＝ 横轴类别（因素1水平），在“X 轴与横标题”里改；Y ＝ 均值（柱高），在“Y 轴与纵标题”里改；Z ＝ 纵深系列（因素2水平），相关设置在“Z 轴与标题”；图例设置在“图例内容”；旋转视角后导出/拼图会按当前角度出图。</div>';
   }
   else if(id==='series'){const idx=clamp(state.chart.selectedSeries,0,Math.max(0,gs.length-1));name=`数据系列 · ${gs[idx]||'Series'}`;
