@@ -2341,7 +2341,8 @@ function applySp1SpecToGallery(spec){
   if(t.family==='serif')s.fontEnglish='Times New Roman';else if(t.family==='condensed')s.fontEnglish='Arial Narrow';else if(t.family)s.fontEnglish='Arial';
   if(tk.length!=null)s.tickLength=px(tk.length,s.tickLength);
   if(g.mode){s.gridEnabled=(g.mode==='h'||g.mode==='both');s.gridVertical=(g.mode==='v'||g.mode==='both')}
-  if(lg.visible!=null)s.legend=!!lg.visible;
+  // 只在明确检测到图例时开启；false 不强制关闭，避免覆盖用户手动开启的图例
+  if(lg.visible===true)s.legend=true;
   if(fr.border!=null)s.frameMode=fr.border?'box':'lb';
   if(mk.shape)s.markerShape=mk.shape;
   if(mk.radius!=null){s.markerSize=px(mk.radius,s.markerSize);s.pointSize=px(mk.radius,s.pointSize)}
@@ -4032,12 +4033,23 @@ function applySp1Spec(spec){
   if(t.family==='serif')s.fontEnglish='Times New Roman';else if(t.family==='condensed')s.fontEnglish='Arial Narrow';else if(t.family)s.fontEnglish='Arial';
   if(tk.length!=null)s.tickLength=px(tk.length,s.tickLength);
   if(g.mode){s.gridEnabled=(g.mode==='h'||g.mode==='both');s.gridVertical=(g.mode==='v'||g.mode==='both')}
-  if(lg.visible!=null)s.legendVisible=!!lg.visible;
+  // 只在明确检测到图例时开启；false 不强制关闭，避免覆盖用户手动开启的图例
+  if(lg.visible===true){
+    s.legendVisible=true;
+    // 按 sp1 的 position 把图例摆到画布内的可见位置，避免沿用旧坐标跑到画布外
+    var _lp=lg.position||'top-right',_lx,_ly;
+    if(_lp==='top-left'){_lx=W*0.06;_ly=40}
+    else if(_lp==='top-center'||_lp==='top'){_lx=W*0.40;_ly=36}
+    else if(_lp==='bottom-left'){_lx=W*0.06;_ly=H-80}
+    else if(_lp==='bottom-center'||_lp==='bottom'){_lx=W*0.40;_ly=H-72}
+    else{_lx=W*0.62;_ly=40}
+    if(state.chart.legend){state.chart.legend.x=_lx;state.chart.legend.y=_ly}
+  }
   if(fr.border!=null)s.frameMode=fr.border?'box':'lb';
   if(mk.shape)s.markerShape=mk.shape;
   if(mk.radius!=null)s.markerSize=px(mk.radius,s.markerSize);
   if(sp.bar){
-    if(sp.bar.widthRatio!=null)s.categoryWidth=Number(sp.bar.widthRatio);
+    if(sp.bar.widthRatio!=null){var _cw=Number(sp.bar.widthRatio);if(isFinite(_cw))s.categoryWidth=clamp(_cw,0.15,0.95)}
     if(sp.bar.gap!=null)s.barGap=px(sp.bar.gap,s.barGap);
   }
   if(sp.errorbar&&sp.errorbar.capWidth!=null)s.errorCap=px(sp.errorbar.capWidth,s.errorCap);
