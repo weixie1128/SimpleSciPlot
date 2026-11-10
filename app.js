@@ -2863,7 +2863,8 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
     if(s.wfZAxisTitle){
       const mid=P(zEdgeNx,0,K/2),ang=Math.atan2(-dy,dir*dx)*180/Math.PI,L=Math.hypot(dx,dy)||1,nxO=dir*dy/L,nyO=dx/L;
       const tx=mid[0]+nxO*30,ty=mid[1]+nyO*30-6;
-      out+=`<text data-object="axis-z" class="chart-object" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" font-size="${s.zTitleSize||s.yTickSize}" font-style="italic" fill="${ac}" transform="rotate(${ang.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
+      const ztx=s.wfZTitleX!=null?s.wfZTitleX:tx,zty=s.wfZTitleY!=null?s.wfZTitleY:ty;
+      out+=`<text data-object="axis-z" data-drag="zTitle" class="chart-object draggable" x="${ztx.toFixed(1)}" y="${zty.toFixed(1)}" text-anchor="middle" font-size="${s.wfZTitleSize||s.yTickSize}" font-weight="${s.wfZTitleWeight||s.globalFontWeight||400}" font-style="italic" fill="${s.wfZTitleColor||ac}" transform="rotate(${ang.toFixed(1)} ${ztx.toFixed(1)} ${zty.toFixed(1)})">${esc(s.wfZAxisTitle)}</text>`;
     }
   }
   // 9) 轴标题
@@ -3327,13 +3328,14 @@ function bindDraggables(){
       // v1.8.5：3D 图例/色条双击回到默认位置
       if(el.dataset.drag==='b3legend'){state.chart.settings.b3LegendX=null;state.chart.settings.b3LegendY=null;renderChart()}
       if(el.dataset.drag==='wflegend'){state.chart.settings.wfLegendX=null;state.chart.settings.wfLegendY=null;renderChart()}
+      if(el.dataset.drag==='zTitle'){state.chart.settings.wfZTitleX=null;state.chart.settings.wfZTitleY=null;renderChart()}
     });
     el.addEventListener('pointerdown',e=>{
       if(e.target.closest('[data-annotation-handle]'))return;
       e.preventDefault();e.stopPropagation();
       const key=el.dataset.drag,start=svgPoint(svg,e),snapshot=dragSnapshot(key,el);
       el.setPointerCapture(e.pointerId);el.classList.add('dragging');
-      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'bar3d':key==='wflegend'?'bar3d':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':'axis-y';
+      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'bar3d':key==='wflegend'?'bar3d':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':key==='zTitle'?'axis-z':'axis-y';
       selectObject(target);
       const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;applyDrag(key,snapshot,dx,dy,el)};
       const up=()=>{el.classList.remove('dragging');el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);renderChart();renderProperties()};
@@ -3349,6 +3351,12 @@ function dragSnapshot(key,el=null){
   if(key==='wflegend'){const s=state.chart.settings;return{x:s.wfLegendX??0,y:s.wfLegendY??0};}
   if(key==='legendFrame')return{x:state.chart.legendFrame.x,y:state.chart.legendFrame.y};
   if(key==='title')return{x:s.titleX,y:s.titleY};if(key==='subtitle')return{x:s.subtitleX,y:s.subtitleY};
+  if(key==='zTitle'){
+    if(s.wfZTitleX!=null&&s.wfZTitleY!=null)return{x:s.wfZTitleX,y:s.wfZTitleY};
+    const rm=(el?.getAttribute('transform')||'').match(/rotate\([-\d.]+[ ,]+([-\d.]+)[ ,]+([-\d.]+)\)/);
+    if(rm)return{x:parseFloat(rm[1]),y:parseFloat(rm[2])};
+    return{x:parseFloat(el?.getAttribute('x'))||0,y:parseFloat(el?.getAttribute('y'))||0};
+  }
   if(key==='xTitle'){
     if((state.chart.type==='waterfall'||state.chart.type==='bar3d')&&el){const x=parseFloat(el.getAttribute('x')),y=parseFloat(el.getAttribute('y'));return{x:Number.isFinite(x)?x:0,y:Number.isFinite(y)?y:0};}
     return{x:s.xTitleX,y:s.xTitleY};
@@ -3370,6 +3378,13 @@ function applyDrag(key,snap,dx,dy,el){
   else if(key==='wflegend'){s.wfLegendX=x;s.wfLegendY=y;el.setAttribute('transform',`translate(${x} ${y})`);return}
   else if(key==='legendFrame'){state.chart.legendFrame.x=x;state.chart.legendFrame.y=y;el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='title'){s.titleX=x;s.titleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}else if(key==='subtitle'){s.subtitleX=x;s.subtitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
+  else if(key==='zTitle'){
+    const am=(el.getAttribute('transform')||'').match(/rotate\(([-\d.]+)/);
+    const ang=am?parseFloat(am[1]):0;
+    s.wfZTitleX=x;s.wfZTitleY=y;
+    el.setAttribute('x',x);el.setAttribute('y',y);
+    el.setAttribute('transform',`rotate(${ang} ${x} ${y})`);
+  }
   else if(key==='xTitle'){
     if(state.chart.type==='waterfall'||state.chart.type==='bar3d'){s.wfXTitleX=x;s.wfXTitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
     else{s.xTitleX=x;s.xTitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
