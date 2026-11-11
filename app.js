@@ -12,32 +12,32 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
  * 注释等所有模块共用同一套实现，导出的 PNG/SVG 也自动带上渐变。
  */
 const PAINT_PRESETS = [
-  {id:'viridis',name:'Viridis 翠绿黄',angle:90,stops:['#440154','#414487','#2a788e','#22a884','#7ad151','#fde725']},
-  {id:'plasma',name:'Plasma 紫粉黄',angle:90,stops:['#0d0887','#6a00a8','#b12a90','#e16462','#fca636','#f0f921']},
-  {id:'inferno',name:'Inferno 黑红黄',angle:90,stops:['#000004','#420a68','#932667','#dd513a','#fca50a','#fcffa4']},
-  {id:'magma',name:'Magma 黑紫粉',angle:90,stops:['#000004','#3b0f70','#8c2981','#de4968','#fe9f6d','#fcfdbf']},
-  {id:'cividis',name:'Cividis 蓝灰黄',angle:90,stops:['#00204c','#414d6b','#7c7b78','#b9ac70','#ffea46']},
-  {id:'blues',name:'Blues 单色蓝',angle:90,stops:['#f7fbff','#c6dbef','#6baed6','#2171b5','#08306b']},
-  {id:'greens',name:'Greens 单色绿',angle:90,stops:['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b']},
-  {id:'reds',name:'Reds 单色红',angle:90,stops:['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d']},
-  {id:'ylgnbu',name:'YlGnBu 黄绿蓝',angle:90,stops:['#ffffd9','#c7e9b4','#41b6c4','#225ea8','#081d58']},
-  {id:'ylorrd',name:'YlOrRd 黄橙红',angle:90,stops:['#ffffb2','#fed976','#fd8d3c','#e31a1c','#800026']},
-  {id:'orrd',name:'OrRd 橙红',angle:90,stops:['#fff7ec','#fdd49e','#fc8d59','#d7301f','#7f0000']},
-  {id:'bupu',name:'BuPu 蓝紫',angle:90,stops:['#f7fcfd','#bfd3e6','#8c96c6','#88419d','#4d004b']},
-  {id:'gnbu',name:'GnBu 绿蓝',angle:90,stops:['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081']},
-  {id:'rdbu',name:'RdBu 红蓝双向',angle:90,stops:['#b2182b','#ef8a62','#f7f7f7','#67a9cf','#2166ac']},
-  {id:'rdylbu',name:'RdYlBu 红黄蓝双向',angle:90,stops:['#d73027','#fdae61','#ffffbf','#abd9e9','#4575b4']},
-  {id:'spectral',name:'Spectral 光谱双向',angle:90,stops:['#d53e4f','#fc8d59','#fee08b','#e6f598','#99d594','#3288bd']},
-  {id:'coolwarm',name:'Coolwarm 冷暖双向',angle:90,stops:['#3b4cc0','#8f9fe0','#dddddd','#f0a08a','#b40426']},
-  {id:'puor',name:'PuOr 紫橙双向',angle:90,stops:['#7f3b08','#fdb863','#f7f7f7','#b2abd2','#542788']},
-  {id:'brbg',name:'BrBG 棕绿双向',angle:90,stops:['#8c510a','#d8b365','#f5f5f5','#80cdc1','#01665e']},
-  {id:'naturesci',name:'Nature 深蓝-青',angle:135,stops:['#3C5488','#4DBBD5','#00A087']},
-  {id:'sciencesun',name:'Science 珊瑚金',angle:135,stops:['#E64B35','#F39B7F','#FDB462']},
-  {id:'ocean',name:'深海青蓝',angle:90,stops:['#0B4F6C','#01BAEF']},
-  {id:'forest',name:'森林绿',angle:90,stops:['#1B4332','#40916C','#95D5B2']},
-  {id:'sunset',name:'落日橙红',angle:90,stops:['#F4A261','#E76F51','#9B2226']},
-  {id:'royalpurple',name:'皇家紫',angle:135,stops:['#3A0CA3','#7209B7','#B5179E']},
-  {id:'monoink',name:'墨色单色',angle:90,stops:['#111111','#888888','#e6e6e6']}
+  {id:'viridis',name:'Viridis 翠绿黄',angle:0,stops:['#440154','#414487','#2a788e','#22a884','#7ad151','#fde725']},
+  {id:'plasma',name:'Plasma 紫粉黄',angle:0,stops:['#0d0887','#6a00a8','#b12a90','#e16462','#fca636','#f0f921']},
+  {id:'inferno',name:'Inferno 黑红黄',angle:0,stops:['#000004','#420a68','#932667','#dd513a','#fca50a','#fcffa4']},
+  {id:'magma',name:'Magma 黑紫粉',angle:0,stops:['#000004','#3b0f70','#8c2981','#de4968','#fe9f6d','#fcfdbf']},
+  {id:'cividis',name:'Cividis 蓝灰黄',angle:0,stops:['#00204c','#414d6b','#7c7b78','#b9ac70','#ffea46']},
+  {id:'blues',name:'Blues 单色蓝',angle:0,stops:['#f7fbff','#c6dbef','#6baed6','#2171b5','#08306b']},
+  {id:'greens',name:'Greens 单色绿',angle:0,stops:['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b']},
+  {id:'reds',name:'Reds 单色红',angle:0,stops:['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d']},
+  {id:'ylgnbu',name:'YlGnBu 黄绿蓝',angle:0,stops:['#ffffd9','#c7e9b4','#41b6c4','#225ea8','#081d58']},
+  {id:'ylorrd',name:'YlOrRd 黄橙红',angle:0,stops:['#ffffb2','#fed976','#fd8d3c','#e31a1c','#800026']},
+  {id:'orrd',name:'OrRd 橙红',angle:0,stops:['#fff7ec','#fdd49e','#fc8d59','#d7301f','#7f0000']},
+  {id:'bupu',name:'BuPu 蓝紫',angle:0,stops:['#f7fcfd','#bfd3e6','#8c96c6','#88419d','#4d004b']},
+  {id:'gnbu',name:'GnBu 绿蓝',angle:0,stops:['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081']},
+  {id:'rdbu',name:'RdBu 红蓝双向',angle:0,stops:['#b2182b','#ef8a62','#f7f7f7','#67a9cf','#2166ac']},
+  {id:'rdylbu',name:'RdYlBu 红黄蓝双向',angle:0,stops:['#d73027','#fdae61','#ffffbf','#abd9e9','#4575b4']},
+  {id:'spectral',name:'Spectral 光谱双向',angle:0,stops:['#d53e4f','#fc8d59','#fee08b','#e6f598','#99d594','#3288bd']},
+  {id:'coolwarm',name:'Coolwarm 冷暖双向',angle:0,stops:['#3b4cc0','#8f9fe0','#dddddd','#f0a08a','#b40426']},
+  {id:'puor',name:'PuOr 紫橙双向',angle:0,stops:['#7f3b08','#fdb863','#f7f7f7','#b2abd2','#542788']},
+  {id:'brbg',name:'BrBG 棕绿双向',angle:0,stops:['#8c510a','#d8b365','#f5f5f5','#80cdc1','#01665e']},
+  {id:'naturesci',name:'Nature 深蓝-青',angle:45,stops:['#3C5488','#4DBBD5','#00A087']},
+  {id:'sciencesun',name:'Science 珊瑚金',angle:45,stops:['#E64B35','#F39B7F','#FDB462']},
+  {id:'ocean',name:'深海青蓝',angle:0,stops:['#0B4F6C','#01BAEF']},
+  {id:'forest',name:'森林绿',angle:0,stops:['#1B4332','#40916C','#95D5B2']},
+  {id:'sunset',name:'落日橙红',angle:0,stops:['#F4A261','#E76F51','#9B2226']},
+  {id:'royalpurple',name:'皇家紫',angle:45,stops:['#3A0CA3','#7209B7','#B5179E']},
+  {id:'monoink',name:'墨色单色',angle:0,stops:['#111111','#888888','#e6e6e6']}
 ];
 const PAINT_PRESET_MAP = new Map(PAINT_PRESETS.map(p => [p.id, p]));
 function isGradientPaint(v){return typeof v==='string'&&v.slice(0,5)==='grad:'}
@@ -45,10 +45,10 @@ function parseGradientPaint(v){
   const raw=String(v||'').slice(5);
   if(raw.startsWith('custom:')){
     const parts=raw.split(':'),angle=Number(parts[1]),stops=String(parts[2]||'').split(',').filter(Boolean);
-    return {angle:Number.isFinite(angle)?angle:135,stops:stops.length?stops:['#3C5488','#00A087']};
+    return {angle:Number.isFinite(angle)?angle:0,stops:stops.length?stops:['#3C5488','#00A087']};
   }
   const p=PAINT_PRESET_MAP.get(raw)||PAINT_PRESETS[0];
-  return {angle:Number(p.angle)||90,stops:p.stops.slice()};
+  return {angle:Number.isFinite(Number(p.angle))?Number(p.angle):90,stops:p.stops.slice()};
 }
 function paintLabel(v){
   if(!isGradientPaint(v))return v;
@@ -61,12 +61,39 @@ function gradientCss(v){
   return `linear-gradient(${g.angle}deg,${g.stops.map((c,i)=>`${c} ${(i/n*100).toFixed(1)}%`).join(',')})`;
 }
 function paintCss(v){return isGradientPaint(v)?gradientCss(v):(v||'#ffffff')}
+// 取渐变代表色：3D 柱体的侧面/顶面需要有确定的纯色来加深/提亮
+function paintSolid(v){if(!isGradientPaint(v))return v;const g=parseGradientPaint(v);return g.stops[Math.min(g.stops.length-1,Math.floor(g.stops.length/2))]||'#888888'}
 function gradientVector(angle){
   const a=(Number(angle)||0)*Math.PI/180,dx=Math.sin(a),dy=-Math.cos(a);
   const f=n=>Number(n.toFixed(4));
   return {x1:f(.5-dx/2),y1:f(.5-dy/2),x2:f(.5+dx/2),y2:f(.5+dy/2)};
 }
 let sspGradSeq=0;
+function fixDegenerateGradients(root){
+  const host=(root&&root.querySelectorAll)?root:document;
+  host.querySelectorAll('[fill^="url(#sspGrad"],[stroke^="url(#sspGrad"]').forEach(el=>{
+    if(!el.isConnected)return;
+    let bb;try{bb=el.getBBox()}catch(_e){return}
+    if(bb.width>0&&bb.height>0)return;
+    ['fill','stroke'].forEach(attr=>{
+      const ref=el.getAttribute(attr);
+      if(!ref||ref.indexOf('url(#sspGrad')!==0)return;
+      const grad=document.getElementById(ref.slice(5,-1));
+      if(!grad)return;
+      const angle0=parseGradientPaint(grad.getAttribute('data-paint')||'').angle;
+      const norm=((angle0%180)+180)%180;
+      const angle=norm<1?90:(Math.abs(norm-90)<1?0:angle0); // 竖渐变落到水平线 → 横向；横渐变落到竖线 → 竖向
+      const v=gradientVector(angle),w=Math.max(bb.width,.01),h=Math.max(bb.height,.01);
+      const clone=grad.cloneNode(true),nid='sspGradFix'+(++sspGradSeq);
+      clone.id=nid;
+      clone.setAttribute('gradientUnits','userSpaceOnUse');
+      clone.setAttribute('x1',(bb.x+v.x1*w).toFixed(1));clone.setAttribute('y1',(bb.y+v.y1*h).toFixed(1));
+      clone.setAttribute('x2',(bb.x+v.x2*w).toFixed(1));clone.setAttribute('y2',(bb.y+v.y2*h).toFixed(1));
+      grad.parentNode.appendChild(clone);
+      el.setAttribute(attr,`url(#${nid})`);
+    });
+  });
+}
 function materializeSvgGradients(svg){
   if(typeof svg!=='string'||svg.indexOf('grad:')===-1)return svg;
   const map=new Map();let defs='';
@@ -75,7 +102,7 @@ function materializeSvgGradients(svg){
     const id='sspGrad'+(++sspGradSeq);map.set(spec,id);
     const g=parseGradientPaint(spec),v=gradientVector(g.angle),n=Math.max(1,g.stops.length-1);
     const stops=g.stops.map((c,i)=>`<stop offset="${(i/n*100).toFixed(2)}%" stop-color="${c}"/>`).join('');
-    defs+=`<linearGradient id="${id}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}">${stops}</linearGradient>`;
+    defs+=`<linearGradient id="${id}" data-paint="${spec}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}">${stops}</linearGradient>`;
     return id;
   };
   let out=svg.replace(/(\b(?:fill|stroke))=(['"])(grad:[^'"]*)\2/g,(m,attr,q,spec)=>`${attr}="url(#${idFor(spec)})"`);
@@ -167,7 +194,7 @@ function ensurePaintPopover(){
     +PAINT_PRESETS.map(p=>`<button type="button" class="paint-preset" data-paint-grad="grad:${p.id}" title="${p.name}" style="background:${paintCss('grad:'+p.id)}"><span>${p.name}</span></button>`).join('')
     +'</div></div>'
     +'<div class="paint-pop-sec"><span class="paint-sec-title">自定义渐变</span><div class="paint-custom"><input type="color" data-paint-c1 value="#3C5488" title="起点颜色"><input type="color" data-paint-c2 value="#00A087" title="终点颜色"><select data-paint-angle title="渐变方向">'
-    +[0,45,90,135,180,225,270,315].map(a=>`<option value="${a}" ${a===135?'selected':''}>${a}°</option>`).join('')
+    +[0,45,90,135,180,225,270,315].map(a=>`<option value="${a}" ${a===0?'selected':''}>${a}°${a===0?'（竖向）':a===90?'（横向）':''}</option>`).join('')
     +'</select></div><button type="button" class="paint-apply" data-paint-apply-custom>应用自定义渐变</button></div>');
   document.body.appendChild(paintPop);
   paintPop.addEventListener('click',ev=>{
@@ -239,6 +266,12 @@ function commitPaintValue(input,value){
     desc.set.call(this,html);
     try{
       if(typeof html==='string'&&html.indexOf('data-paint-native')!==-1)enhancePaintControls(this);
+    }catch(_e){}
+    try{
+      if(typeof html==='string'&&html.indexOf('sspGrad')!==-1){
+        const host=this;
+        requestAnimationFrame(()=>{try{fixDegenerateGradients(host&&host.isConnected?host:document)}catch(_e){}});
+      }
     }catch(_e){}
   };
   patched.__sspPaintHook=true;
@@ -346,7 +379,7 @@ const defaultChartSettings = {
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
   // v1.8.7：3D 柱状图专属——方位角（-72–-6°，MATLAB 默认左前视角）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
   b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
-  b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,wfLegendX:null,wfLegendY:null,
+  b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,b3YAxisEdge:'auto',b3ZAxisEdge:'auto',b3XAxisEdge:'front',
   // v1.9.6：Z 轴独立完整设置
   wfZTitleVisible:true,wfZTitleSize:12,wfZTitleColor:'',wfZTitleWeight:400,
   wfZLabelColor:'',wfZLabelWeight:400,wfZShowTicks:true,wfZTickLength:7,
@@ -2967,7 +3000,7 @@ function wfXScale(xvals){
 }
 function wfLine(a,b,c,w,extra=''){return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}"${extra?' '+extra:''}/>`;}
 function wfPoly(pts,attrs){return `<polygon points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" ${attrs}/>`;}
-function wfHexToRgb(hex){const h=(hex||'#000').replace('#','');const v=h.length===3?h.split('').map(c=>c+c).join(''):h;return [parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)];}
+function wfHexToRgb(hex){if(isGradientPaint(hex))hex=paintSolid(hex);const h=(hex||'#000').replace('#','');const v=h.length===3?h.split('').map(c=>c+c).join(''):h;return [parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)];}
 function wfRgbToHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
 function wfLerpColor(c1,c2,t){const a=wfHexToRgb(c1),b=wfHexToRgb(c2);return wfRgbToHex(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t);}
 function wfColorForLayer(k,n,colors){
@@ -3168,7 +3201,12 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
   const P=(nx,ny,k)=>[ox+L*u(nx,k),oy-L*v(nx,ny,k)];
   const sideNx = s.b3ViewDir==='right' ? 1 : 0; // 右后视角坐标轴镜像到右侧，避免被柱子遮挡
-  const zEdgeNx = sideNx; // Y 与 Z 轴同侧共享原点
+  // v1.9.48：三条坐标轴各自可选所在棱，避免轴线固定在某一侧
+  const yEdgeRaw=String(s.b3YAxisEdge||'');
+  const yEdge=['lf','lb','rf','rb'].includes(yEdgeRaw)?yEdgeRaw:(sideNx===1?'rb':'lb');
+  const yNx=yEdge[0]==='r'?1:0, yK=yEdge[1]==='b'?KD:0;
+  const zEdgeNx=s.b3ZAxisEdge==='left'?0:(s.b3ZAxisEdge==='right'?1:sideNx); // Y 与 Z 轴默认同侧
+  const xK=s.b3XAxisEdge==='back'?KD:0;
   const yN=vv=>(Number(vv)-bmin)/((bmax-bmin)||1);
   const gc=s.wfGridColor,gw=s.wfGridWidth,wc=s.wfWallColor,wo=(s.wfWallOpacity!=null)?Number(s.wfWallOpacity):1;
   const valMode=s.b3ColorMode==='value';
@@ -3197,6 +3235,16 @@ function renderBar3D(W,H,xvals,gs,colors,b){
       defs+=`<linearGradient id="b3s-${r.k}-${r.i}" x1="0" y1="1" x2="0" y2="0">${gradStops(tb,tt,.2)}</linearGradient>`;
     });
     defs+=`<linearGradient id="b3cb" x1="0" y1="1" x2="0" y2="0">${[0,.25,.5,.75,1].map(f=>`<stop offset="${f*100}%" stop-color="${cmap(f)}"/>`).join('')}</linearGradient>`;
+  }else{
+    // 系列模式下的渐变色：沿数值轴铺满整条 Y 范围，每根柱只露出自己高度对应的那一段，
+    // 与文献里“按值着色”的立体柱效果一致，而不是单面左右渐变。
+    rows.forEach(r=>{
+      if(!isGradientPaint(r.c))return;
+      const g=parseGradientPaint(r.c),n=Math.max(1,g.stops.length-1);
+      const yb=P(r.cx,0,r.k)[1],yt=P(r.cx,1,r.k)[1];
+      defs+=`<linearGradient id="b3p-${r.k}-${r.i}" gradientUnits="userSpaceOnUse" x1="0" y1="${yb.toFixed(1)}" x2="0" y2="${yt.toFixed(1)}">`
+        +g.stops.map((c,i)=>`<stop offset="${(i/n*100).toFixed(2)}%" stop-color="${c}"/>`).join('')+`</linearGradient>`;
+    });
   }
   let out=defs?`<defs>${defs}</defs>`:'';
   // 1) 后墙
@@ -3226,11 +3274,17 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   out+=`<g stroke="#c9c9c9" stroke-width=".6" fill="none">`
     +`<path d="M${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)} L${P(1-sideNx,1,KD)[0].toFixed(1)},${P(1-sideNx,1,KD)[1].toFixed(1)}"/>`
     +`</g>`;
+  // 用户指定棱上的三条主轴（X 底棱 / Y 竖棱 / Z 底线）
+  out+=`<g class="b3-axis-edges" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
+    +`<path d="M${P(0,0,xK)[0].toFixed(1)},${P(0,0,xK)[1].toFixed(1)} L${P(1,0,xK)[0].toFixed(1)},${P(1,0,xK)[1].toFixed(1)}"/>`
+    +`<path d="M${P(yNx,0,yK)[0].toFixed(1)},${P(yNx,0,yK)[1].toFixed(1)} L${P(yNx,1,yK)[0].toFixed(1)},${P(yNx,1,yK)[1].toFixed(1)}"/>`
+    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
+    +`</g>`;
   out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,0);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
+  if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,xK);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
   out+='</g>';
   out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,KD);const tx=sideNx===0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
+  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(yNx,ny,yK);const tx=yNx===0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
   out+='</g>';
   // 4) 柱体（远→近，深度排序）
   rows.forEach(r=>{
@@ -3245,7 +3299,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
       cFill=`url(#b3g-${k}-${i})`;cSide=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
-    }else{cFill=r.c;cSide=wfLerpColor(r.c,'#000000',.42);cTop=wfLerpColor(r.c,'#ffffff',.5);edgeC='#ffffff';}
+    }else{const baseC=paintSolid(r.c);cFill=isGradientPaint(r.c)?`url(#b3p-${k}-${i})`:r.c;cSide=wfLerpColor(baseC,'#000000',.42);cTop=wfLerpColor(baseC,'#ffffff',.5);edgeC='#ffffff';}
     const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
     out+=wfPoly(faceSideL,attr(cSide));
     out+=wfPoly(faceSideR,attr(cSide));
@@ -3261,9 +3315,9 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     }
   });
   // 5) X / Y 刻度文字（位于绘图区外，画在柱体之后）
-  xs.ticks.forEach(t=>{const p=P(t.n,0,0);const yy=p[1]+s.tickLength+18;out+=`<text data-object="axis-x" class="chart-object" x="${p[0].toFixed(1)}" y="${yy}" text-anchor="${rot<0?'end':'middle'}" font-size="${s.xTickSize}" fill="${s.xTickColor}" transform="rotate(${rot} ${p[0].toFixed(1)} ${yy})">${esc(t.label)}</text>`;});
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(sideNx,ny,KD);
-    const tx=sideNx===0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=sideNx===0?'end':'start';
+  xs.ticks.forEach(t=>{const p=P(t.n,0,xK);const yy=p[1]+s.tickLength+18;out+=`<text data-object="axis-x" class="chart-object" x="${p[0].toFixed(1)}" y="${yy}" text-anchor="${rot<0?'end':'middle'}" font-size="${s.xTickSize}" fill="${s.xTickColor}" transform="rotate(${rot} ${p[0].toFixed(1)} ${yy})">${esc(t.label)}</text>`;});
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(yNx,ny,yK);
+    const tx=yNx===0?p[0]-s.tickLength-6:p[0]+s.tickLength+6,anchor=yNx===0?'end':'start';
     out+=`<text data-object="axis-y" class="chart-object" x="${tx.toFixed(1)}" y="${(p[1]+4).toFixed(1)}" text-anchor="${anchor}" font-size="${s.yTickSize}" fill="${s.yTickColor}">${formatAxisNumber(vv,s.yTickDecimals,yStep,false)}</text>`;});
   // 8) Z 标签（v1.9.6：独立完整设置，偏移随字号自适应防遮挡）
   if(K>=1&&s.wfZLabels){
@@ -3271,7 +3325,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     let zAng=Math.atan2(ey,ex)*180/Math.PI;
     // 文字始终正立：角度超出 ±90° 就镜像 180°
     if(zAng>90)zAng-=180; else if(zAng<-90)zAng+=180;
-    const sgn = sideNx===1 ? -1 : 1;
+    const sgn = zEdgeNx===1 ? -1 : 1;
     const nxO=ey/el*sgn, nyO=-ex/el*sgn; // 外法线：右侧时反向
     const zFs = s.wfZLabelSize || s.yTickSize;
     const tickLen = s.wfZShowTicks ? (Number(s.wfZTickLength)||0) : 0;
@@ -3290,8 +3344,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     }
   }
   // 9) 轴标题
-  if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,0);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
-  if(s.yTitleVisible&&s.yTitle){const dp=P(sideNx,.5,KD);const rotY=sideNx===0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:(sideNx===0?dp[0]-40:dp[0]+40),yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
+  if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,xK);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
+  if(s.yTitleVisible&&s.yTitle){const dp=P(yNx,.5,yK);const rotY=yNx===0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:(yNx===0?dp[0]-40:dp[0]+40),yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例 / 数值色条（统一图例体系，可直接拖动）
   if(valMode&&s.legendVisible&&K>=1){
@@ -3753,6 +3807,9 @@ function renderProperties(){
     rangeField('b3Azim','水平旋转角（方位）',-20,90,1),
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
+    selectField('b3YAxisEdge','Y 轴所在竖棱',[['auto','跟随侧墙（默认）'],['lf','左前'],['lb','左后'],['rf','右前'],['rb','右后']]),
+    selectField('b3XAxisEdge','X 轴所在底棱',[['front','前侧（默认）'],['back','后侧']]),
+    selectField('b3ZAxisEdge','Z 轴所在底棱',[['auto','跟随侧墙（默认）'],['left','左侧底棱'],['right','右侧底棱']]),
     rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
     rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1),
     rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01)])
