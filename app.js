@@ -2910,7 +2910,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
   const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
   const KD=K+tD;
-  let A=clamp(Number(s.b3Azim)||-34,-150,-5)*Math.PI/180;
+  let A=clamp(Number(s.b3Azim)||-34,-95,-20)*Math.PI/180;
   if(s.b3ViewDir==='left')A=-A; // 纵深方向镜像
   const E=clamp(Number(s.b3Elev)||26,5,80)*Math.PI/180;
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
@@ -3317,7 +3317,7 @@ function bindBar3DRotateGesture(svg){
   bg.addEventListener('pointerdown',e=>{
     if(e.button!=null&&e.button!==0)return;
     const s=state.chart.settings,isB3=ct==='bar3d';
-    const azim0=clamp(Number(isB3?s.b3Azim:s.wfAzim)||(isB3?-34:-39),isB3?-150:-72,isB3?-5:-6);
+    const azim0=clamp(Number(isB3?s.b3Azim:s.wfAzim)||(isB3?-34:-39),isB3?-95:-72,isB3?-20:-6);
     const elev0=clamp(Number(isB3?s.b3Elev:s.wfElev)||26,isB3?5:12,isB3?80:55);
     const px0=e.clientX,py0=e.clientY;let moved=false;
     b3GestureMoved=false;
@@ -3326,7 +3326,7 @@ function bindBar3DRotateGesture(svg){
       if(!moved&&Math.hypot(dx,dy)<3)return;
       moved=true;b3GestureMoved=true;
       if(isB3){
-        s.b3Azim=Math.round(clamp(azim0+dx*.35,-150,-5));
+        s.b3Azim=Math.round(clamp(azim0+dx*.35,-95,-20));
         s.b3Elev=Math.round(clamp(elev0-dy*.35,5,80));
       }else{
         s.wfAzim=Math.round(clamp(azim0+dx*.35,-72,-6));
@@ -3508,7 +3508,7 @@ function renderProperties(){
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
-    rangeField('b3Azim','水平旋转角（方位）',-150,-5,1),
+    rangeField('b3Azim','水平旋转角（方位）',-95,-20,1),
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
