@@ -381,7 +381,7 @@ const defaultChartSettings = {
   lowerMin:0, lowerMax:20, upperMin:70, upperMax:82, breakGap:12, lowerRatio:.23,
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
   // v1.8.7：3D 柱状图专属——方位角（-72–-6°，MATLAB 默认左前视角）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
-  b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,b3BarShape:'box',b3CbLength:118,b3CbWidth:14,b3CbFontSize:12,b3CbOrientation:'vertical',
+  b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,b3BarShape:'box',b3CbLength:118,b3CbWidth:14,b3CbFontSize:12,b3CbOrientation:'vertical',b3ShowValues:false,b3ValueDecimals:1,b3ValueSize:12,wfGridDash:'solid',wfWallBorderWidthBack:0,wfWallBorderColorBack:'#000000',wfWallBorderWidthSide:0,wfWallBorderColorSide:'#000000',wfWallBorderWidthBottom:0,wfWallBorderColorBottom:'#000000',
   b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,b3YAxisEdge:'auto',b3ZAxisEdge:'auto',b3XAxisEdge:'front',
   // v1.9.6：Z 轴独立完整设置
   wfZTitleVisible:true,wfZTitleSize:12,wfZTitleColor:'',wfZTitleWeight:400,
@@ -3250,38 +3250,62 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     });
   }
   let out=defs?`<defs>${defs}</defs>`:'';
+  // 网格线样式（虚线只作用于网格/墙面，不作用于坐标轴）
+  const gridDash=s.wfGridDash==='dash'?'5 4':(s.wfGridDash==='dot'?'1.6 3.2':'');
+  // 墙面边框（坐标轴以外的墙体外框）：三个面各自独立设置，粗细 0 = 不加粗（只显示网格线）。
+  // 每条物理边只归一个面绘制，避免相邻面互相覆盖。
+  const wbB=Math.max(0,Number(s.wfWallBorderWidthBack)||0),wcB=s.wfWallBorderColorBack||'#000000';
+  const wbS=Math.max(0,Number(s.wfWallBorderWidthSide)||0),wcS=s.wfWallBorderColorSide||'#000000';
+  const wbT=Math.max(0,Number(s.wfWallBorderWidthBottom)||0),wcT=s.wfWallBorderColorBottom||'#000000';
   // 1) 后墙
-  out+='<g pointer-events="none">';
+  out+='<g pointer-events="none"'+(gridDash?` stroke-dasharray="${gridDash}"`:'')+'>';
   out+=wfPoly([P(0,0,KD),P(1,0,KD),P(1,1,KD),P(0,1,KD)],`fill="${s.wfWallColorBack||wc}" fill-opacity="${wo}" stroke="none"`);
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,KD),P(t.n,1,KD),s.wfGridColorBack||gc,s.wfGridWidthBack!=null?+s.wfGridWidthBack:gw));
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1){const zb=(s.wfZeroLineWidth>0&&Math.abs(vv)<1e-9);out+=wfLine(P(0,ny,KD),P(1,ny,KD),zb?(s.wfZeroLineColor||s.wfGridColorBack||gc):(s.wfGridColorBack||gc),zb?+s.wfZeroLineWidth:(s.wfGridWidthBack!=null?+s.wfGridWidthBack:gw));}});
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;
+    const isEdge=(ny<1e-6||ny>1-1e-6);
+    const zb=(!isEdge&&s.wfZeroLineWidth>0&&Math.abs(vv)<1e-9);
+    const col=zb?(s.wfZeroLineColor||s.wfGridColorBack||gc):(s.wfGridColorBack||gc);
+    const wid=zb?+s.wfZeroLineWidth:(s.wfGridWidthBack!=null?+s.wfGridWidthBack:gw);
+    out+=wfLine(P(0,ny,KD),P(1,ny,KD),col,wid);});
   // 2) 侧墙
   out+=wfPoly([P(sideNx,0,0),P(sideNx,0,KD),P(sideNx,1,KD),P(sideNx,1,0)],`fill="${s.wfWallColorSide||wc}" fill-opacity="${wo}" stroke="none"`);
-  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny>=0&&ny<=1){const zb=(s.wfZeroLineWidth>0&&Math.abs(vv)<1e-9);out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,KD),zb?(s.wfZeroLineColor||s.wfGridColorSide||gc):(s.wfGridColorSide||gc),zb?+s.wfZeroLineWidth:(s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw));}});
-  for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),s.wfGridColorSide||gc,s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw);
+  yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;
+    const isEdge=(ny<1e-6||ny>1-1e-6);
+    const zb=(!isEdge&&s.wfZeroLineWidth>0&&Math.abs(vv)<1e-9);
+    const col=zb?(s.wfZeroLineColor||s.wfGridColorSide||gc):(s.wfGridColorSide||gc);
+    const wid=zb?+s.wfZeroLineWidth:(s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw);
+    out+=wfLine(P(sideNx,ny,0),P(sideNx,ny,KD),col,wid);});
+  // 7) 纵深网格线穿过每排柱体的中心（k+tD/2），柱底正好落在网格交汇处
+  for(let k=0;k<=K;k++)out+=wfLine(P(sideNx,0,k+tD/2),P(sideNx,1,k+tD/2),s.wfGridColorSide||gc,s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw);
+  // 侧墙左右两条竖边（墙面外框的网格线基础）
+  [0,KD].forEach(k=>out+=wfLine(P(sideNx,0,k),P(sideNx,1,k),s.wfGridColorSide||gc,s.wfGridWidthSide!=null?+s.wfGridWidthSide:gw));
   // 3) 底面
   out+=wfPoly([P(0,0,0),P(1,0,0),P(1,0,KD),P(0,0,KD)],`fill="${s.wfWallColorBottom||wc}" fill-opacity="${wo}" stroke="none"`);
   xs.ticks.forEach(t=>out+=wfLine(P(t.n,0,0),P(t.n,0,KD),s.wfGridColorBottom||gc,s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw));
-  for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k),P(1,0,k),s.wfGridColorBottom||gc,s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw);
+  for(let k=0;k<=K;k++)out+=wfLine(P(0,0,k+tD/2),P(1,0,k+tD/2),s.wfGridColorBottom||gc,s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw);
+  // 底面前后两条边（墙面外框的网格线基础）
+  [0,KD].forEach(k=>out+=wfLine(P(0,0,k),P(1,0,k),s.wfGridColorBottom||gc,s.wfGridWidthBottom!=null?+s.wfGridWidthBottom:gw));
   out+='</g>';
-  // 坐标轴盒与刻度线（必须画在柱体之前，避免轴线穿模、柱体与背景框线叠加）
+  // 4) 墙面边框（可选）：按面独立加粗，每条物理边归属唯一一个面
+  if(wbB>0){
+    out+=wfLine(P(0,1,KD),P(1,1,KD),wcB,wbB);   // 后墙顶边
+    out+=wfLine(P(0,0,KD),P(1,0,KD),wcB,wbB);   // 后墙底边（＝底面后边）
+    out+=wfLine(P(0,0,KD),P(0,1,KD),wcB,wbB);   // 后墙左边
+    out+=wfLine(P(1,0,KD),P(1,1,KD),wcB,wbB);   // 后墙右边
+  }
+  if(wbS>0){
+    out+=wfLine(P(sideNx,1,0),P(sideNx,1,KD),wcS,wbS); // 侧墙顶边
+    out+=wfLine(P(sideNx,0,0),P(sideNx,1,0),wcS,wbS);  // 侧墙前竖边
+    out+=wfLine(P(sideNx,0,0),P(sideNx,0,KD),wcS,wbS); // 侧墙底边（＝底面侧边）
+  }
+  if(wbT>0){
+    out+=wfLine(P(0,0,0),P(1,0,0),wcT,wbT);                        // 底面前边
+    out+=wfLine(P(1-sideNx,0,0),P(1-sideNx,0,KD),wcT,wbT);        // 底面外侧边
+  }
   const ac=s.axisColor,aw=s.axisWidth;
   const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
   const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
-  // 仅绘制用户指定的三条坐标轴主棱——墙面本身已有网格线，足够定位；
-  // 不画完整立方体盒子，避免把所有坐标轴"连起来"形成立方体壳。
-  out+=`<g class="b3-axis-edges" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
-    +`<path d="M${P(0,0,xK)[0].toFixed(1)},${P(0,0,xK)[1].toFixed(1)} L${P(1,0,xK)[0].toFixed(1)},${P(1,0,xK)[1].toFixed(1)}"/>`
-    +`<path d="M${P(yNx,0,yK)[0].toFixed(1)},${P(yNx,0,yK)[1].toFixed(1)} L${P(yNx,1,yK)[0].toFixed(1)},${P(yNx,1,yK)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
-    +`</g>`;
-  out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showXTicks)xs.ticks.forEach(t=>{const p=P(t.n,0,xK);out+=wfLine(p,[p[0],p[1]+s.tickLength],ac,aw);});
-  out+='</g>';
-  out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
-  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(yNx,ny,yK);const tx=yNx===0?p[0]-s.tickLength:p[0]+s.tickLength;out+=wfLine(p,[tx,p[1]],ac,aw);});
-  out+='</g>';
-  // 4) 柱体（远→近，深度排序）
+  // 4) 柱体（远→近，深度排序）；坐标轴主棱与刻度线在柱体之后重绘（见 4b），避免被柱边框遮挡
   rows.forEach(r=>{
     const {k,i,d,cx,x0,x1,yBase,yTop}=r;
     const dimmed=(selK!=null&&selK!==k);
@@ -3317,6 +3341,13 @@ function renderBar3D(W,H,xvals,gs,colors,b){
       // 顶面：俯仰角 E ∈ [5°,80°] 永远可见
       out+=wfPoly(faceTop,attr(cTop));
     }
+    // 柱顶数值标注（紧贴柱顶；有误差棒时让到误差棒上方）
+    if(s.b3ShowValues){
+      const pv=P(cx,yTop,k+tD/2);
+      let vy=pv[1]-6;
+      if(s.errorType&&d.error!=null)vy-=Math.abs(P(cx,yN(d.mean+d.error),k+tD/2)[1]-pv[1])+4;
+      out+=`<text data-object="series" data-series="${k}" class="chart-object" x="${pv[0].toFixed(1)}" y="${vy.toFixed(1)}" text-anchor="middle" font-size="${s.b3ValueSize||12}" fill="${s.wfZLabelColor||s.yTickColor||'#333'}" pointer-events="none">${formatAxisNumber(d.mean,Number(s.b3ValueDecimals)||0,1,false)}</text>`;
+    }
     // 误差棒与显著性字母（贴在柱顶前缘中点）
     if(s.errorType&&d.error!=null){
       const midTop=[(tF[0]+tR[0])/2,(tF[1]+tR[1])/2];
@@ -3326,6 +3357,18 @@ function renderBar3D(W,H,xvals,gs,colors,b){
       if(s.letters&&d.letter)out+=letterSvg(midTop[0],midTop[1]-ePx-s.letterOffset,d.letter,d.x,d.group);
     }
   });
+  // 4b) 坐标轴重绘：永远压在柱体之上，柱边框颜色/半透明柱不会遮住坐标轴
+  out+=`<g class="b3-axis-edges" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
+    +`<path d="M${P(0,0,xK)[0].toFixed(1)},${P(0,0,xK)[1].toFixed(1)} L${P(1,0,xK)[0].toFixed(1)},${P(1,0,xK)[1].toFixed(1)}"/>`
+    +`<path d="M${P(yNx,0,yK)[0].toFixed(1)},${P(yNx,0,yK)[1].toFixed(1)} L${P(yNx,1,yK)[0].toFixed(1)},${P(yNx,1,yK)[1].toFixed(1)}"/>`
+    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
+    +`</g>`;
+  out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
+  if(s.showXTicks)xs.ticks.forEach(tk=>{const pt=P(tk.n,0,xK);out+=wfLine(pt,[pt[0],pt[1]+s.tickLength],ac,aw);});
+  out+='</g>';
+  out+=`<g data-object="axis-y" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
+  if(s.showYTicks)yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const pt=P(yNx,ny,yK);const tx=yNx===0?pt[0]-s.tickLength:pt[0]+s.tickLength;out+=wfLine(pt,[tx,pt[1]],ac,aw);});
+  out+='</g>';
   // 5) X / Y 刻度文字（位于绘图区外，画在柱体之后）
   xs.ticks.forEach(t=>{const p=P(t.n,0,xK);const yy=p[1]+s.tickLength+18;out+=`<text data-object="axis-x" class="chart-object" x="${p[0].toFixed(1)}" y="${yy}" text-anchor="${rot<0?'end':'middle'}" font-size="${s.xTickSize}" fill="${s.xTickColor}" transform="rotate(${rot} ${p[0].toFixed(1)} ${yy})">${esc(t.label)}</text>`;});
   yTicksNice.forEach(vv=>{const ny=yN(vv);if(ny<0||ny>1)return;const p=P(yNx,ny,yK);
@@ -3356,7 +3399,13 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     }
   }
   // 9) 轴标题
-  if(s.xTitleVisible&&s.xTitle){const dp=P(.5,0,xK);const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}">${esc(convertedXTitle())}</text>`;}
+  if(s.xTitleVisible&&s.xTitle){
+    const dp=P(.5,0,xK),a0=P(0,0,xK),a1=P(1,0,xK);
+    let xAng=Math.atan2(a1[1]-a0[1],a1[0]-a0[0])*180/Math.PI;
+    if(xAng>90)xAng-=180;else if(xAng<-90)xAng+=180; // 文字保持正立，同时自动平行于 X 轴
+    const xt=s.wfXTitleX!=null?s.wfXTitleX:dp[0],yt=s.wfXTitleY!=null?s.wfXTitleY:dp[1]+64;
+    out+=`<text data-object="axis-x" data-drag="xTitle" class="chart-object draggable" x="${xt.toFixed(1)}" y="${yt.toFixed(1)}" text-anchor="middle" font-size="${s.xTitleSize}" font-weight="${s.xTitleWeight||s.globalFontWeight||400}" fill="${s.xTitleColor}" transform="rotate(${xAng.toFixed(1)} ${xt.toFixed(1)} ${yt.toFixed(1)})">${esc(convertedXTitle())}</text>`;
+  }
   if(s.yTitleVisible&&s.yTitle){const dp=P(yNx,.5,yK);const rotY=yNx===0?-90:90;const ytx=s.wfYTitleX!=null?s.wfYTitleX:(yNx===0?dp[0]-40:dp[0]+40),yty=s.wfYTitleY!=null?s.wfYTitleY:dp[1];
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例 / 数值色条（统一图例体系，可直接拖动）
@@ -3828,7 +3877,15 @@ function renderProperties(){
     colorField('wfWallColor','统一墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
     colorField('wfGridColor','统一网格线颜色'),
-    rangeField('wfGridWidth','统一网格线粗细',.1,2,.1)])
+    rangeField('wfGridWidth','统一网格线粗细',.1,2,.1),
+    selectField('wfGridDash','网格线样式',[['solid','实线'],['dash','虚线'],['dot','点线']])])
++'<div class="object-property-section"><h3>墙面边框（坐标轴以外，0＝不加粗）</h3></div>'+fieldGroup([
+    rangeField('wfWallBorderWidthBack','后墙边框粗细',0,4,.1),
+    colorField('wfWallBorderColorBack','后墙边框颜色'),
+    rangeField('wfWallBorderWidthSide','侧墙边框粗细',0,4,.1),
+    colorField('wfWallBorderColorSide','侧墙边框颜色'),
+    rangeField('wfWallBorderWidthBottom','底面边框粗细',0,4,.1),
+    colorField('wfWallBorderColorBottom','底面边框颜色')])
 +'<details style="margin:2px 0 10px;border:1px solid #dde4e9;border-radius:6px;padding:6px 10px"><summary style="cursor:pointer;font-size:12px;color:#5a6a75">按面细分：各墙面 / 各面网格 / 基准线（展开）</summary>'+fieldGroup([
     colorField('wfWallColorBack','后墙底色（留空＝统一）'),
     colorField('wfWallColorSide','侧墙底色（留空＝统一）'),
@@ -3859,9 +3916,13 @@ function renderProperties(){
     rangeField('b3BarDepth','柱体纵深厚度（前后）',.35,.95,.01)])
 +'<div class="object-property-section"><h3>柱体边框</h3></div>'+fieldGroup([
     rangeField('barBorderWidth','边框粗细',0,3,.1),
-    selectField('barBorderColorMode','边框颜色',[['auto','白色描边（默认）'],['custom','自定义颜色']]),
-    ...((state.chart.settings.barBorderColorMode==='custom')?[colorField('barBorderColor','自定义边框颜色')]:[]),
+    selectField('barBorderColorMode','边框颜色',[['auto','白色描边（默认）'],['custom','使用自定义颜色']]),
+    colorField('barBorderColor','自定义边框颜色（上一项选“自定义”后生效）'),
     rangeField('barOpacity','柱体填充透明度',.25,1,.05)])
++'<div class="object-property-section"><h3>柱顶数值标注</h3></div>'+fieldGroup([
+    checkField('b3ShowValues','在柱顶标注数值'),
+    selectField('b3ValueDecimals','数值小数位',[['0','整数'],['1','1 位'],['2','2 位'],['3','3 位']]),
+    rangeField('b3ValueSize','数值字号',7,24,1)])
 +'<div class="object-property-section"><h3>柱体颜色与渐变色带</h3></div>'+fieldGroup([
     selectField('b3ColorMode','着色方式',[['series','按系列着色（默认）'],['value','按数值渐变（MATLAB 风格）']]),
     selectField('b3Cmap','渐变色带',[['plasma','等离子 Plasma'],['viridis','翠绿 Viridis'],['inferno','熔岩 Inferno'],['rdbu','红–蓝'],['terrain','地形 Terrain']]),
