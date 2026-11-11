@@ -4,6 +4,247 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+/* ===== v1.9.46 全站渐变色 =====
+ * 颜色参数保持同一个键：纯色仍是 #rrggbb；渐变色写作 grad:<presetId>，
+ * 自定义渐变写作 grad:custom:<角度>:<色1>,<色2>[,<色3>]。
+ * 渲染时在执行 innerHTML 之前，把 fill/stroke 上的 grad: 说明替换成
+ * SVG <linearGradient> 引用，因此柱状、折线、画廊、光谱、热分析、拼图、
+ * 注释等所有模块共用同一套实现，导出的 PNG/SVG 也自动带上渐变。
+ */
+const PAINT_PRESETS = [
+  {id:'viridis',name:'Viridis 翠绿黄',angle:90,stops:['#440154','#414487','#2a788e','#22a884','#7ad151','#fde725']},
+  {id:'plasma',name:'Plasma 紫粉黄',angle:90,stops:['#0d0887','#6a00a8','#b12a90','#e16462','#fca636','#f0f921']},
+  {id:'inferno',name:'Inferno 黑红黄',angle:90,stops:['#000004','#420a68','#932667','#dd513a','#fca50a','#fcffa4']},
+  {id:'magma',name:'Magma 黑紫粉',angle:90,stops:['#000004','#3b0f70','#8c2981','#de4968','#fe9f6d','#fcfdbf']},
+  {id:'cividis',name:'Cividis 蓝灰黄',angle:90,stops:['#00204c','#414d6b','#7c7b78','#b9ac70','#ffea46']},
+  {id:'blues',name:'Blues 单色蓝',angle:90,stops:['#f7fbff','#c6dbef','#6baed6','#2171b5','#08306b']},
+  {id:'greens',name:'Greens 单色绿',angle:90,stops:['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b']},
+  {id:'reds',name:'Reds 单色红',angle:90,stops:['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d']},
+  {id:'ylgnbu',name:'YlGnBu 黄绿蓝',angle:90,stops:['#ffffd9','#c7e9b4','#41b6c4','#225ea8','#081d58']},
+  {id:'ylorrd',name:'YlOrRd 黄橙红',angle:90,stops:['#ffffb2','#fed976','#fd8d3c','#e31a1c','#800026']},
+  {id:'orrd',name:'OrRd 橙红',angle:90,stops:['#fff7ec','#fdd49e','#fc8d59','#d7301f','#7f0000']},
+  {id:'bupu',name:'BuPu 蓝紫',angle:90,stops:['#f7fcfd','#bfd3e6','#8c96c6','#88419d','#4d004b']},
+  {id:'gnbu',name:'GnBu 绿蓝',angle:90,stops:['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081']},
+  {id:'rdbu',name:'RdBu 红蓝双向',angle:90,stops:['#b2182b','#ef8a62','#f7f7f7','#67a9cf','#2166ac']},
+  {id:'rdylbu',name:'RdYlBu 红黄蓝双向',angle:90,stops:['#d73027','#fdae61','#ffffbf','#abd9e9','#4575b4']},
+  {id:'spectral',name:'Spectral 光谱双向',angle:90,stops:['#d53e4f','#fc8d59','#fee08b','#e6f598','#99d594','#3288bd']},
+  {id:'coolwarm',name:'Coolwarm 冷暖双向',angle:90,stops:['#3b4cc0','#8f9fe0','#dddddd','#f0a08a','#b40426']},
+  {id:'puor',name:'PuOr 紫橙双向',angle:90,stops:['#7f3b08','#fdb863','#f7f7f7','#b2abd2','#542788']},
+  {id:'brbg',name:'BrBG 棕绿双向',angle:90,stops:['#8c510a','#d8b365','#f5f5f5','#80cdc1','#01665e']},
+  {id:'naturesci',name:'Nature 深蓝-青',angle:135,stops:['#3C5488','#4DBBD5','#00A087']},
+  {id:'sciencesun',name:'Science 珊瑚金',angle:135,stops:['#E64B35','#F39B7F','#FDB462']},
+  {id:'ocean',name:'深海青蓝',angle:90,stops:['#0B4F6C','#01BAEF']},
+  {id:'forest',name:'森林绿',angle:90,stops:['#1B4332','#40916C','#95D5B2']},
+  {id:'sunset',name:'落日橙红',angle:90,stops:['#F4A261','#E76F51','#9B2226']},
+  {id:'royalpurple',name:'皇家紫',angle:135,stops:['#3A0CA3','#7209B7','#B5179E']},
+  {id:'monoink',name:'墨色单色',angle:90,stops:['#111111','#888888','#e6e6e6']}
+];
+const PAINT_PRESET_MAP = new Map(PAINT_PRESETS.map(p => [p.id, p]));
+function isGradientPaint(v){return typeof v==='string'&&v.slice(0,5)==='grad:'}
+function parseGradientPaint(v){
+  const raw=String(v||'').slice(5);
+  if(raw.startsWith('custom:')){
+    const parts=raw.split(':'),angle=Number(parts[1]),stops=String(parts[2]||'').split(',').filter(Boolean);
+    return {angle:Number.isFinite(angle)?angle:135,stops:stops.length?stops:['#3C5488','#00A087']};
+  }
+  const p=PAINT_PRESET_MAP.get(raw)||PAINT_PRESETS[0];
+  return {angle:Number(p.angle)||90,stops:p.stops.slice()};
+}
+function paintLabel(v){
+  if(!isGradientPaint(v))return v;
+  const raw=String(v).slice(5);
+  const p=PAINT_PRESET_MAP.get(raw);
+  return p?`渐变 · ${p.name}`:'渐变 · 自定义';
+}
+function gradientCss(v){
+  const g=parseGradientPaint(v),n=Math.max(1,g.stops.length-1);
+  return `linear-gradient(${g.angle}deg,${g.stops.map((c,i)=>`${c} ${(i/n*100).toFixed(1)}%`).join(',')})`;
+}
+function paintCss(v){return isGradientPaint(v)?gradientCss(v):(v||'#ffffff')}
+function gradientVector(angle){
+  const a=(Number(angle)||0)*Math.PI/180,dx=Math.sin(a),dy=-Math.cos(a);
+  const f=n=>Number(n.toFixed(4));
+  return {x1:f(.5-dx/2),y1:f(.5-dy/2),x2:f(.5+dx/2),y2:f(.5+dy/2)};
+}
+let sspGradSeq=0;
+function materializeSvgGradients(svg){
+  if(typeof svg!=='string'||svg.indexOf('grad:')===-1)return svg;
+  const map=new Map();let defs='';
+  const idFor=spec=>{
+    if(map.has(spec))return map.get(spec);
+    const id='sspGrad'+(++sspGradSeq);map.set(spec,id);
+    const g=parseGradientPaint(spec),v=gradientVector(g.angle),n=Math.max(1,g.stops.length-1);
+    const stops=g.stops.map((c,i)=>`<stop offset="${(i/n*100).toFixed(2)}%" stop-color="${c}"/>`).join('');
+    defs+=`<linearGradient id="${id}" x1="${v.x1}" y1="${v.y1}" x2="${v.x2}" y2="${v.y2}">${stops}</linearGradient>`;
+    return id;
+  };
+  let out=svg.replace(/(\b(?:fill|stroke))=(['"])(grad:[^'"]*)\2/g,(m,attr,q,spec)=>`${attr}="url(#${idFor(spec)})"`);
+  out=out.replace(/((?:^|[;"'\s])(?:fill|stroke)\s*:\s*)(grad:[^;"'}]+)/g,(m,pre,spec)=>pre+`url(#${idFor(spec)})`);
+  if(!defs)return out;
+  return out.replace(/<svg\b[^>]*>/,m=>m+`<defs>${defs}</defs>`);
+}
+function paintifyHtml(html){
+  if(html.indexOf('type="color"')!==-1||html.indexOf("type='color'")!==-1){
+    html=html.replace(/<input\b[^>]*>/gi,m=>{
+      if(!/\btype=(['"])color\1/i.test(m))return m;
+      let out=m.replace(/\btype=(['"])color\1/i,'type="text"');
+      if(!/\bdata-paint-native\b/.test(out))out=out.replace(/>$/, ' data-paint-native="1">');
+      return out;
+    });
+  }
+  if(html.indexOf('grad:')!==-1){
+    html=html.replace(/(background\s*:\s*)(grad:[^;"'}>]+)/g,(m,p,spec)=>p+paintCss(spec));
+  }
+  return html;
+}
+function refreshPaintChip(input){
+  const wrap=input.closest('.paint-ctl');if(!wrap)return;
+  const chip=wrap.querySelector('.paint-chip');if(!chip)return;
+  const grad=isGradientPaint(input.value);
+  chip.style.background=paintCss(input.value);
+  chip.classList.toggle('is-gradient',grad);
+  chip.dataset.paintValue=input.value;
+  chip.title=grad?`${paintLabel(input.value)}（点击修改）`:`${input.value||'颜色'}（点击修改，可改渐变）`;
+  wrap.classList.toggle('is-gradient',grad);
+}
+function enhancePaintControls(root){
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('input[data-paint-native]').forEach(inp=>{
+    if(inp.dataset.paintReady==='1')return;
+    inp.dataset.paintReady='1';
+    const wrap=document.createElement('span');wrap.className='paint-ctl';
+    inp.parentNode.insertBefore(wrap,inp);
+    wrap.appendChild(inp);
+    const chip=document.createElement('button');
+    chip.type='button';chip.className='paint-chip';chip.setAttribute('aria-label','选择纯色或渐变色');
+    wrap.appendChild(chip);
+    chip.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();openPaintPopover(inp,chip)});
+    inp.addEventListener('input',()=>refreshPaintChip(inp));
+    inp.addEventListener('change',()=>refreshPaintChip(inp));
+    refreshPaintChip(inp);
+  });
+}
+let paintPop=null,paintPopTarget=null;
+function injectPaintStyles(){
+  if(document.getElementById('paint-ui-styles'))return;
+  const st=document.createElement('style');st.id='paint-ui-styles';
+  st.textContent='.paint-ctl{display:inline-flex;align-items:center;width:100%;min-width:0}'
+    +'.paint-ctl input.paint-native{display:none!important}'
+    +'.paint-chip{width:100%;min-width:28px;height:30px;border:1px solid #cbd8d3;border-radius:7px;padding:2px;cursor:pointer;background:#fff;position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}'
+    +'.paint-chip:hover{border-color:#4f9c86;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),0 0 0 2px rgba(79,156,134,.15)}'
+    +'.paint-chip.is-gradient:after{content:"";position:absolute;right:2px;bottom:2px;width:9px;height:9px;border-radius:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.18);opacity:.9}'
+    +'.paint-pop{position:fixed;z-index:10000;width:330px;max-height:72vh;overflow:auto;background:#fff;border:1px solid #cbd8d3;border-radius:12px;box-shadow:0 18px 44px rgba(16,42,34,.2);padding:12px;display:none}'
+    +'.paint-pop.open{display:block}'
+    +'.paint-pop-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#1d3b33;margin-bottom:8px}'
+    +'.paint-pop-close{border:none;background:#f1f5f3;width:24px;height:24px;border-radius:6px;cursor:pointer;font-size:15px;line-height:1;color:#4b625a}'
+    +'.paint-pop-sec{border-top:1px solid #edf2f0;padding-top:9px;margin-top:9px}'
+    +'.paint-sec-title{display:block;font-size:12px;font-weight:700;color:#3d574f;margin-bottom:7px}'
+    +'.paint-solid{display:flex;gap:8px;align-items:center}'
+    +'.paint-solid input[type=color]{width:52px;height:34px;padding:2px;border:1px solid #cbd8d3;border-radius:7px;background:#fff}'
+    +'.paint-solid input[type=text]{flex:1;min-width:0;border:1px solid #cbd8d3;border-radius:7px;padding:7px 9px;font-size:12px;color:#223b34}'
+    +'.paint-presets{display:grid;grid-template-columns:1fr 1fr;gap:6px}'
+    +'.paint-preset{position:relative;height:34px;border:1px solid #d6e0dc;border-radius:8px;cursor:pointer;overflow:hidden;padding:0}'
+    +'.paint-preset span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55),0 0 6px rgba(0,0,0,.35);letter-spacing:.2px}'
+    +'.paint-preset:hover{box-shadow:0 0 0 2px rgba(79,156,134,.35)}'
+    +'.popover-grads{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:4px 0 7px}'
+    +'.popover-grads button{height:22px;border:1px solid rgba(0,0,0,.12);border-radius:4px;cursor:pointer;padding:0}'
+    +'.popover-grads button:hover{box-shadow:0 0 0 2px rgba(79,156,134,.4)}'
+    +'.paint-custom{display:flex;gap:8px;align-items:center;margin-bottom:8px}'
+    +'.paint-custom input[type=color]{width:48px;height:32px;padding:2px;border:1px solid #cbd8d3;border-radius:7px;background:#fff}'
+    +'.paint-custom select{flex:1;min-width:0;border:1px solid #cbd8d3;border-radius:7px;padding:6px 8px;font-size:12px;background:#fff;color:#223b34}'
+    +'.paint-apply{width:100%;height:32px;border:1px solid #2f7a63;border-radius:8px;background:#2f7a63;color:#fff;font-size:12px;font-weight:700;cursor:pointer}'
+    +'.paint-apply:hover{background:#276a56}';
+  document.head.appendChild(st);
+}
+function ensurePaintPopover(){
+  if(paintPop)return paintPop;
+  injectPaintStyles();
+  paintPop=document.createElement('div');paintPop.className='paint-pop';paintPop.id='paintPop';
+  paintPop.insertAdjacentHTML('beforeend',
+    '<div class="paint-pop-head"><b>颜色 / 渐变色</b><button type="button" class="paint-pop-close" data-paint-close aria-label="关闭">×</button></div>'
+    +'<div class="paint-pop-sec"><span class="paint-sec-title">纯色</span><div class="paint-solid"><input type="color" data-paint-solid><input type="text" data-paint-hex maxlength="9" spellcheck="false" placeholder="#000000"></div></div>'
+    +'<div class="paint-pop-sec"><span class="paint-sec-title">论文常用渐变色（点击应用）</span><div class="paint-presets" data-paint-presets>'
+    +PAINT_PRESETS.map(p=>`<button type="button" class="paint-preset" data-paint-grad="grad:${p.id}" title="${p.name}" style="background:${paintCss('grad:'+p.id)}"><span>${p.name}</span></button>`).join('')
+    +'</div></div>'
+    +'<div class="paint-pop-sec"><span class="paint-sec-title">自定义渐变</span><div class="paint-custom"><input type="color" data-paint-c1 value="#3C5488" title="起点颜色"><input type="color" data-paint-c2 value="#00A087" title="终点颜色"><select data-paint-angle title="渐变方向">'
+    +[0,45,90,135,180,225,270,315].map(a=>`<option value="${a}" ${a===135?'selected':''}>${a}°</option>`).join('')
+    +'</select></div><button type="button" class="paint-apply" data-paint-apply-custom>应用自定义渐变</button></div>');
+  document.body.appendChild(paintPop);
+  paintPop.addEventListener('click',ev=>{
+    if(ev.target.closest('[data-paint-close]')){closePaintPopover();return}
+    const preset=ev.target.closest('[data-paint-grad]');
+    if(preset){commitPaintValue(paintPopTarget,preset.dataset.paintGrad);closePaintPopover();return}
+    if(ev.target.closest('[data-paint-apply-custom]')){
+      const c1=paintPop.querySelector('[data-paint-c1]').value
+        ,c2=paintPop.querySelector('[data-paint-c2]').value
+        ,angle=paintPop.querySelector('[data-paint-angle]').value;
+      commitPaintValue(paintPopTarget,`grad:custom:${angle}:${c1},${c2}`);closePaintPopover();
+    }
+  });
+  const solid=paintPop.querySelector('[data-paint-solid]'),hexBox=paintPop.querySelector('[data-paint-hex]');
+  solid.addEventListener('input',()=>{hexBox.value=solid.value;commitPaintValue(paintPopTarget,solid.value)});
+  hexBox.addEventListener('change',()=>{
+    let v=String(hexBox.value||'').trim();
+    if(/^[0-9a-f]{6}$/i.test(v))v='#'+v;
+    if(!/^#[0-9a-f]{6}$/i.test(v)){v=solid.value||'#000000'}
+    hexBox.value=v;solid.value=v;commitPaintValue(paintPopTarget,v);
+  });
+  document.addEventListener('mousedown',ev=>{
+    if(!paintPop.classList.contains('open'))return;
+    if(paintPop.contains(ev.target)||ev.target.closest('.paint-chip'))return;
+    closePaintPopover();
+  });
+  document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closePaintPopover()});
+  return paintPop;
+}
+function openPaintPopover(input,anchor){
+  if(!input||!anchor||!anchor.isConnected)return;
+  ensurePaintPopover();
+  paintPopTarget=input;
+  const cur=input.value||'#ffffff';
+  const g=isGradientPaint(cur)?parseGradientPaint(cur):null;
+  const hexFor=r=>/^#[0-9a-f]{6}$/i.test(r)?r:'#ffffff';
+  const first=g?hexFor(g.stops[0]):hexFor(cur);
+  paintPop.querySelector('[data-paint-solid]').value=first;
+  paintPop.querySelector('[data-paint-hex]').value=first;
+  if(g){paintPop.querySelector('[data-paint-c1]').value=hexFor(g.stops[0]);paintPop.querySelector('[data-paint-c2]').value=hexFor(g.stops[g.stops.length-1]);paintPop.querySelector('[data-paint-angle]').value=String(g.angle)}
+  paintPop.classList.add('open');
+  paintPop.style.visibility='hidden';
+  const r=anchor.getBoundingClientRect(),pr=paintPop.getBoundingClientRect();
+  let left=Math.min(Math.max(8,r.left),Math.max(8,innerWidth-pr.width-8));
+  let top=r.bottom+8;
+  if(top+pr.height>innerHeight-8)top=Math.max(8,r.top-pr.height-8);
+  paintPop.style.left=left+'px';paintPop.style.top=top+'px';paintPop.style.visibility='';
+}
+function closePaintPopover(){if(paintPop)paintPop.classList.remove('open');paintPopTarget=null}
+function commitPaintValue(input,value){
+  if(!input)return;
+  input.value=value;
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  input.dispatchEvent(new Event('change',{bubbles:true}));
+  refreshPaintChip(input);
+  if(!input.isConnected)closePaintPopover();
+}
+(function installPaintHooks(){
+  if(typeof Element==='undefined')return;
+  const desc=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+  if(!desc||!desc.set||desc.set.__sspPaintHook)return;
+  const patched=function(html){
+    try{
+      if(typeof html==='string'&&html.length<8e6&&(html.indexOf('type="color"')!==-1||html.indexOf('grad:')!==-1)){
+        html=paintifyHtml(html);
+        if(html.indexOf('grad:')!==-1&&html.indexOf('<svg')!==-1)html=materializeSvgGradients(html);
+      }
+    }catch(_e){}
+    desc.set.call(this,html);
+    try{
+      if(typeof html==='string'&&html.indexOf('data-paint-native')!==-1)enhancePaintControls(this);
+    }catch(_e){}
+  };
+  patched.__sspPaintHook=true;
+  Object.defineProperty(Element.prototype,'innerHTML',{configurable:true,enumerable:desc.enumerable,get:desc.get,set:patched});
+})();
+
 
 // v0.8.1 性能层：大数据图表只建立一次索引，避免每次绘图重复进行 O(n²) 查找。
 let chartDataVersion=0;
@@ -2910,7 +3151,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const xs={norm:v=>{const i=xvals.findIndex(x=>String(x)===String(v));return ((i<0?0:i)+.5)/Nx},ticks:xvals.map((v,i)=>({n:(i+.5)/Nx,label:formatXTick(v)}))};
   const tD=clamp(Number(s.b3BarDepth)||.7,.35,.95);
   const KD=K+tD;
-  let A=clamp(Number(s.b3Azim)||-34,-95,-20)*Math.PI/180;
+  let A=clamp(Number.isFinite(Number(s.b3Azim))?Number(s.b3Azim):-34,-20,90)*Math.PI/180;
   if(s.b3ViewDir==='left')A=-A; // 纵深方向镜像
   const E=clamp(Number(s.b3Elev)||26,5,80)*Math.PI/180;
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
@@ -3317,7 +3558,8 @@ function bindBar3DRotateGesture(svg){
   bg.addEventListener('pointerdown',e=>{
     if(e.button!=null&&e.button!==0)return;
     const s=state.chart.settings,isB3=ct==='bar3d';
-    const azim0=clamp(Number(isB3?s.b3Azim:s.wfAzim)||(isB3?-34:-39),isB3?-95:-72,isB3?-20:-6);
+    const azim0Raw=Number(isB3?s.b3Azim:s.wfAzim);
+    const azim0=clamp(Number.isFinite(azim0Raw)?azim0Raw:(isB3?-34:-39),isB3?-20:-72,isB3?90:-6);
     const elev0=clamp(Number(isB3?s.b3Elev:s.wfElev)||26,isB3?5:12,isB3?80:55);
     const px0=e.clientX,py0=e.clientY;let moved=false;
     b3GestureMoved=false;
@@ -3326,7 +3568,7 @@ function bindBar3DRotateGesture(svg){
       if(!moved&&Math.hypot(dx,dy)<3)return;
       moved=true;b3GestureMoved=true;
       if(isB3){
-        s.b3Azim=Math.round(clamp(azim0+dx*.35,-95,-20));
+        s.b3Azim=Math.round(clamp(azim0+dx*.35,-20,90));
         s.b3Elev=Math.round(clamp(elev0-dy*.35,5,80));
       }else{
         s.wfAzim=Math.round(clamp(azim0+dx*.35,-72,-6));
@@ -3508,7 +3750,7 @@ function renderProperties(){
   }
   else if(id==='bar3d'){name='3D 柱状图';html=
 '<div class="object-property-section"><h3>视角与纵深</h3></div>'+fieldGroup([
-    rangeField('b3Azim','水平旋转角（方位）',-95,-20,1),
+    rangeField('b3Azim','水平旋转角（方位）',-20,90,1),
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
@@ -3624,7 +3866,7 @@ function checkField(k,n){return`<label class="check-row"><input data-setting="${
 function numberLegendField(k,n){return fieldWrap(`图例${n}`,`legend:${k}`,`<input data-setting="legend:${k}" type="number" step="1" value="${state.chart.legend[k]}">`)}
 function numberLegendFrameField(k,n){return fieldWrap(`边框${n}`,`legendFrame:${k}`,`<input data-setting="legendFrame:${k}" type="number" step="1" value="${state.chart.legendFrame[k]??''}">`)}
 function checkLegendFrameField(k,n){return`<label class="check-row"><input data-setting="legendFrame:${k}" type="checkbox" ${state.chart.legendFrame[k]?'checked':''}>${n}</label>`}
-function displaySetting(k){return getSettingValue(k)}
+function displaySetting(k){const v=getSettingValue(k);return isGradientPaint(v)?paintLabel(v):v}
 function breakPropertyBlock(){const s=state.chart.settings;return `<div class="subhead">真实断轴</div><label class="check-row"><input id="breakFromProp" type="checkbox" ${state.chart.breakAxis?'checked':''}>启用断轴</label><div class="two-col">${numberField('lowerMin','下段最小值',null,null,.01)}${numberField('lowerMax','下段最大值',null,null,.01)}${numberField('upperMin','上段最小值',null,null,.01)}${numberField('upperMax','上段最大值',null,null,.01)}</div>${rangeField('breakGap','两条断裂线间距',6,28,1)}${rangeField('lowerRatio','下段高度比例',.12,.42,.01)}<div class="hint">柱体空白断口与两条平行断裂线中心之间的距离完全一致；断裂线中心直接落在坐标轴端点上。</div>`}
 const SWATCH_GRAYS=['#ffffff','#d9d9d9','#bfbfbf','#999999','#666666','#333333','#000000'];
 const SWATCH_HUES=[0,30,45,60,120,150,175,195,215,255,280,330];
@@ -3644,9 +3886,11 @@ function seriesColorPicker(idx){
   const key=`palette:${idx}`,v=getSettingValue(key);
   return `<div class="color-picker" data-picker="${key}">
     <div class="field"><label><span>当前系列颜色</span><output data-out="${key}">${displaySetting(key)}</output></label>
-      <button type="button" class="color-trigger" data-color-trigger="${key}" style="background:${v}" title="点击选色" aria-label="点击选色"></button></div>
+      <button type="button" class="color-trigger" data-color-trigger="${key}" style="background:${paintCss(v)}" title="点击选色或渐变色" aria-label="点击选色"></button></div>
     <div class="color-popover" data-color-popover="${key}">
       <div class="popover-title">选色（点击色块）</div>${swatchGrid()}
+      <div class="popover-title" style="margin-top:6px">渐变色（点击即应用）</div>
+      <div class="popover-grads">${PAINT_PRESETS.map(p=>`<button type="button" data-grad-swatch="grad:${p.id}" title="${p.name}" style="background:${paintCss('grad:'+p.id)}"></button>`).join('')}</div>
       <div class="popover-custom"><span>精细自定义</span><input type="color" data-setting="${key}" value="${v}"></div>
     </div>
   </div>`;
@@ -3729,13 +3973,22 @@ function bindPropertyInputs(){
     const idx=Number(picker.dataset.picker.split(':')[1]);
     state.chart.palette[idx]=hex;ensurePalette(chartGroups().length);rememberPalette(state.chart.palette);
     const trg=picker.querySelector('.color-trigger');if(trg)trg.style.background=hex;
-    const custom=picker.querySelector('.popover-custom input[type=color]');if(custom)custom.value=hex;
+    const custom=picker.querySelector('.popover-custom input.paint-native');if(custom)commitPaintValue(custom,hex);
     const out=picker.querySelector(`[data-out="${cssEscape(picker.dataset.picker)}"]`);if(out)out.textContent=hex;
     closeAllPopovers();renderChart();
   }));
-  $$('.popover-custom input[type=color]').forEach(inp=>inp.addEventListener('input',()=>{
+  $$('[data-grad-swatch]').forEach(btn=>btn.addEventListener('click',()=>{
+    const spec=btn.dataset.gradSwatch,picker=btn.closest('.color-picker');if(!picker)return;
+    const idx=Number(picker.dataset.picker.split(':')[1]);
+    state.chart.palette[idx]=spec;ensurePalette(chartGroups().length);rememberPalette(state.chart.palette);
+    const trg=picker.querySelector('.color-trigger');if(trg)trg.style.background=paintCss(spec);
+    const custom=picker.querySelector('.popover-custom input.paint-native');if(custom)commitPaintValue(custom,spec);
+    const out=picker.querySelector(`[data-out="${cssEscape(picker.dataset.picker)}"]`);if(out)out.textContent=paintLabel(spec);
+    closeAllPopovers();renderChart();
+  }));
+  $$('.popover-custom input.paint-native').forEach(inp=>inp.addEventListener('input',()=>{
     const picker=inp.closest('.color-picker'),trg=picker?picker.querySelector('.color-trigger'):null;
-    if(trg)trg.style.background=inp.value;
+    if(trg)trg.style.background=paintCss(inp.value);
   }));
   if(!window._colorPopoverBound){window._colorPopoverBound=true;
     document.addEventListener('click',ev=>{if(!ev.target.closest('.color-picker'))$$('.color-popover.open').forEach(p=>p.classList.remove('open'));});
@@ -4047,17 +4300,17 @@ function buildMethodNote(){const s=state.chart.settings;const et=s.errorType||'s
   const ltx=s.letterScheme==='twoWay'?'双因素主效应比较（大写字母对应横轴因素、小写对应分组因素，如 Aa、Bb）':'单因素组内比较（每个横轴分组内比较各系列）';
   return '数据以平均值±'+etxt+'表示。采用方差分析（ANOVA）进行多组比较，事后多重比较采用 '+pm+' 法，显著性水平 α=0.05。柱（点）上不同字母表示组间差异显著（P<0.05），相同字母表示差异不显著。本图显著性分析方式：'+ltx+'。';}
 function rememberPalette(colors){try{localStorage.setItem('foodlab-last-palette',JSON.stringify(colors))}catch(_e){}}
-function exportPalette(){var colors=state.chart.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)});if(!colors.length){toast('当前没有可用颜色');return}
+function exportPalette(){var colors=state.chart.palette.filter(function(c){return typeof c==='string'&&(/^#/.test(c)||isGradientPaint(c))});if(!colors.length){toast('当前没有可用颜色');return}
   var name=prompt('给这套配色起个名字：','我的配色')||'我的配色';rememberPalette(colors);
   download(new Blob([JSON.stringify({type:'foodlab-palette',name:name,colors:colors},null,2)],{type:'application/json'}),safeFile(name)+'_配色.json');toast('配色已保存，并记住为下次默认')}
 async function importPalette(file){try{var obj=JSON.parse(await readAsText(file));var colors=Array.isArray(obj)?obj:obj.colors;if(!Array.isArray(colors)||!colors.length)throw new Error('格式不对');
-    colors=colors.filter(function(c){return typeof c==='string'}).map(function(c){return /^#/.test(c)?c:'#'+c});if(!colors.length)throw new Error('没有颜色');
+    colors=colors.filter(function(c){return typeof c==='string'}).map(function(c){return (/^#/.test(c)||isGradientPaint(c))?c:'#'+c});if(!colors.length)throw new Error('没有颜色');
     state.chart.palette=colors;ensurePalette(chartGroups().length);rememberPalette(colors);renderProperties();renderChart();toast('配色已导入')}
   catch(err){toast('导入失败：'+(err.message||'格式错误'))}}
 function applyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.chart.palette=colors;ensurePalette(chartGroups().length);rememberPalette(colors);renderProperties();renderChart();toast('已应用 '+colors.length+' 个颜色')}
-function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),seriesStyles:Object.assign({},state.chart.seriesStyles||{}),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
+function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&(/^#/.test(c)||isGradientPaint(c))}),settings:Object.assign({},s),seriesStyles:Object.assign({},state.chart.seriesStyles||{}),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function importStyle(file){try{var obj=JSON.parse(await readAsText(file));
     if(obj.protocol==='sp1'||(obj.meta&&obj.meta.chartType&&obj.colors&&Array.isArray(obj.colors.series))){
