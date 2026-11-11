@@ -3289,21 +3289,22 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
     const bF2=P(x0,yBase,k+tD),bR2=P(x1,yBase,k+tD),tR2=P(x1,yTop,k+tD),tF2=P(x0,yTop,k+tD);
     const faceTop=[tF,tR,tR2,tF2],faceSideL=[bF,tF,tF2,bF2],faceSideR=[bR,tR,tR2,bR2];
-    const faceFront=[bF,bR,tR,tF],faceBack=[bF2,bR2,tR2,tF2];
-    // 画家算法：每个不透明柱体从任何角度最多只能看到 3 个面（顶面 + 左右其一 + 前后其一）。
-    // 背面一律不画——既减少冗余绘制，也杜绝"看穿"不透明柱子的底部/侧面。
-    let cFill,cSideBright,cSideDark,cTop,edgeC;
+    const faceFront=[bF,bR,tR,tF];
+    // 可见面判定由投影矩阵的零空间推出（相机方向）：
+    //   相机 x 分量 ∝ -sinA/cosA → A<0 时在 +x 侧，看到 nx=1 面；A>0 时看到 nx=0 面；
+    //   相机 k 分量恒为负 → 深度 k 增大永远朝屏幕上方远离相机，k 端面永远朝向相机。
+    // 因此不透明柱体始终恰好可见 3 个面：顶面 + 左/右其一 + k 端面。
+    let cFill,cSideBright,cTop,edgeC;
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
-      cFill=`url(#b3g-${k}-${i})`;cSideBright=cFill;cSideDark=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
-    }else{const baseC=paintSolid(r.c);cFill=isGradientPaint(r.c)?`url(#b3p-${k}-${i})`:r.c;cSideBright=wfLerpColor(baseC,'#ffffff',.12);cSideDark=wfLerpColor(baseC,'#000000',.38);cTop=wfLerpColor(baseC,'#ffffff',.5);edgeC='#ffffff';}
+      cFill=`url(#b3g-${k}-${i})`;cSideBright=cFill;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
+    }else{const baseC=paintSolid(r.c);cFill=isGradientPaint(r.c)?`url(#b3p-${k}-${i})`:r.c;cSideBright=wfLerpColor(baseC,'#ffffff',.12);cTop=wfLerpColor(baseC,'#ffffff',.5);edgeC='#ffffff';}
     const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
-    // 左右面：cosA>0 时 nx=1（faceSideR）朝相机（亮面），cosA<0 时 nx=0（faceSideL）朝相机
-    if(cA>0)out+=wfPoly(faceSideR,attr(cSideBright));
-    else if(cA<0)out+=wfPoly(faceSideL,attr(cSideBright));
-    // 前后端面：sinA>0 时近端面（k 侧，faceFront）朝相机，sinA<0 时远端面（k+tD 侧，faceBack）朝相机
-    if(sA>0)out+=wfPoly(faceFront,attr(cFill));
-    else if(sA<0)out+=wfPoly(faceBack,attr(cFill));
+    // 左/右面：A<0（sinA<0）时相机在 +x 侧 → 画右面；A>0 → 画左面（A=0 时侧面与视线平行，不可见）
+    if(sA<-1e-6)out+=wfPoly(faceSideR,attr(cSideBright));
+    else if(sA>1e-6)out+=wfPoly(faceSideL,attr(cSideBright));
+    // k 端面：始终朝向相机
+    out+=wfPoly(faceFront,attr(cFill));
     // 顶面：俯仰角 E ∈ [5°,80°] 永远可见
     out+=wfPoly(faceTop,attr(cTop));
     // 误差棒与显著性字母（贴在柱顶前缘中点）
