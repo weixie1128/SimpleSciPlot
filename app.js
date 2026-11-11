@@ -381,7 +381,7 @@ const defaultChartSettings = {
   lowerMin:0, lowerMax:20, upperMin:70, upperMax:82, breakGap:12, lowerRatio:.23,
   wfLayerDx:64, wfLayerDy:80, wfFill:true, wfFillOpacity:.55, wfZLabels:true, wfLineEndLabels:false, wfZLabelSize:11, wfZAxisTitle:'', zTitleSize:12, wfWallColor:'#f7f6f1', wfGridColor:'#d9d7ce', wfGridWidth:.8, wfLegend:true, wfLegendSize:11, wfViewDir:'right', wfLegendStyle:'block', wfWallOpacity:1, wfColorMode:'palette', wfPeakLabels:false, wfPeakMinProminence:0, wfPeakLabelDecimals:1, wfHighlightSelected:false, wfShowMarkers:false,
   // v1.8.7：3D 柱状图专属——方位角（-72–-6°，MATLAB 默认左前视角）、仰角、柱体纵深厚度、按数值渐变、色带、图例自由位置
-  b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,
+  b3Azim:-34,b3Elev:26,b3BarDepth:.7,b3ColorMode:'series',b3Cmap:'plasma',b3LegendX:null,b3LegendY:null,b3BarShape:'box',b3CbLength:118,b3CbWidth:14,b3CbFontSize:12,b3CbOrientation:'vertical',
   b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,b3YAxisEdge:'auto',b3ZAxisEdge:'auto',b3XAxisEdge:'front',
   // v1.9.6：Z 轴独立完整设置
   wfZTitleVisible:true,wfZTitleSize:12,wfZTitleColor:'',wfZTitleWeight:400,
@@ -2856,7 +2856,7 @@ function renderLayers(){
   if(state.chart.type!=='curve'&&!isWf&&!isB3){layers.push(['error','误差棒','special']);if(!state.analysis?.continuous)layers.push(['letters','显著性字母','special'])}
   if(state.chart.annotations.length){layers.push(['section','标注对象']);state.chart.annotations.forEach((a,i)=>layers.push([`annotation:${a.id}`,`${annotationTypeLabel(a.type)} ${i+1}`,'special']))}
   if(isWf)layers.push(['section','图形专属'],['wf-axes','坐标轴与网格线','special'],['wf-rotate','旋转与角度','special'],['wf-curves','层曲线与填充','special'],['axis-z','Z 轴与标题','special']);
-  if(isB3)layers.push(['section','图形专属'],['b3-axes','坐标轴与网格线','special'],['b3-rotate','旋转与角度','special'],['b3-colors','柱体颜色与渐变色带','special'],['axis-z','Z 轴与标题','special']);
+  if(isB3)layers.push(['section','图形专属'],['b3-axes','坐标轴与网格线','special'],['b3-rotate','旋转与角度','special'],['b3-colors','柱体形状与颜色','special'],['axis-z','Z 轴与标题','special']);
   $('#layersList').innerHTML=layers.map(item=>{if(item[0]==='section')return`<div class="layer-section-label">${item[1]}</div>`;const[id,name,kind]=item;return`<button class="layer-item ${selectedMatches(id)?'active':''}" data-layer="${esc(id)}"><span class="layer-dot"></span>${esc(name)}<span class="layer-tag ${kind==='special'?'special':''}">${kind==='special'?'专属':'基础'}</span></button>`}).join('');
   $$('[data-layer]').forEach(b=>b.addEventListener('click',()=>selectObject(b.dataset.layer)));
 }
@@ -3237,6 +3237,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
       defs+=`<linearGradient id="b3s-${r.k}-${r.i}" x1="0" y1="1" x2="0" y2="0">${gradStops(tb,tt,.2)}</linearGradient>`;
     });
     defs+=`<linearGradient id="b3cb" x1="0" y1="1" x2="0" y2="0">${[0,.25,.5,.75,1].map(f=>`<stop offset="${f*100}%" stop-color="${cmap(f)}"/>`).join('')}</linearGradient>`;
+    defs+=`<linearGradient id="b3cbh" x1="0" y1="0" x2="1" y2="0">${[0,.25,.5,.75,1].map(f=>`<stop offset="${f*100}%" stop-color="${cmap(f)}"/>`).join('')}</linearGradient>`;
   }else{
     // 系列模式下的渐变色：沿数值轴铺满整条 Y 范围，每根柱只露出自己高度对应的那一段，
     // 与文献里“按值着色”的立体柱效果一致，而不是单面左右渐变。
@@ -3294,19 +3295,28 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     //   相机 x 分量 ∝ -sinA/cosA → A<0 时在 +x 侧，看到 nx=1 面；A>0 时看到 nx=0 面；
     //   相机 k 分量恒为负 → 深度 k 增大永远朝屏幕上方远离相机，k 端面永远朝向相机。
     // 因此不透明柱体始终恰好可见 3 个面：顶面 + 左/右其一 + k 端面。
-    let cFill,cSideBright,cTop,edgeC;
+    const edgeC=(s.barBorderColorMode==='custom'?(s.barBorderColor||'#000000'):'')||'#ffffff';
+    let cFill,cSideBright,cTop;
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
-      cFill=`url(#b3g-${k}-${i})`;cSideBright=cFill;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
-    }else{const baseC=paintSolid(r.c);cFill=isGradientPaint(r.c)?`url(#b3p-${k}-${i})`:r.c;cSideBright=wfLerpColor(baseC,'#ffffff',.12);cTop=wfLerpColor(baseC,'#ffffff',.5);edgeC='#ffffff';}
+      cFill=`url(#b3g-${k}-${i})`;cSideBright=cFill;cTop=wfLerpColor(topC,'#ffffff',.35);
+    }else{const baseC=paintSolid(r.c);cFill=isGradientPaint(r.c)?`url(#b3p-${k}-${i})`:r.c;cSideBright=wfLerpColor(baseC,'#ffffff',.12);cTop=wfLerpColor(baseC,'#ffffff',.5);}
     const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
-    // 左/右面：A<0（sinA<0）时相机在 +x 侧 → 画右面；A>0 → 画左面（A=0 时侧面与视线平行，不可见）
-    if(sA<-1e-6)out+=wfPoly(faceSideR,attr(cSideBright));
-    else if(sA>1e-6)out+=wfPoly(faceSideL,attr(cSideBright));
-    // k 端面：始终朝向相机
-    out+=wfPoly(faceFront,attr(cFill));
-    // 顶面：俯仰角 E ∈ [5°,80°] 永远可见
-    out+=wfPoly(faceTop,attr(cTop));
+    if(s.b3BarShape==='cylinder'){
+      // 圆柱：顶面椭圆 + 柱身（下沿为前半椭圆弧）；不透明，只画朝向相机的一侧
+      const ct=P(cx,yTop,k+tD/2),cbb=P(cx,yBase,k+tD/2);
+      const rx=Math.max(1.5,Math.abs(P(x1,yTop,k)[0]-P(x0,yTop,k)[0])/2),ry=Math.max(1.2,rx*.42);
+      out+=`<path ${attr(cFill)} d="M${(ct[0]-rx).toFixed(1)},${ct[1].toFixed(1)} L${(cbb[0]-rx).toFixed(1)},${cbb[1].toFixed(1)} A${rx.toFixed(1)},${ry.toFixed(1)} 0 0 0 ${(cbb[0]+rx).toFixed(1)},${cbb[1].toFixed(1)} L${(ct[0]+rx).toFixed(1)},${ct[1].toFixed(1)} Z"/>`;
+      out+=`<ellipse ${attr(cTop)} cx="${ct[0].toFixed(1)}" cy="${ct[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}"/>`;
+    }else{
+      // 左/右面：A<0（sinA<0）时相机在 +x 侧 → 画右面；A>0 → 画左面（A=0 时侧面与视线平行，不可见）
+      if(sA<-1e-6)out+=wfPoly(faceSideR,attr(cSideBright));
+      else if(sA>1e-6)out+=wfPoly(faceSideL,attr(cSideBright));
+      // k 端面：始终朝向相机
+      out+=wfPoly(faceFront,attr(cFill));
+      // 顶面：俯仰角 E ∈ [5°,80°] 永远可见
+      out+=wfPoly(faceTop,attr(cTop));
+    }
     // 误差棒与显著性字母（贴在柱顶前缘中点）
     if(s.errorType&&d.error!=null){
       const midTop=[(tF[0]+tR[0])/2,(tF[1]+tR[1])/2];
@@ -3353,10 +3363,16 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   if(valMode&&s.legendVisible&&K>=1){
     const lx=state.chart.legend.x,ly=state.chart.legend.y;
     out+=`<g data-object="legend" data-drag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})" style="cursor:pointer">`;
-    const cbH=118,cx0=0,txl=20;
-    out+=`<rect x="${cx0}" y="0" width="14" height="${cbH}" fill="url(#b3cb)" stroke="#8a8a8a" stroke-width=".6"/>`;
-    [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const yy=f*cbH+4;
-      out+=`<text x="${txl}" y="${yy.toFixed(1)}" text-anchor="start" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
+    const cbL=Math.max(30,Number(s.b3CbLength)||118),cbW=Math.max(4,Number(s.b3CbWidth)||14),cbFs=Number(s.b3CbFontSize)||12;
+    if(s.b3CbOrientation==='horizontal'){
+      out+=`<rect x="0" y="0" width="${cbL}" height="${cbW}" fill="url(#b3cbh)" stroke="#8a8a8a" stroke-width=".6"/>`;
+      [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const xx=f*cbL;
+        out+=`<text x="${xx.toFixed(1)}" y="${(cbW+cbFs+2).toFixed(1)}" text-anchor="middle" font-size="${cbFs}" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
+    }else{
+      out+=`<rect x="0" y="0" width="${cbW}" height="${cbL}" fill="url(#b3cb)" stroke="#8a8a8a" stroke-width=".6"/>`;
+      [[0,bmax],[.5,(bmax+bmin)/2],[1,bmin]].forEach(([f,val])=>{const yy=f*cbL+cbFs*.35;
+        out+=`<text x="${(cbW+6).toFixed(1)}" y="${yy.toFixed(1)}" text-anchor="start" font-size="${cbFs}" fill="#333">${formatAxisNumber(val,s.yTickDecimals,yStep,false)}</text>`;});
+    }
     out+=`</g>`;
   }else{
     out+=renderLegendFrame(gs,colors);
@@ -3832,17 +3848,31 @@ function renderProperties(){
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
-    rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1),
-    rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01)])
+    rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1)])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
-+'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱间距、组宽度、柱填充透明度、柱边框粗细在「数据系列」面板里改。</div>';}
-  else if(id==='b3-colors'){name='柱体颜色与渐变色带';html=
-'<div class="object-property-section"><h3>柱体颜色与渐变色带</h3></div>'+fieldGroup([
++'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱体形状、粗细、边框和渐变在「柱体形状与颜色」面板里改。</div>';}
+  else if(id==='b3-colors'){name='柱体形状与颜色';html=
+'<div class="object-property-section"><h3>柱体形状</h3></div>'+fieldGroup([
+    selectField('b3BarShape','柱体形状',[['box','方柱（默认）'],['cylinder','圆柱']]),
+    rangeField('categoryWidth','柱体宽度（组宽度）',.35,.95,.01),
+    rangeField('barGap','柱体间距',0,16,1),
+    rangeField('b3BarDepth','柱体纵深厚度（前后）',.35,.95,.01)])
++'<div class="object-property-section"><h3>柱体边框</h3></div>'+fieldGroup([
+    rangeField('barBorderWidth','边框粗细',0,3,.1),
+    selectField('barBorderColorMode','边框颜色',[['auto','白色描边（默认）'],['custom','自定义颜色']]),
+    ...((state.chart.settings.barBorderColorMode==='custom')?[colorField('barBorderColor','自定义边框颜色')]:[]),
+    rangeField('barOpacity','柱体填充透明度',.25,1,.05)])
++'<div class="object-property-section"><h3>柱体颜色与渐变色带</h3></div>'+fieldGroup([
     selectField('b3ColorMode','着色方式',[['series','按系列着色（默认）'],['value','按数值渐变（MATLAB 风格）']]),
     selectField('b3Cmap','渐变色带',[['plasma','等离子 Plasma'],['viridis','翠绿 Viridis'],['inferno','熔岩 Inferno'],['rdbu','红–蓝'],['terrain','地形 Terrain']]),
     selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
-+'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条；单个系列的颜色点颜色条即可换纯色或渐变。</div>';}
++'<div class="object-property-section"><h3>数值色带图例</h3></div>'+fieldGroup([
+    selectField('b3CbOrientation','色带方向',[['vertical','垂直'],['horizontal','水平']]),
+    rangeField('b3CbLength','色带长度',30,360,1),
+    rangeField('b3CbWidth','色带粗细',4,48,1),
+    rangeField('b3CbFontSize','色带数字字号',6,26,1)])
++'<div class="hint">色带只在「按数值渐变」时出现，可直接拖动位置、双击复位；长度/粗细/字号与热图色带一致可调。</div>';}
   else if(id==='series'){const idx=clamp(state.chart.selectedSeries,0,Math.max(0,gs.length-1));name=`数据系列 · ${gs[idx]||'Series'}`;
     // v1.8.4：按图形类型裁剪控件——瀑布图不显示柱状图控件，3D 柱状图不显示折线/marker 控件，
     // 避免面板上堆着一堆对当前图形无效的选项。
@@ -3850,8 +3880,8 @@ function renderProperties(){
     const _lineFields=_isB3?[]:[rangeField('lineWidth','全系列折线粗细',.5,7,.1),rangeField('markerSize','全系列标记大小',1,16,.2)];
     const _seriesLineFields=_isB3?[]:[rangeField(`series:${idx}:lineWidth`,'本系列折线粗细',.5,7,.1),rangeField(`series:${idx}:markerSize`,'本系列标记大小',1,16,.2),markerShapeGrid(idx),selectField(`series:${idx}:markerFill`,'本系列标记填充',[['white','白色空心'],['series','同系列颜色']])];
     const _lineModeField=(_isWf||_isB3)?[]:[selectField('lineMode','折线连接方式',[['straight','直线连接'],['smooth','平滑连接']])];
-    const _barFields=_isWf?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
-    const _barBorderColor=(_isWf||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
+    const _barFields=(_isWf||_isB3)?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
+    const _barBorderColor=(_isWf||_isB3||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
     html=(_isB3?'':'<div class="object-property-section"><h3>全系列样式</h3></div>'+fieldGroup(_lineFields))+fieldGroup([
     seriesColorPicker(idx),..._seriesLineFields,
     ..._lineModeField,
