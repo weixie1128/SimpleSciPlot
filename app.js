@@ -190,12 +190,14 @@ function ensurePaintPopover(){
   paintPop.insertAdjacentHTML('beforeend',
     '<div class="paint-pop-head"><b>颜色 / 渐变色</b><button type="button" class="paint-pop-close" data-paint-close aria-label="关闭">×</button></div>'
     +'<div class="paint-pop-sec"><span class="paint-sec-title">纯色</span><div class="paint-solid"><input type="color" data-paint-solid><input type="text" data-paint-hex maxlength="9" spellcheck="false" placeholder="#000000"></div></div>'
+    +'<details class="paint-grad-box" data-paint-gradbox style="border:1px solid #dde4e9;border-radius:8px;margin:0 0 8px"><summary style="cursor:pointer;padding:7px 9px;font-size:12px;font-weight:600;color:#2f5d4f;background:#f4f8f6;border-radius:8px">渐变色（点击展开）</summary><div style="padding:8px 9px 10px">'
     +'<div class="paint-pop-sec"><span class="paint-sec-title">论文常用渐变色（点击应用）</span><div class="paint-presets" data-paint-presets>'
     +PAINT_PRESETS.map(p=>`<button type="button" class="paint-preset" data-paint-grad="grad:${p.id}" title="${p.name}" style="background:${paintCss('grad:'+p.id)}"><span>${p.name}</span></button>`).join('')
     +'</div></div>'
     +'<div class="paint-pop-sec"><span class="paint-sec-title">自定义渐变</span><div class="paint-custom"><input type="color" data-paint-c1 value="#3C5488" title="起点颜色"><input type="color" data-paint-c2 value="#00A087" title="终点颜色"><select data-paint-angle title="渐变方向">'
     +[0,45,90,135,180,225,270,315].map(a=>`<option value="${a}" ${a===0?'selected':''}>${a}°${a===0?'（竖向）':a===90?'（横向）':''}</option>`).join('')
-    +'</select></div><button type="button" class="paint-apply" data-paint-apply-custom>应用自定义渐变</button></div>');
+    +'</select></div><button type="button" class="paint-apply" data-paint-apply-custom>应用自定义渐变</button></div>'
+    +'</div></details>');
   document.body.appendChild(paintPop);
   paintPop.addEventListener('click',ev=>{
     if(ev.target.closest('[data-paint-close]')){closePaintPopover();return}
@@ -228,6 +230,7 @@ function openPaintPopover(input,anchor){
   if(!input||!anchor||!anchor.isConnected)return;
   ensurePaintPopover();
   paintPopTarget=input;
+  const _gb=paintPop.querySelector('[data-paint-gradbox]');if(_gb)_gb.open=false;
   const cur=input.value||'#ffffff';
   const g=isGradientPaint(cur)?parseGradientPaint(cur):null;
   const hexFor=r=>/^#[0-9a-f]{6}$/i.test(r)?r:'#ffffff';
@@ -2852,8 +2855,8 @@ function renderLayers(){
   gs.forEach((g,i)=>layers.push([`series:${i}`,`数据系列 · ${g}`,'series']));
   if(state.chart.type!=='curve'&&!isWf&&!isB3){layers.push(['error','误差棒','special']);if(!state.analysis?.continuous)layers.push(['letters','显著性字母','special'])}
   if(state.chart.annotations.length){layers.push(['section','标注对象']);state.chart.annotations.forEach((a,i)=>layers.push([`annotation:${a.id}`,`${annotationTypeLabel(a.type)} ${i+1}`,'special']))}
-  if(isWf)layers.push(['section','图形专属'],['axis-z','Z 轴与标题','special'],['waterfall3d','3D 瀑布图','special']);
-  if(isB3)layers.push(['section','图形专属'],['axis-z','Z 轴与标题','special'],['bar3d','3D 柱状图','special']);
+  if(isWf)layers.push(['section','图形专属'],['wf-axes','坐标轴与网格线','special'],['wf-rotate','旋转与角度','special'],['wf-curves','层曲线与填充','special'],['axis-z','Z 轴与标题','special']);
+  if(isB3)layers.push(['section','图形专属'],['b3-axes','坐标轴与网格线','special'],['b3-rotate','旋转与角度','special'],['b3-colors','柱体颜色与渐变色带','special'],['axis-z','Z 轴与标题','special']);
   $('#layersList').innerHTML=layers.map(item=>{if(item[0]==='section')return`<div class="layer-section-label">${item[1]}</div>`;const[id,name,kind]=item;return`<button class="layer-item ${selectedMatches(id)?'active':''}" data-layer="${esc(id)}"><span class="layer-dot"></span>${esc(name)}<span class="layer-tag ${kind==='special'?'special':''}">${kind==='special'?'专属':'基础'}</span></button>`}).join('');
   $$('[data-layer]').forEach(b=>b.addEventListener('click',()=>selectObject(b.dataset.layer)));
 }
@@ -3116,16 +3119,11 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   // 5) 棱线：前轴粗，后轮廓细
   const ac=s.axisColor,aw=s.axisWidth;
   // v1.9.52：瀑布图盒子棱分色——三条坐标轴棱保持深色，其余棱与顶面用网格线颜色
+  // 仅绘制三条坐标轴主棱，不画完整盒子轮廓
   out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
     +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,K)[0].toFixed(1)},${P(zEdgeNx,0,K)[1].toFixed(1)}"/>`
     +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
-    +`</g>`;
-  out+=`<g stroke="${gc}" stroke-width="${gw}" fill="none" stroke-linecap="square">`
-    +`<path d="M${P(1-zEdgeNx,0,0)[0].toFixed(1)},${P(1-zEdgeNx,0,0)[1].toFixed(1)} L${P(1-zEdgeNx,0,K)[0].toFixed(1)},${P(1-zEdgeNx,0,K)[1].toFixed(1)}"/>`
-    +`<path d="M${P(1-sideNx,0,0)[0].toFixed(1)},${P(1-sideNx,0,0)[1].toFixed(1)} L${P(1-sideNx,1,0)[0].toFixed(1)},${P(1-sideNx,1,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,K)[0].toFixed(1)},${P(zEdgeNx,0,K)[1].toFixed(1)} L${P(zEdgeNx,1,K)[0].toFixed(1)},${P(zEdgeNx,1,K)[1].toFixed(1)} L${P(sideNx,1,K)[0].toFixed(1)},${P(sideNx,1,K)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(0,1,0)[0].toFixed(1)},${P(0,1,0)[1].toFixed(1)} L${P(1,1,0)[0].toFixed(1)},${P(1,1,0)[1].toFixed(1)}"/>`
     +`</g>`;
   // 6) X 刻度（前底边）
   const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
@@ -3269,24 +3267,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const ac=s.axisColor,aw=s.axisWidth;
   const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
   const yStep=yTicksNice.length>1?(yTicksNice[1]-yTicksNice[0]):1;
-  // v1.9.52：盒子棱分色——非坐标轴棱用网格线颜色，坐标轴棱跳过（由下方深色主轴绘制）
-  out+=`<g data-object="axis-box" class="chart-object" stroke="${gc}" stroke-width="${gw}" fill="none" stroke-linecap="square">`;
-  if(xK!==0)    out+=`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`;
-  if(xK!==KD)   out+=`<path d="M${P(0,0,KD)[0].toFixed(1)},${P(0,0,KD)[1].toFixed(1)} L${P(1,0,KD)[0].toFixed(1)},${P(1,0,KD)[1].toFixed(1)}"/>`;
-  if(zEdgeNx!==sideNx)  out+=`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,0,KD)[0].toFixed(1)},${P(sideNx,0,KD)[1].toFixed(1)}"/>`;
-  if(zEdgeNx!==1-sideNx)out+=`<path d="M${P(1-sideNx,0,0)[0].toFixed(1)},${P(1-sideNx,0,0)[1].toFixed(1)} L${P(1-sideNx,0,KD)[0].toFixed(1)},${P(1-sideNx,0,KD)[1].toFixed(1)}"/>`;
-  if(!(yNx===sideNx&&yK===0))   out+=`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`;
-  if(!(yNx===sideNx&&yK===KD))  out+=`<path d="M${P(sideNx,0,KD)[0].toFixed(1)},${P(sideNx,0,KD)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)}"/>`;
-  if(!(yNx===1-sideNx&&yK===0)) out+=`<path d="M${P(1-sideNx,0,0)[0].toFixed(1)},${P(1-sideNx,0,0)[1].toFixed(1)} L${P(1-sideNx,1,0)[0].toFixed(1)},${P(1-sideNx,1,0)[1].toFixed(1)}"/>`;
-  if(!(yNx===1-sideNx&&yK===KD))out+=`<path d="M${P(1-sideNx,0,KD)[0].toFixed(1)},${P(1-sideNx,0,KD)[1].toFixed(1)} L${P(1-sideNx,1,KD)[0].toFixed(1)},${P(1-sideNx,1,KD)[1].toFixed(1)}"/>`;
-  out+=`</g>`;
-  out+=`<g stroke="${gc}" stroke-width="${gw}" fill="none" stroke-linecap="square">`
-    +`<path d="M${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)} L${P(sideNx,1,KD)[0].toFixed(1)},${P(sideNx,1,KD)[1].toFixed(1)}"/>`
-    +`<path d="M${P(1-sideNx,1,0)[0].toFixed(1)},${P(1-sideNx,1,0)[1].toFixed(1)} L${P(1-sideNx,1,KD)[0].toFixed(1)},${P(1-sideNx,1,KD)[1].toFixed(1)}"/>`
-    +`<path d="M${P(0,1,0)[0].toFixed(1)},${P(0,1,0)[1].toFixed(1)} L${P(1,1,0)[0].toFixed(1)},${P(1,1,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(0,1,KD)[0].toFixed(1)},${P(0,1,KD)[1].toFixed(1)} L${P(1,1,KD)[0].toFixed(1)},${P(1,1,KD)[1].toFixed(1)}"/>`
-    +`</g>`;
-  // 用户指定棱上的三条主轴（X 底棱 / Y 竖棱 / Z 底线）
+  // 仅绘制用户指定的三条坐标轴主棱——墙面本身已有网格线，足够定位；
+  // 不画完整立方体盒子，避免把所有坐标轴"连起来"形成立方体壳。
   out+=`<g class="b3-axis-edges" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,xK)[0].toFixed(1)},${P(0,0,xK)[1].toFixed(1)} L${P(1,0,xK)[0].toFixed(1)},${P(1,0,xK)[1].toFixed(1)}"/>`
     +`<path d="M${P(yNx,0,yK)[0].toFixed(1)},${P(yNx,0,yK)[1].toFixed(1)} L${P(yNx,1,yK)[0].toFixed(1)},${P(yNx,1,yK)[1].toFixed(1)}"/>`
@@ -3306,20 +3288,24 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const strokeOp=dimmed?'.35':'1';
     const bF=P(x0,yBase,k),bR=P(x1,yBase,k),tR=P(x1,yTop,k),tF=P(x0,yTop,k);
     const bF2=P(x0,yBase,k+tD),bR2=P(x1,yBase,k+tD),tR2=P(x1,yTop,k+tD),tF2=P(x0,yTop,k+tD);
-    const faceTop=[tF,tR,tR2,tF2],faceSideL=[bF,tF,tF2,bF2],faceSideR=[bR,tR,tR2,bR2],faceFront=[bF,bR,tR,tF];
-    // v1.9.52：亮暗面区分——光面方向跟随相机方位角 cosA，旋转过程中自然切换；
-    // 投影 u=(nx-.5)cA-... → cosA>0 时 nx=1 侧朝相机（亮），cosA<0 时 nx=0 侧朝相机（亮）
+    const faceTop=[tF,tR,tR2,tF2],faceSideL=[bF,tF,tF2,bF2],faceSideR=[bR,tR,tR2,bR2];
+    const faceFront=[bF,bR,tR,tF],faceBack=[bF2,bR2,tR2,tF2];
+    // 画家算法：每个不透明柱体从任何角度最多只能看到 3 个面（顶面 + 左右其一 + 前后其一）。
+    // 背面一律不画——既减少冗余绘制，也杜绝"看穿"不透明柱子的底部/侧面。
     let cFill,cSideBright,cSideDark,cTop,edgeC;
     if(valMode){
       const tt=tVal(d.mean),topC=cmap(tt);
       cFill=`url(#b3g-${k}-${i})`;cSideBright=cFill;cSideDark=`url(#b3s-${k}-${i})`;cTop=wfLerpColor(topC,'#ffffff',.35);edgeC='#ffffff';
     }else{const baseC=paintSolid(r.c);cFill=isGradientPaint(r.c)?`url(#b3p-${k}-${i})`:r.c;cSideBright=wfLerpColor(baseC,'#ffffff',.12);cSideDark=wfLerpColor(baseC,'#000000',.38);cTop=wfLerpColor(baseC,'#ffffff',.5);edgeC='#ffffff';}
-    const lightOnRight=(cA>0);
     const attr=fill=>`data-object="series" data-series="${k}" class="chart-object" fill="${fill}" fill-opacity="${frontOp}" stroke="${edgeC}" stroke-width="${s.barBorderWidth}" stroke-opacity="${strokeOp}" style="cursor:pointer"`;
-    out+=wfPoly(faceSideL,attr(lightOnRight?cSideDark:cSideBright));
-    out+=wfPoly(faceSideR,attr(lightOnRight?cSideBright:cSideDark));
+    // 左右面：cosA>0 时 nx=1（faceSideR）朝相机（亮面），cosA<0 时 nx=0（faceSideL）朝相机
+    if(cA>0)out+=wfPoly(faceSideR,attr(cSideBright));
+    else if(cA<0)out+=wfPoly(faceSideL,attr(cSideBright));
+    // 前后端面：sinA>0 时近端面（k 侧，faceFront）朝相机，sinA<0 时远端面（k+tD 侧，faceBack）朝相机
+    if(sA>0)out+=wfPoly(faceFront,attr(cFill));
+    else if(sA<0)out+=wfPoly(faceBack,attr(cFill));
+    // 顶面：俯仰角 E ∈ [5°,80°] 永远可见
     out+=wfPoly(faceTop,attr(cTop));
-    out+=wfPoly(faceFront,attr(cFill));
     // 误差棒与显著性字母（贴在柱顶前缘中点）
     if(s.errorType&&d.error!=null){
       const midTop=[(tF[0]+tR[0])/2,(tF[1]+tR[1])/2];
@@ -3581,7 +3567,7 @@ function bindChartObjects(){
     // v1.8.5：3D 柱状图空白处旋转手势结束后，忽略随之而来的 background 点击（避免误选背景面板）
     if(el.dataset.object==='background'&&b3GestureMoved){b3GestureMoved=false;return}
     if(el.dataset.annotationId)selectObject(`annotation:${el.dataset.annotationId}`);
-    else{let target=el.dataset.object;if(target==='b3legend')target='bar3d';selectObject(target,el.dataset.series)}};
+    else{let target=el.dataset.object;if(target==='b3legend')target='b3-colors';if(target==='wflegend')target='wf-curves';selectObject(target,el.dataset.series)}};
 }
 
 function openLetterEditor(t){ensureLetterEditor().open(t)}
@@ -3665,7 +3651,7 @@ function bindDraggables(){
       e.preventDefault();e.stopPropagation();
       const key=el.dataset.drag,start=svgPoint(svg,e),snapshot=dragSnapshot(key,el);
       el.setPointerCapture(e.pointerId);el.classList.add('dragging');
-      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'bar3d':key==='wflegend'?'bar3d':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':key==='zTitle'?'axis-z':'axis-y';
+      const target=key==='annotation'?`annotation:${el.dataset.annotationId}`:key==='legend'?'legend':key==='legendFrame'?'legend-frame':key==='b3legend'?'b3-colors':key==='wflegend'?'wf-curves':key==='title'?'title':key==='subtitle'?'subtitle':key==='xTitle'?'axis-x':key==='zTitle'?'axis-z':'axis-y';
       selectObject(target);
       const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;applyDrag(key,snapshot,dx,dy,el)};
       const up=()=>{el.classList.remove('dragging');el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);renderChart();renderProperties()};
@@ -3777,7 +3763,7 @@ function renderProperties(){
   else if(id==='frame'){name='图片边框';html=fieldGroup([
     selectField('frameMode','边框形式',[['lb','仅左、下轴'],['lbr','左、下、右三边'],['box','完整四边框'],['none','不显示边框']]),rangeField('frameWidth','边框粗细',.5,6,.1),colorField('frameColor','边框颜色')
   ]);}
-  else if(id==='waterfall3d'){name='3D 瀑布图';html=
+  else if(id==='wf-axes'){name='坐标轴与网格线';html=
 '<div class="object-property-section"><h3>坐标轴与网格线</h3></div>'+fieldGroup([
     colorField('wfWallColor','统一墙面底色'),
     rangeField('wfWallOpacity','墙面透明度',0,1,.05),
@@ -3795,14 +3781,17 @@ function renderProperties(){
     rangeField('wfGridWidthBottom','底面网格粗细',.1,2,.1),
     colorField('wfZeroLineColor','基准线（0 线）颜色'),
     rangeField('wfZeroLineWidth','基准线加粗（0＝不加粗）',0,4,.1)])+'</details>'
-+'<div class="hint">非坐标轴的盒棱与顶面轮廓使用“统一网格线颜色 / 粗细”；Z 轴层标签与标题在“Z 轴与标题”里改。</div>'
-+'<div class="object-property-section"><h3>旋转与角度</h3></div>'+fieldGroup([
++'<div class="hint">墙面本身已带网格线，不再额外画立方体外框；Z 轴刻度与标题在「Z 轴与标题」标签页里改。</div>';}
+  else if(id==='wf-rotate'){name='旋转与角度';html=
+'<div class="object-property-section"><h3>旋转与角度</h3></div>'+fieldGroup([
     rangeField('wfAzim','水平旋转角（方位）',-72,-6,1),
     rangeField('wfElev','俯仰角（仰角）',12,55,1),
     selectField('wfViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
     rangeField('wfLayerDx','层间水平错开（向右纵深）',0,220,1),
     rangeField('wfLayerDy','层间垂直错开（向上纵深）',0,220,1)])
-+'<div class="object-property-section"><h3>层曲线与填充</h3></div>'+fieldGroup([
++'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；层数与层名在左侧「数据系列」里改。</div>';}
+  else if(id==='wf-curves'){name='层曲线与填充';html=
+'<div class="object-property-section"><h3>层曲线与填充</h3></div>'+fieldGroup([
     checkField('wfFill','每层填充到基线'),
     rangeField('wfFillOpacity','填充不透明度',0,1,.05),
     checkField('wfShowMarkers','显示数据点 marker'),
@@ -3813,9 +3802,8 @@ function renderProperties(){
     checkField('wfPeakLabels','自动标注每层峰值'),
     rangeField('wfPeakMinProminence','最小突出度（过滤小峰）',0,5,.1),
     selectField('wfPeakLabelDecimals','数值小数位',[['0','整数'],['1','1 位'],['2','2 位'],['3','3 位']])])
-+'<div class="method-badge">X ＝ 横轴点（波长/时间），在“X 轴与横标题”里改；Y ＝ 数值（前左竖边），在“Y 轴与纵标题”里改；Z ＝ 层（右斜边），在“Z 轴与标题”里改；图例设置在“图例内容”。</div>';
-  }
-  else if(id==='bar3d'){name='3D 柱状图';html=
++'<div class="hint">每层曲线的线宽、颜色、marker 形状在左侧「数据系列」里单独设置。</div>';}
+  else if(id==='b3-axes'){name='坐标轴与网格线';html=
 '<div class="object-property-section"><h3>坐标轴与网格线</h3></div>'+fieldGroup([
     selectField('b3YAxisEdge','Y 轴所在竖棱',[['auto','跟随侧墙（默认）'],['lf','左前'],['lb','左后'],['rf','右前'],['rb','右后']]),
     selectField('b3XAxisEdge','X 轴所在底棱',[['front','前侧（默认）'],['back','后侧']]),
@@ -3836,8 +3824,9 @@ function renderProperties(){
     rangeField('wfGridWidthBottom','底面网格粗细',.1,2,.1),
     colorField('wfZeroLineColor','基准线（0 线）颜色'),
     rangeField('wfZeroLineWidth','基准线加粗（0＝不加粗）',0,4,.1)])+'</details>'
-+'<div class="hint">非坐标轴的盒棱与顶面轮廓使用“统一网格线颜色 / 粗细”；Z 轴刻度与标题在“Z 轴与标题”里改。</div>'
-+'<div class="object-property-section"><h3>旋转与角度</h3></div>'+fieldGroup([
++'<div class="hint">墙面本身已带网格线，不再额外画立方体外框；Z 轴刻度与标题在「Z 轴与标题」标签页里改。</div>';}
+  else if(id==='b3-rotate'){name='旋转与角度';html=
+'<div class="object-property-section"><h3>旋转与角度</h3></div>'+fieldGroup([
     rangeField('b3Azim','水平旋转角（方位）',-20,90,1),
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
@@ -3845,15 +3834,14 @@ function renderProperties(){
     rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1),
     rangeField('b3BarDepth','柱体纵深厚度（前后宽度）',.35,.95,.01)])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
-+'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱间距、组宽度（左右宽度）、柱填充透明度、柱边框粗细在「数据系列」面板里改。</div>'
-+'<div class="object-property-section"><h3>柱体颜色与渐变色带</h3></div>'+fieldGroup([
++'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱间距、组宽度、柱填充透明度、柱边框粗细在「数据系列」面板里改。</div>';}
+  else if(id==='b3-colors'){name='柱体颜色与渐变色带';html=
+'<div class="object-property-section"><h3>柱体颜色与渐变色带</h3></div>'+fieldGroup([
     selectField('b3ColorMode','着色方式',[['series','按系列着色（默认）'],['value','按数值渐变（MATLAB 风格）']]),
     selectField('b3Cmap','渐变色带',[['plasma','等离子 Plasma'],['viridis','翠绿 Viridis'],['inferno','熔岩 Inferno'],['rdbu','红–蓝'],['terrain','地形 Terrain']]),
     selectField('wfColorMode','系列配色（按系列时）',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfHighlightSelected','选中某层时其他层变淡')])
-+'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条。</div>'
-+'<div class="method-badge">X ＝ 横轴类别（因素1水平），在“X 轴与横标题”里改；Y ＝ 均值（柱高），在“Y 轴与纵标题”里改；Z ＝ 纵深系列（因素2水平），相关设置在“Z 轴与标题”；图例设置在“图例内容”；旋转视角后导出/拼图会按当前角度出图。</div>';
-  }
++'<div class="hint">「按数值渐变」时柱体颜色代表均值大小（柱底→柱顶对应数值由小到大），系列图例自动替换为数值色条；单个系列的颜色点颜色条即可换纯色或渐变。</div>';}
   else if(id==='series'){const idx=clamp(state.chart.selectedSeries,0,Math.max(0,gs.length-1));name=`数据系列 · ${gs[idx]||'Series'}`;
     // v1.8.4：按图形类型裁剪控件——瀑布图不显示柱状图控件，3D 柱状图不显示折线/marker 控件，
     // 避免面板上堆着一堆对当前图形无效的选项。
@@ -3885,7 +3873,7 @@ function renderProperties(){
   else if(id==='palette'){name='配色参数';html=paletteBlock()+paletteButtons();}
   else if(id==='style'){name='图片参数';html=styleButtons();}
   else if(id==='methodnote'){name='方法说明';const note=s.methodNote||buildMethodNote();html='<div class="subhead">方法说明（可编辑、可复制到论文）</div><textarea id="methodNoteArea" style="width:100%;min-height:220px;font-size:13px;line-height:1.7;padding:10px;border:1px solid #c9d2d8;border-radius:6px;resize:vertical;box-sizing:border-box" placeholder="自动生成方法说明...">'+esc(note)+'</textarea><div style="display:flex;gap:6px;margin-top:8px"><button type="button" id="regenMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">重新自动生成</button><button type="button" id="copyMethodNote" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复制全部</button></div><div class="hint">这段文字不画到图上，供你复制进论文「材料与方法」；直接在框里改字，点空白处自动保存。</div>';}
-  $('#selectedObjectName').textContent=name||'未选择对象';$('#propertyEditor').innerHTML=html||'<div class="empty-state">在图中点击一个对象</div>';const badge=$('#propertyScopeBadge');if(badge){const special=['series','error','letters','axis-z','waterfall3d','bar3d','palette','style'].includes(id)||id.startsWith('annotation:');badge.textContent=special?'图形专属':'基础';badge.classList.toggle('chart-specific',special)}bindPropertyInputs();
+  $('#selectedObjectName').textContent=name||'未选择对象';$('#propertyEditor').innerHTML=html||'<div class="empty-state">在图中点击一个对象</div>';const badge=$('#propertyScopeBadge');if(badge){const special=['series','error','letters','axis-z','wf-axes','wf-rotate','wf-curves','b3-axes','b3-rotate','b3-colors','palette','style'].includes(id)||id.startsWith('annotation:');badge.textContent=special?'图形专属':'基础';badge.classList.toggle('chart-specific',special)}bindPropertyInputs();
   const mna=$('#methodNoteArea');if(mna)mna.oninput=()=>{state.chart.settings.methodNote=mna.value};
   const rg=$('#regenMethodNote');if(rg)rg.onclick=()=>{delete state.chart.settings.methodNote;renderProperties()};
   const cp=$('#copyMethodNote');if(cp)cp.onclick=()=>{const a=$('#methodNoteArea');if(a&&navigator.clipboard)navigator.clipboard.writeText(a.value).then(()=>toast('已复制方法说明')).catch(()=>{})};
