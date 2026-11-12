@@ -3192,12 +3192,13 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
   const M={l:104,r:42,t:58,b:102};
   const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
-  const kS=1/Nx*(1+clamp(Number(s.b3LayerDx)||0,0,200)/100); // v1.8.8：层间水平错开缩放
-  const dyOff=clamp(Number(s.b3LayerDy)||0,0,200)/100*0.35; // v1.8.8：层间垂直错开（每层整体抬高）
+  const kS=1/Nx*(1+clamp(Number(s.b3LayerDx)||0,0,200)/100); // 层间沿 Z 轴（纵深）错开
+  const xStagger=clamp(Number(s.b3LayerDy)||0,0,200)/100*(1/Nx)*0.5; // 层间沿 X 轴（横向）错开，每层在 X 方向偏移
   const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*kS*sA;
-  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE+k*dyOff;
+  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE;
   let minU=1e9,maxU=-1e9,minV=1e9,maxV=-1e9;
-  for(const nx of [0,1])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
+  const nxMaxOff=(K/2)*xStagger;
+  for(const nx of [-nxMaxOff,0,1,1+nxMaxOff])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
   const L=Math.min((plotW-24)/(maxU-minU),(plotH-16)/(maxV-minV));
   const ox=M.l+plotW/2-L*(minU+maxU)/2;
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
@@ -3221,7 +3222,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   gs.forEach((g,k)=>{xvals.forEach((x,i)=>{
     const d=(model.byGroup.get(String(g))||[]).find(r=>String(r.x)===String(x));
     if(!d)return;
-    const cx=(i+.5)/Nx;
+    const cx=(i+.5)/Nx+(k-K/2)*xStagger;
     rows.push({g,k,i,d,c:wfColorForLayer(k,gs.length,colors),cx,x0:cx-barWnx/2,x1:cx+barWnx/2,
       yBase:yN(Math.max(bmin,0)),yTop:yN(d.mean),
       near:-(cx-.5)*sA-(k+tD/2-K/2)*kS*cA});
@@ -3410,8 +3411,8 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     out+=`<text data-object="axis-y" data-drag="yTitle" class="chart-object draggable" transform="translate(${ytx.toFixed(1)} ${yty.toFixed(1)}) rotate(${rotY})" text-anchor="middle" font-size="${s.yTitleSize}" font-weight="${s.yTitleWeight||s.globalFontWeight||400}" fill="${s.yTitleColor}">${esc(s.yTitle)}</text>`;}
   // 10) 图例 / 数值色条（统一图例体系，可直接拖动）
   if(valMode&&s.legendVisible&&K>=1){
-    const lx=state.chart.legend.x,ly=state.chart.legend.y;
-    out+=`<g data-object="legend" data-drag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})" style="cursor:pointer">`;
+    const lx=s.b3LegendX!=null?s.b3LegendX:state.chart.legend.x,ly=s.b3LegendY!=null?s.b3LegendY:state.chart.legend.y;
+    out+=`<g data-object="b3legend" data-drag="b3legend" class="chart-object draggable" transform="translate(${lx} ${ly})" style="cursor:pointer">`;
     const cbL=Math.max(30,Number(s.b3CbLength)||118),cbW=Math.max(4,Number(s.b3CbWidth)||14),cbFs=Number(s.b3CbFontSize)||12;
     if(s.b3CbOrientation==='horizontal'){
       out+=`<rect x="0" y="0" width="${cbL}" height="${cbW}" fill="url(#b3cbh)" stroke="#8a8a8a" stroke-width=".6"/>`;
@@ -3904,8 +3905,8 @@ function renderProperties(){
     rangeField('b3Azim','水平旋转角（方位）',-20,90,1),
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
-    rangeField('b3LayerDx','层间水平错开（向右纵深）',0,200,1),
-    rangeField('b3LayerDy','层间垂直错开（向上纵深）',0,200,1)])
+    rangeField('b3LayerDx','层间沿 Z 轴（纵深）错开',0,200,1),
+    rangeField('b3LayerDy','层间沿 X 轴（横向）错开',0,200,1)])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
 +'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱体形状、粗细、边框和渐变在「柱体形状与颜色」面板里改。</div>';}
   else if(id==='b3-colors'){name='柱体形状与颜色';html=
