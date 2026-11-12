@@ -3964,7 +3964,7 @@ function renderProperties(){
       `<div class="field"><label><span>本系列标记颜色</span></label><input data-setting="series:${idx}:markerColor" type="color" value="${getSeriesSetting(idx,'markerColor')||_mc}"></div>`];
     const _lineModeField=(_isWf||_isB3)?[]:[selectField('lineMode','折线连接方式',[['straight','直线连接'],['smooth','平滑连接']])];
     const _barFields=(_isWf||_isB3)?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
-    const _barBorderColor=(_isWf||_isB3||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
+    const _barBorderColor=(_isWf||_isB3)?[]:[colorField('barBorderColor','自定义柱边框颜色（上一项选“自定义颜色”时生效）')];
     html=(_isB3?'':'<div class="object-property-section"><h3>全系列样式</h3></div>'+fieldGroup(_lineFields))+fieldGroup([
     seriesColorPicker(idx),..._seriesLineFields,
     ..._lineModeField,
@@ -4033,7 +4033,7 @@ function textField(k,n){return fieldWrap(n,k,`<input data-setting="${k}" type="t
 function numberField(k,n,min,max,step=1,nullable=false){const v=getSettingValue(k);return fieldWrap(n,k,`<input data-setting="${k}" type="number" ${min!=null?`min="${min}"`:''} ${max!=null?`max="${max}"`:''} step="${step}" value="${v==null&&nullable?'':v??''}" placeholder="自动">`)}
 function rangeField(k,n,min,max,step){return fieldWrap(n,k,`<input data-setting="${k}" type="range" min="${min}" max="${max}" step="${step}" value="${getSettingValue(k)}">`)}
 function colorField(k,n){const v=getSettingValue(k);return fieldWrap(n,k,`<input data-setting="${k}" type="color" value="${v}">`)}
-function selectField(k,n,options){const current=getSettingValue(k);return fieldWrap(n,k,`<select data-setting="${k}">${options.map(([v,l])=>`<option value="${v}" ${String(current)===String(v)?'selected':''}>${l}</option>`).join('')}</select>`)}
+function selectField(k,n,options){const current=getSettingValue(k),cur=options.find(([v])=>String(v)===String(current));return`<div class="field"><label><span>${n}</span><output data-out="${k}">${cur?cur[1]:displaySetting(k)}</output></label><select data-setting="${k}">${options.map(([v,l])=>`<option value="${v}" ${String(current)===String(v)?'selected':''}>${l}</option>`).join('')}</select></div>`}
 function orientationButtonField(k,n){const current=getSettingValue(k)||'horizontal';return `<div class="field"><label><span>${n}</span><output data-out="${k}">${current==='vertical'?'纵向':'横向'}</output></label><div class="orientation-buttons"><button type="button" data-orientation-setting="${k}" data-orientation-value="horizontal" class="${current==='horizontal'?'active':''}">横向</button><button type="button" data-orientation-setting="${k}" data-orientation-value="vertical" class="${current==='vertical'?'active':''}">纵向</button></div></div>`}
 function gOrientationButtons(k,l){const current=state.gallery.settings[k]||'horizontal';return `<div class="field"><label><span>${l}</span><output data-gout="${k}">${current==='vertical'?'纵向':'横向'}</output></label><div class="orientation-buttons"><button type="button" data-gorientation="${k}" data-orientation-value="horizontal" class="${current==='horizontal'?'active':''}">横向</button><button type="button" data-gorientation="${k}" data-orientation-value="vertical" class="${current==='vertical'?'active':''}">纵向</button></div></div>`}
 function checkField(k,n){return`<label class="check-row"><input data-setting="${k}" type="checkbox" ${getSettingValue(k)?'checked':''}>${n}</label>`}
@@ -4116,7 +4116,10 @@ function bindPropertyInputs(){
       state.chart.settings.legendColumns=value==='vertical'?1:Math.max(2,Math.min(chartGroups().length||3,3));
       renderProperties();
     }
-    const o=$(`[data-out="${cssEscape(k)}"]`);if(o)o.textContent=value??'';if(k==='letterScheme'||k==='errorType'||k==='errorCustomValue'||k==='postHoc')prepareChartData();renderChart();
+    const o=$(`[data-out="${cssEscape(k)}"]`);if(o)o.textContent=el.tagName==='SELECT'?(el.selectedOptions?.[0]?.textContent??value):(value??'');if(k==='letterScheme'||k==='errorType'||k==='errorCustomValue'||k==='postHoc')prepareChartData();renderChart();
+    // 下拉选项可能决定后面是否出现新控件（如误差棒“自定义固定值”、柱边框“自定义颜色”），
+    // 面板不会自动重建，所以这里主动重绘一次属性面板。
+    if(el.tagName==='SELECT'&&k!=='legendOrientation')renderProperties();
   };
   $$('[data-setting]').forEach(el=>{el.addEventListener('input',()=>applyPropertyInput(el));el.addEventListener('change',()=>applyPropertyInput(el))});
   $$('[data-orientation-setting]').forEach(btn=>btn.addEventListener('click',()=>{
