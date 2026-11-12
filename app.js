@@ -2877,7 +2877,9 @@ function seriesStyleKey(index){
 }
 function defaultSeriesStyle(index){
   const s=state.chart.settings;
-  return {lineWidth:s.lineWidth,markerSize:s.markerSize,markerShape:SERIES_MARKERS[index%SERIES_MARKERS.length],markerFill:s.markerFill,barLine:true};
+  // 3D 瀑布图默认用圆（球状标记），普通折线图按系列轮换形状
+  const shape=state.chart.type==='waterfall'?'circle':SERIES_MARKERS[index%SERIES_MARKERS.length];
+  return {lineWidth:s.lineWidth,markerSize:s.markerSize,markerShape:shape,markerFill:s.markerFill,showMarker:true,barLine:true};
 }
 function getSeriesStyle(index){
   if(!state.chart.seriesStyles||typeof state.chart.seriesStyles!=='object')state.chart.seriesStyles={};
@@ -3101,7 +3103,10 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
     if(s.wfFill)out+=wfPoly([bl,...coords,br],`fill="${c}" fill-opacity="${fillOp}" stroke="none" pointer-events="none"`);
     const lw=getSeriesStyle(k).lineWidth||1.4;
     out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${darken(c,.18)}" stroke-width="${lw}" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="${strokeOp}" pointer-events="none"/>`;
-    if(s.wfShowMarkers&&coords.length<=20){const _st=getSeriesStyle(k),_mr=Math.max(2.2,(_st.markerSize||4.7)*.92),_mc=_st.markerColor||c;coords.forEach(p=>out+=sphereMarkerSvg(p[0],p[1],_mr,_mc,k));}
+    if(s.wfShowMarkers&&coords.length<=20){
+      const _st=getSeriesStyle(k),_mc=_st.markerColor||c,_mr=Math.max(2.2,(_st.markerSize||4.7)*.92);
+      if(_st.showMarker!==false)coords.forEach(p=>out+=sphereMarkerSvg(p[0],p[1],_mr,_mc,k,_st.markerShape));
+    }
     if(s.wfPeakLabels){
       const peaks=wfFindPeaks(pts,Number(s.wfPeakMinProminence)||0);
       peaks.forEach(d=>{
@@ -3458,7 +3463,7 @@ function renderNormalPlot(W,H,M,plotW,plotH,xvals,gs,colors,b){
       const pts=model.byGroup.get(String(g))||[],c=colors[gi%colors.length],positions=pts.map(d=>{const idx=model.xIndex.get(String(d.x))??0;return{d,xx:xCfg?xCfg.pos(Number(convertXValue(d.x))):xBaseAt(idx,xStep,M),yy:y(d.mean)}}),coords=positions.map(p=>[p.xx,p.yy]);
       if(coords.length>1)out+=`<path data-object="series" data-series="${gi}" class="chart-object" d="${seriesPath(coords)}" fill="none" stroke="${c}" stroke-width="${getSeriesStyle(gi).lineWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
       if(isLineChart()&&positions.length){let errorPath='';positions.forEach(p=>{const e=Math.abs(y(p.d.mean+p.d.error)-p.yy),cap=s.errorCap/2;errorPath+=`M${p.xx},${p.yy-e}V${p.yy+e}M${p.xx-cap},${p.yy-e}H${p.xx+cap}M${p.xx-cap},${p.yy+e}H${p.xx+cap}`});const errorColor=s.errorColorMode==='black'?s.axisColor:c;out+=`<path data-object="error" data-series="${gi}" class="chart-object" d="${errorPath}" fill="none" stroke="${errorColor}" stroke-width="${s.errorWidth}"/>`}
-      if(seriesMarkersVisible())positions.forEach(p=>out+=markerSvg(p.xx,p.yy,c,gi));
+      if(seriesMarkersVisible()&&getSeriesStyle(gi).showMarker!==false)positions.forEach(p=>out+=markerSvg(p.xx,p.yy,c,gi));
       if(isLineChart()&&s.letters)positions.forEach(p=>{if(p.d.letter){const e=Math.abs(y(p.d.mean+p.d.error)-p.yy);out+=letterSvg(p.xx,p.yy-e-s.letterOffset,p.d.letter,p.d.x,p.d.group)}});
     });
   }else{
@@ -3573,9 +3578,13 @@ function markerSvg(x,y,c,series){
   const common=`data-object="series" data-series="${series}" class="chart-object" fill="${fill}" stroke="${mc}" stroke-width="${Math.max(1.5,st.lineWidth*.72)}"`;
   return markerShapeSvg(st.markerShape,x,y,r,common);
 }
-// 3D 图专用：球状标记（球体 + 左上高光 + 深色描边），比平面 shapes 在 3D 投影里更自然
-function sphereMarkerSvg(x,y,r,c,series){
-  const dk=darken(c,.28),hl=Math.max(.9,r*.42);
+// 3D 图专用：球状标记（球体 + 左上高光 + 深色描边）；选其它形状时按所选形状绘制
+function sphereMarkerSvg(x,y,r,c,series,shape){
+  const dk=darken(c,.28);
+  if(shape&&shape!=='circle'){
+    return markerShapeSvg(shape,x,y,r,`data-object="series" data-series="${series}" class="chart-object" fill="${c}" stroke="${dk}" stroke-width=".7" pointer-events="none"`);
+  }
+  const hl=Math.max(.9,r*.42);
   return `<g data-object="series" data-series="${series}" class="chart-object" pointer-events="none">`
     +`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${c}" stroke="${dk}" stroke-width=".6"/>`
     +`<circle cx="${(x-r*.32).toFixed(1)}" cy="${(y-r*.34).toFixed(1)}" r="${hl.toFixed(1)}" fill="#ffffff" fill-opacity=".62"/>`
@@ -3948,7 +3957,11 @@ function renderProperties(){
     const _t=state.chart.type,_isWf=_t==='waterfall',_isB3=_t==='bar3d';
     const _lineFields=_isB3?[]:[rangeField('lineWidth','全系列折线粗细',.5,7,.1),rangeField('markerSize','全系列标记大小',1,16,.2)];
     const _mc=(()=>{const pl=state.chart.palette||[],v=pl[idx%Math.max(1,pl.length)];return (typeof v==='string'&&!isGradientPaint(v))?v:'#000000'})();
-    const _seriesLineFields=_isB3?[]:[rangeField(`series:${idx}:lineWidth`,'本系列折线粗细',.5,7,.1),rangeField(`series:${idx}:markerSize`,'本系列标记大小',1,16,.2),...(_isWf?[]:[markerShapeGrid(idx)]),...(_isWf?[]:[selectField(`series:${idx}:markerFill`,'本系列标记填充',[['white','白色空心'],['series','同系列颜色']])]),fieldWrap('本系列标记颜色',`series:${idx}:markerColor`,`<input data-setting="series:${idx}:markerColor" type="color" value="${getSeriesSetting(idx,'markerColor')||_mc}">`)];
+    const _seriesLineFields=_isB3?[]:[rangeField(`series:${idx}:lineWidth`,'本系列折线粗细',.5,7,.1),rangeField(`series:${idx}:markerSize`,'本系列标记大小',1,16,.2),
+      `<label class="check-row"><input data-setting="series:${idx}:showMarker" type="checkbox" ${getSeriesSetting(idx,'showMarker')!==false?'checked':''}>本系列显示标记</label>`,
+      markerShapeGrid(idx),
+      ...(_isWf?[]:[selectField(`series:${idx}:markerFill`,'本系列标记填充',[['white','白色空心'],['series','同系列颜色']])]),
+      `<div class="field"><label><span>本系列标记颜色</span></label><input data-setting="series:${idx}:markerColor" type="color" value="${getSeriesSetting(idx,'markerColor')||_mc}"></div>`];
     const _lineModeField=(_isWf||_isB3)?[]:[selectField('lineMode','折线连接方式',[['straight','直线连接'],['smooth','平滑连接']])];
     const _barFields=(_isWf||_isB3)?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
     const _barBorderColor=(_isWf||_isB3||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
@@ -4027,7 +4040,7 @@ function checkField(k,n){return`<label class="check-row"><input data-setting="${
 function numberLegendField(k,n){return fieldWrap(`图例${n}`,`legend:${k}`,`<input data-setting="legend:${k}" type="number" step="1" value="${state.chart.legend[k]}">`)}
 function numberLegendFrameField(k,n){return fieldWrap(`边框${n}`,`legendFrame:${k}`,`<input data-setting="legendFrame:${k}" type="number" step="1" value="${state.chart.legendFrame[k]??''}">`)}
 function checkLegendFrameField(k,n){return`<label class="check-row"><input data-setting="legendFrame:${k}" type="checkbox" ${state.chart.legendFrame[k]?'checked':''}>${n}</label>`}
-function displaySetting(k){const v=getSettingValue(k);return isGradientPaint(v)?paintLabel(v):v}
+function displaySetting(k){const v=getSettingValue(k);if(v==null)return'';return isGradientPaint(v)?paintLabel(v):v}
 function breakPropertyBlock(){const s=state.chart.settings;return `<div class="subhead">真实断轴</div><label class="check-row"><input id="breakFromProp" type="checkbox" ${state.chart.breakAxis?'checked':''}>启用断轴</label><div class="two-col">${numberField('lowerMin','下段最小值',null,null,.01)}${numberField('lowerMax','下段最大值',null,null,.01)}${numberField('upperMin','上段最小值',null,null,.01)}${numberField('upperMax','上段最大值',null,null,.01)}</div>${rangeField('breakGap','两条断裂线间距',6,28,1)}${rangeField('lowerRatio','下段高度比例',.12,.42,.01)}<div class="hint">柱体空白断口与两条平行断裂线中心之间的距离完全一致；断裂线中心直接落在坐标轴端点上。</div>`}
 const SWATCH_GRAYS=['#ffffff','#d9d9d9','#bfbfbf','#999999','#666666','#333333','#000000'];
 const SWATCH_HUES=[0,30,45,60,120,150,175,195,215,255,280,330];
