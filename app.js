@@ -2938,7 +2938,7 @@ function renderChart(){
 function isLineChart(){return state.chart.type==='line'}
 function isCurveChart(){return state.chart.type==='curve'}
 function isLineLike(){return isLineChart()||isCurveChart()}
-function seriesMarkersVisible(){return isLineLike()&&chartXs().length<=120}
+function seriesMarkersVisible(){return isLineLike()&&chartXs().length<=20}
 function seriesPath(coords){
   return isCurveChart()||state.chart.settings.lineMode==='smooth'
     ? smoothPath(coords)
@@ -3101,7 +3101,7 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
     if(s.wfFill)out+=wfPoly([bl,...coords,br],`fill="${c}" fill-opacity="${fillOp}" stroke="none" pointer-events="none"`);
     const lw=getSeriesStyle(k).lineWidth||1.4;
     out+=`<path data-object="series" data-series="${k}" class="chart-object" d="${coords.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="none" stroke="${darken(c,.18)}" stroke-width="${lw}" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="${strokeOp}" pointer-events="none"/>`;
-    if(s.wfShowMarkers)coords.forEach(p=>out+=markerSvg(p[0],p[1],c,k));
+    if(s.wfShowMarkers&&coords.length<=20){const _st=getSeriesStyle(k),_mr=Math.max(2.2,(_st.markerSize||4.7)*.92),_mc=_st.markerColor||c;coords.forEach(p=>out+=sphereMarkerSvg(p[0],p[1],_mr,_mc,k));}
     if(s.wfPeakLabels){
       const peaks=wfFindPeaks(pts,Number(s.wfPeakMinProminence)||0);
       peaks.forEach(d=>{
@@ -3569,9 +3569,17 @@ function markerShapeSvg(shape,x,y,r,attrs){
   return`<circle ${attrs} cx="${x}" cy="${y}" r="${r}"/>`;
 }
 function markerSvg(x,y,c,series){
-  const st=getSeriesStyle(series),fill=st.markerFill==='series'?c:st.markerFill,r=st.markerSize;
-  const common=`data-object="series" data-series="${series}" class="chart-object" fill="${fill}" stroke="${c}" stroke-width="${Math.max(1.5,st.lineWidth*.72)}"`;
+  const st=getSeriesStyle(series),mc=st.markerColor||c,fill=st.markerFill==='series'?mc:st.markerFill,r=st.markerSize;
+  const common=`data-object="series" data-series="${series}" class="chart-object" fill="${fill}" stroke="${mc}" stroke-width="${Math.max(1.5,st.lineWidth*.72)}"`;
   return markerShapeSvg(st.markerShape,x,y,r,common);
+}
+// 3D 图专用：球状标记（球体 + 左上高光 + 深色描边），比平面 shapes 在 3D 投影里更自然
+function sphereMarkerSvg(x,y,r,c,series){
+  const dk=darken(c,.28),hl=Math.max(.9,r*.42);
+  return `<g data-object="series" data-series="${series}" class="chart-object" pointer-events="none">`
+    +`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${c}" stroke="${dk}" stroke-width=".6"/>`
+    +`<circle cx="${(x-r*.32).toFixed(1)}" cy="${(y-r*.34).toFixed(1)}" r="${hl.toFixed(1)}" fill="#ffffff" fill-opacity=".62"/>`
+    +`</g>`;
 }
 
 function errorSvg(x,y,e,c,series,clipId=''){
@@ -3623,8 +3631,8 @@ function renderLegend(gs,colors){
   return `<g id="legendGroup" data-object="legend" data-drag="legend" class="chart-object draggable" transform="translate(${x} ${y})"><g transform="translate(${layout.padX} ${layout.padY})">${layout.content}</g></g>`;
 }
 function markerLegend(x,y,c,series){
-  const st=getSeriesStyle(series),r=Math.min(st.markerSize,Math.max(4.6,state.chart.settings.legendSize*.34)),fill=st.markerFill==='series'?c:st.markerFill;
-  return markerShapeSvg(st.markerShape,x,y,r,`fill="${fill}" stroke="${c}" stroke-width="${Math.max(1.2,st.lineWidth*.68)}"`);
+  const st=getSeriesStyle(series),r=Math.min(st.markerSize,Math.max(4.6,state.chart.settings.legendSize*.34)),mc=st.markerColor||c,fill=st.markerFill==='series'?mc:st.markerFill;
+  return markerShapeSvg(st.markerShape,x,y,r,`fill="${fill}" stroke="${mc}" stroke-width="${Math.max(1.2,st.lineWidth*.68)}"`);
 }
 
 function bindChartObjects(){
@@ -3860,7 +3868,7 @@ function renderProperties(){
 '<div class="object-property-section"><h3>层曲线与填充</h3></div>'+fieldGroup([
     checkField('wfFill','每层填充到基线'),
     rangeField('wfFillOpacity','填充不透明度',0,1,.05),
-    checkField('wfShowMarkers','显示数据点 marker'),
+    checkField('wfShowMarkers','显示数据点球状标记（每层 ≤20 点）'),
     checkField('wfHighlightSelected','选中某层时其他层变淡'),
     selectField('wfColorMode','配色方式',[['palette','循环取色（默认）'],['gradient','沿 Z 轴渐变色']]),
     checkField('wfLineEndLabels','线尾标注层名')])
@@ -3868,7 +3876,7 @@ function renderProperties(){
     checkField('wfPeakLabels','自动标注每层峰值'),
     rangeField('wfPeakMinProminence','最小突出度（过滤小峰）',0,5,.1),
     selectField('wfPeakLabelDecimals','数值小数位',[['0','整数'],['1','1 位'],['2','2 位'],['3','3 位']])])
-+'<div class="hint">每层曲线的线宽、颜色、marker 形状在左侧「数据系列」里单独设置。</div>';}
++'<div class="hint">每层曲线的线宽、marker 大小与颜色在左侧「数据系列」里单独设置；普通折线图/曲线图在数据点 ≤20 时自动显示标记。</div>';}
   else if(id==='b3-axes'){name='坐标轴与网格线';html=
 '<div class="object-property-section"><h3>坐标轴与网格线</h3></div>'+fieldGroup([
     selectField('b3YAxisEdge','Y 轴所在竖棱',[['auto','跟随侧墙（默认）'],['lf','左前'],['lb','左后'],['rf','右前'],['rb','右后']]),
@@ -3939,7 +3947,8 @@ function renderProperties(){
     // 避免面板上堆着一堆对当前图形无效的选项。
     const _t=state.chart.type,_isWf=_t==='waterfall',_isB3=_t==='bar3d';
     const _lineFields=_isB3?[]:[rangeField('lineWidth','全系列折线粗细',.5,7,.1),rangeField('markerSize','全系列标记大小',1,16,.2)];
-    const _seriesLineFields=_isB3?[]:[rangeField(`series:${idx}:lineWidth`,'本系列折线粗细',.5,7,.1),rangeField(`series:${idx}:markerSize`,'本系列标记大小',1,16,.2),markerShapeGrid(idx),selectField(`series:${idx}:markerFill`,'本系列标记填充',[['white','白色空心'],['series','同系列颜色']])];
+    const _mc=(()=>{const pl=state.chart.palette||[],v=pl[idx%Math.max(1,pl.length)];return (typeof v==='string'&&!isGradientPaint(v))?v:'#000000'})();
+    const _seriesLineFields=_isB3?[]:[rangeField(`series:${idx}:lineWidth`,'本系列折线粗细',.5,7,.1),rangeField(`series:${idx}:markerSize`,'本系列标记大小',1,16,.2),...(_isWf?[]:[markerShapeGrid(idx)]),...(_isWf?[]:[selectField(`series:${idx}:markerFill`,'本系列标记填充',[['white','白色空心'],['series','同系列颜色']])]),fieldWrap('本系列标记颜色',`series:${idx}:markerColor`,`<input data-setting="series:${idx}:markerColor" type="color" value="${getSeriesSetting(idx,'markerColor')||_mc}">`)];
     const _lineModeField=(_isWf||_isB3)?[]:[selectField('lineMode','折线连接方式',[['straight','直线连接'],['smooth','平滑连接']])];
     const _barFields=(_isWf||_isB3)?[]:[rangeField('barGap','柱间距',0,16,1),rangeField('categoryWidth','组宽度',.35,.95,.01),rangeField('barOpacity','柱填充透明度',.25,1,.05),rangeField('barBorderWidth','柱边框粗细',0,3,.1),selectField('barBorderColorMode','柱边框颜色',[['auto','跟随柱色加深'],['custom','自定义颜色']])];
     const _barBorderColor=(_isWf||_isB3||getSettingValue('barBorderColorMode')!=='custom')?[]:[colorField('barBorderColor','边框颜色')];
