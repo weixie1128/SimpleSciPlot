@@ -634,10 +634,10 @@ function renderSchemaMini(schema){
     else{headers=['X','Y1','Y2','Y3'];rows=[['1','5.42','5.74','5.63'],['2','5.55','5.81','5.70']];legend=[['k','第一列＝X'],['p','每列一个平行测定值']]}
   }else{
     const map={
-      hist:{h:['平行号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝平行号/序号'],['p','每列一个数据集或变量']]},
-      kde:{h:['序号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝序号（可省略）'],['p','每列一个 Group']]},
-      box:{h:['序号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝序号（可省略）'],['p','每列一个 Group']]},
-      violin:{h:['序号','A','B','C'],r:[[1,5.42,5.74,5.63],[2,5.55,5.81,5.70]],l:[['k','第一列＝序号（可省略）'],['p','每列一个 Group']]},
+      hist:{h:['A','B','C','D'],r:[[5.42,5.74,5.63,5.58],[5.55,5.81,5.70,5.66]],l:[['k','表头＝组名（可直接改成你的组名）'],['p','每列一组，往下填原始数值']]},
+      kde:{h:['A','B','C','D'],r:[[5.42,5.74,5.63,5.58],[5.55,5.81,5.70,5.66]],l:[['k','表头＝组名'],['p','每列一组，往下填原始数值']]},
+      box:{h:['A','B','C','D'],r:[[5.42,5.74,5.63,5.58],[5.55,5.81,5.70,5.66]],l:[['k','表头＝组名'],['p','每列一组，往下填原始数值']]},
+      violin:{h:['A','B','C','D'],r:[[5.42,5.74,5.63,5.58],[5.55,5.81,5.70,5.66]],l:[['k','表头＝组名'],['p','每列一组，往下填原始数值']]},
       scatter:{h:['序号','A X','A Y','B X','B Y'],r:[[1,1.00,1.96,4.60,5.04],[2,1.45,2.48,5.05,5.02]],l:[['k','第一列＝序号'],['p','每 Group 一对 XY 列']]},
       bubble:{h:['序号','A X','A Y','A Size'],r:[[1,1.00,1.96,12],[2,1.45,2.48,13]],l:[['k','第一列＝序号'],['p','每 Group 三列 XY+Size']]},
       stacked:{h:['类别','A','B','C'],r:[['Moisture',72.4,70.1,68.8],['Protein',18.6,19.1,19.7]],l:[['k','第一列＝组分/类别'],['p','每 Group 一列']]},
@@ -2559,7 +2559,7 @@ function histPropertyHtml(){
       ['relaxed','宽松（两侧各约 2 个 bin）'],
       ['manual','手动范围 / 自定义外边距']
     ]),
-    gRange('histXPaddingPct','手动模式外边距 %（独立分面使用）',0,50,1),
+    gRange('histXPaddingPct','手动模式外边距 %（独立分面使用）',0,50,1,{disabled:s.histXRangePreset!=='manual'}),
     manualRange,
     gRange('histFacetGap','分面额外间距（刻度文字之外）',0,60,2),
     gCheck('histShowAxisBreak','非零起点显示 X 轴截断标记')
@@ -5114,7 +5114,7 @@ function renderGallerySettings(){
 function gWrap(label,key,input){return`<div class="field"><label><span>${label}</span><output data-gout="${key}">${esc(state.gallery.settings[key])}</output></label>${input}</div>`}
 function gText(k,l){return gWrap(l,k,`<input data-gsetting="${k}" type="text" value="${escAttr(state.gallery.settings[k])}">`)}
 function gNumber(k,l,min,max,step){return gWrap(l,k,`<input data-gsetting="${k}" type="number" min="${min}" max="${max}" step="${step}" value="${state.gallery.settings[k]}">`)}
-function gRange(k,l,min,max,step){return gWrap(l,k,`<input data-gsetting="${k}" type="range" min="${min}" max="${max}" step="${step}" value="${state.gallery.settings[k]}">`)}
+function gRange(k,l,min,max,step,opt){const extra=opt&&opt.disabled?' disabled title="把「X 轴显示紧凑度」设为「手动范围」后可用"':'';return gWrap(l,k,`<input data-gsetting="${k}" type="range" min="${min}" max="${max}" step="${step}" value="${state.gallery.settings[k]}"${extra}>`)}
 function gSelect(k,l,opts){return gWrap(l,k,`<select data-gsetting="${k}">${opts.map(([v,n])=>`<option value="${v}" ${String(state.gallery.settings[k])===String(v)?'selected':''}>${n}</option>`).join('')}</select>`)}
 function gCheck(k,l){return`<label class="check-row"><input data-gsetting="${k}" type="checkbox" ${state.gallery.settings[k]?'checked':''}>${l}</label>`}
 

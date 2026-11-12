@@ -1431,6 +1431,38 @@
         if (typeof renderChartStudio === 'function') renderChartStudio();
       }
     }, true);
+    // 两个“看起来没反应”的坑，在捕获阶段先把前置条件补齐：
+    // 1) 自动分箱开着时，手动分箱数量被忽略 → 用户拖滑杆完全没反应。用户一动滑杆就视为想手动，
+    //    自动关闭自动分箱，并把面板上的勾选框同步取消。
+    // 2) 区间高亮只勾选框、不填边界时不会高亮任何柱子 → 自动给一段数据中间 50% 的默认区间。
+    const hydrateHistogramSetting = event => {
+      const el = event.target?.closest?.('[data-gsetting]');
+      if (!el) return;
+      const key = el.dataset.gsetting;
+      const s = ensureFixSettings();
+      if (key === 'bins') {
+        if (s.histAutoBins !== false) {
+          s.histAutoBins = false;
+          document.querySelectorAll('[data-gsetting="histAutoBins"]').forEach(cb => { if (cb.type === 'checkbox' && cb.checked) cb.checked = false; });
+        }
+        return;
+      }
+      if (key === 'histHighlight' && el.type === 'checkbox' && el.checked) {
+        const missing = !hasFiniteSetting(s.histHlMin) || !hasFiniteSetting(s.histHlMax);
+        if (missing) {
+          const vals = (state.gallery.rows || []).map(r => Number(r.Value)).filter(Number.isFinite).sort((a, b) => a - b);
+          if (vals.length) {
+            const q = p => vals[Math.min(vals.length - 1, Math.max(0, Math.round((vals.length - 1) * p)))];
+            s.histHlMin = Number(q(0.25).toFixed(2));
+            s.histHlMax = Number(q(0.75).toFixed(2));
+            document.querySelectorAll('[data-gsetting="histHlMin"]').forEach(inp => { inp.value = s.histHlMin; });
+            document.querySelectorAll('[data-gsetting="histHlMax"]').forEach(inp => { inp.value = s.histHlMax; });
+          }
+        }
+      }
+    };
+    document.addEventListener('input', hydrateHistogramSetting, true);
+    document.addEventListener('change', hydrateHistogramSetting, true);
   }
   ensureFixSettings();
 })();
