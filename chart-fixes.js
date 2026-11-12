@@ -31,8 +31,13 @@
   function ensureFixSettings() {
     const s = state.gallery.settings;
     if (typeof s.histAutoBins !== 'boolean') s.histAutoBins = true;
-    if (!['frequency', 'density'].includes(s.histogramScale)) s.histogramScale = 'frequency';
-    if (!['facet', 'overlay'].includes(s.histDisplayMode)) s.histDisplayMode = 'facet';
+    if (!['frequency', 'density', 'percent'].includes(s.histogramScale)) s.histogramScale = 'frequency';
+    if (!['facet', 'dodge', 'overlay', 'stacked'].includes(s.histDisplayMode)) s.histDisplayMode = 'facet';
+    if (typeof s.histMirror !== 'boolean') s.histMirror = false;
+    if (typeof s.histHighlight !== 'boolean') s.histHighlight = false;
+    if (s.histHlMin === undefined) s.histHlMin = null;
+    if (s.histHlMax === undefined) s.histHlMax = null;
+    if (typeof s.histHighlightColor !== 'string' || !s.histHighlightColor.trim()) s.histHighlightColor = '#E8A13C';
     if (!['auto', 'independent', 'shared'].includes(s.histAxisMode)) s.histAxisMode = 'auto';
     if (!['group', 'overall'].includes(s.scatterFitMode)) s.scatterFitMode = 'group';
     if (!['solid', 'dashed', 'dotted', 'dashdot'].includes(s.scatterRegressionLineStyle)) s.scatterRegressionLineStyle = 'solid';
@@ -268,20 +273,7 @@
     ticks.push(Number(max.toFixed(12)));
     return [...new Set(ticks)].sort((a, b) => a - b);
   }
-  function histogramManualRangeHtml(s) {
-    const min = hasFiniteSetting(s.histManualXMin) ? String(s.histManualXMin) : '';
-    const max = hasFiniteSetting(s.histManualXMax) ? String(s.histManualXMax) : '';
-    const active = s.histXRangePreset === 'manual';
-    return `<div class="field" style="margin-top:8px;${active ? '' : 'opacity:.58'}">
-      <label>手动 X 轴范围（单图 / 共享 X 轴）</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-        <input type="number" step="any" data-hist-manual-axis="histManualXMin" placeholder="Min（自动）" value="${esc(min)}">
-        <input type="number" step="any" data-hist-manual-axis="histManualXMax" placeholder="Max（自动）" value="${esc(max)}">
-      </div>
-      <small>仅改变显示范围，不改变分箱和频数。独立多变量分面使用“紧凑度”分别扩展各自 X 轴。</small>
-    </div>`;
-  }
-  function histogramCounts(rows, groups, geometry, densityMode) {
+  function histogramCounts(rows, groups, geometry, scale = 'frequency') {
     const counts = groups.map(() => Array(geometry.bins).fill(0));
     const sizes = groups.map(g => rows.filter(r => String(r.Group || 'All') === g).length);
     rows.forEach(r => {
@@ -294,9 +286,11 @@
       bi = clampLocal(bi, 0, geometry.bins - 1);
       counts[gi][bi] += 1;
     });
-    return counts.map((arr, gi) => arr.map(c =>
-      densityMode ? c / (Math.max(1, sizes[gi]) * geometry.binWidth) : c
-    ));
+    return counts.map((arr, gi) => arr.map(c => {
+      if (scale === 'density') return c / (Math.max(1, sizes[gi]) * geometry.binWidth);
+      if (scale === 'percent') return c / Math.max(1, sizes[gi]) * 100;
+      return c;
+    }));
   }
   function histogramSeriesValues(rows, group) {
     return rows
@@ -370,12 +364,29 @@
     }
     return out;
   }
-  function drawHistogramBars(panel, heights, gi, xMap, yMap, geometry, s, overlay = false) {
+  function histogramHighlightSpec(s) {
+    if (s.histHighlight !== true) return null;
+    const a = Number(s.histHlMin), b = Number(s.histHlMax);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return { min: Math.min(a, b), max: Math.max(a, b), color: s.histHighlightColor || '#E8A13C' };
+  }
+  function histogramBarStyle(gi, s) {
     const st = getGallerySeriesStyle(gi);
-    const opacity = overlay ? Math.min(0.32, num(s.opacity, 0.72)) : Math.min(0.9, Math.max(0.45, num(s.opacity, 0.72)));
-    const lw = Math.max(0.45, num(st.lineWidth, s.lineWidth));
+    return {
+      color: st.color,
+      // v1.9.70：透明度与边框由「数据系列」逐系列控制（直方图面板的全局滑杆已移除）。
+      opacity: clampLocal(num(st.opacity, 0.72), 0.05, 1),
+      stroke: st.borderColor || st.color,
+      lw: Math.max(0.45, num(st.lineWidth, s.lineWidth))
+    };
+  }
+  function drawHistogramBars(panel, heights, gi, xMap, yMap, geometry, s, overlay = false) {
+    const st = histogramBarStyle(gi, s);
+    const opacity = overlay ? Math.min(0.5, st.opacity) : st.opacity;
+    const hl = histogramHighlightSpec(s);
     let body = '';
     heights.forEach((height, i) => {
+      if (!(height > 0)) return;
       const left = geometry.domainMin + i * geometry.binWidth;
       const right = left + geometry.binWidth;
       let x1 = xMap(left), x2 = xMap(right);
@@ -385,9 +396,112 @@
       const y = yMap(height);
       // No visual shrink/gap: histogram rectangle width is exactly the numerical bin interval.
       // A wider display domain creates only outer whitespace; it never inserts gaps between bins.
-      body += `<rect x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, panel.t + panel.h - y)}" fill="${st.color}" fill-opacity="${opacity}" stroke="${st.color}" stroke-width="${lw}"/>`;
+      const inHl = hl && left >= hl.min - 1e-9 && right <= hl.max + 1e-9;
+      const fill = inHl ? hl.color : st.color;
+      body += `<rect x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, panel.t + panel.h - y)}" fill="${fill}" fill-opacity="${opacity}" stroke="${inHl ? hl.color : st.stroke}" stroke-width="${st.lw}"/>`;
     });
     return `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;
+  }
+  function drawDodgeBars(panel, allHeights, xMap, yMap, geometry, s) {
+    const G = Math.max(1, allHeights.length);
+    const hl = histogramHighlightSpec(s);
+    let out = '';
+    allHeights.forEach((heights, gi) => {
+      const st = histogramBarStyle(gi, s);
+      let body = '';
+      heights.forEach((height, i) => {
+        if (!(height > 0)) return;
+        const left = geometry.domainMin + i * geometry.binWidth;
+        const seg = geometry.binWidth / G;
+        let x1 = xMap(left + gi * seg), x2 = xMap(left + (gi + 1) * seg);
+        if (x2 < panel.l || x1 > panel.l + panel.w) return;
+        x1 = clampLocal(x1, panel.l, panel.l + panel.w);
+        x2 = clampLocal(x2, panel.l, panel.l + panel.w);
+        const y = yMap(height);
+        const inHl = hl && left >= hl.min - 1e-9 && left + geometry.binWidth <= hl.max + 1e-9;
+        const fill = inHl ? hl.color : st.color;
+        body += `<rect x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, panel.t + panel.h - y)}" fill="${fill}" fill-opacity="${st.opacity}" stroke="${inHl ? hl.color : st.stroke}" stroke-width="${st.lw}"/>`;
+      });
+      out += `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;
+    });
+    return out;
+  }
+  function drawStackedBars(panel, allHeights, xMap, yMap, geometry, s) {
+    const hl = histogramHighlightSpec(s);
+    let out = '';
+    allHeights.forEach((heights, gi) => {
+      const st = histogramBarStyle(gi, s);
+      let body = '';
+      heights.forEach((height, i) => {
+        if (!(height > 0)) return;
+        const left = geometry.domainMin + i * geometry.binWidth;
+        const lower = allHeights.slice(0, gi).reduce((a, h) => a + h[i], 0);
+        const upper = lower + height;
+        const yTop = yMap(upper), yBot = yMap(lower);
+        const inHl = hl && left >= hl.min - 1e-9 && left + geometry.binWidth <= hl.max + 1e-9;
+        const fill = inHl ? hl.color : st.color;
+        body += `<rect x="${xMap(left)}" y="${yTop}" width="${Math.max(0, xMap(left + geometry.binWidth) - xMap(left))}" height="${Math.max(0, yBot - yTop)}" fill="${fill}" fill-opacity="${st.opacity}" stroke="${inHl ? hl.color : st.stroke}" stroke-width="${st.lw}"/>`;
+      });
+      out += `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;
+    });
+    return out;
+  }
+  function drawMirrorHalf(panel, heights, gi, xMap, baseY, halfH, yMax, geometry, s, up) {
+    const st = histogramBarStyle(gi, s);
+    const hl = histogramHighlightSpec(s);
+    let body = '';
+    heights.forEach((height, i) => {
+      if (!(height > 0)) return;
+      const left = geometry.domainMin + i * geometry.binWidth;
+      let x1 = xMap(left), x2 = xMap(left + geometry.binWidth);
+      if (x2 < panel.l || x1 > panel.l + panel.w) return;
+      x1 = clampLocal(x1, panel.l, panel.l + panel.w);
+      x2 = clampLocal(x2, panel.l, panel.l + panel.w);
+      const len = Math.min(height / yMax, 1) * halfH;
+      const y = up ? baseY - len : baseY;
+      const inHl = hl && left >= hl.min - 1e-9 && left + geometry.binWidth <= hl.max + 1e-9;
+      const fill = inHl ? hl.color : st.color;
+      body += `<rect x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, len)}" fill="${fill}" fill-opacity="${st.opacity}" stroke="${inHl ? hl.color : st.stroke}" stroke-width="${st.lw}"/>`;
+    });
+    return `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;
+  }
+  function drawMirrorAxes(panel, { s, xMap, xTicks, xStep, yTicks, yStep, baseY, geometry, upMap, downMap }) {
+    const axis = s.axisColor || '#20262b';
+    const sw = num(s.axisWidth, 1.35);
+    const tick = num(s.tickLength, 6);
+    const xSize = num(s.xTickSize, 12);
+    const ySize = num(s.yTickSize, 12);
+    const boxMode = String(s.frameMode || 'box') === 'box';
+    let out = '';
+    if (boxMode) {
+      out += `<rect x="${panel.l}" y="${panel.t}" width="${panel.w}" height="${panel.h}" fill="none" stroke="${axis}" stroke-width="${num(s.frameWidth, 1.15)}"/>`;
+    } else {
+      out += `<line x1="${panel.l}" y1="${panel.t + panel.h}" x2="${panel.l + panel.w}" y2="${panel.t + panel.h}" stroke="${axis}" stroke-width="${sw}"/>`;
+      out += `<line x1="${panel.l}" y1="${panel.t}" x2="${panel.l}" y2="${panel.t + panel.h}" stroke="${axis}" stroke-width="${sw}"/>`;
+    }
+    // Mirrored Y: identical absolute tick values above and below the baseline;
+    // the label is drawn once (up side), the down side only gets a tick mark.
+    yTicks.forEach(v => {
+      const yu = upMap(v);
+      if (yu >= panel.t - 0.5 && yu <= baseY + 0.5) {
+        out += `<line x1="${panel.l + sw/2}" x2="${panel.l - tick}" y1="${yu}" y2="${yu}" stroke="${axis}" stroke-width="${sw}"/>`;
+        out += `<text x="${panel.l - tick - 5}" y="${yu + ySize * 0.34}" text-anchor="end" font-size="${ySize}" font-weight="${num(s.yTickWeight, 400)}" fill="${s.yTickColor || axis}">${esc(prettyNumber(v, yStep))}</text>`;
+      }
+      if (v > 0) {
+        const yd = downMap(v);
+        if (yd <= panel.t + panel.h + 0.5) out += `<line x1="${panel.l + sw/2}" x2="${panel.l - tick}" y1="${yd}" y2="${yd}" stroke="${axis}" stroke-width="${sw}"/>`;
+      }
+    });
+    xTicks.forEach((v, i) => {
+      const x = xMap(v);
+      const first = i === 0, last = i === xTicks.length - 1;
+      const anchor = first ? 'start' : last ? 'end' : 'middle';
+      const dx = first ? 2 : last ? -2 : 0;
+      out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw/2}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
+      out += `<text x="${x + dx}" y="${panel.t + panel.h + tick + xSize + 4}" text-anchor="${anchor}" font-size="${xSize}" font-weight="${num(s.xTickWeight, 400)}" fill="${s.xTickColor || axis}">${esc(prettyNumber(v, xStep))}</text>`;
+    });
+    out += drawXAxisBreak(panel, geometry, s);
+    return out;
   }
   function estimateLegendTextWidth(text, fontSize) {
     let em = 0;
@@ -602,35 +716,10 @@
   gallerySpecificPropertyHtml = function patchedGallerySpecificPropertyHtml(type, id) {
     const s = ensureFixSettings();
     if (id === 'histogram') {
-      return gallerySection('直方图', [
-        gCheck('histAutoBins', '自动分箱（推荐：Freedman–Diaconis / Sturges）'),
-        gRange('bins', '手动分箱数量（关闭自动后；越少柱越宽，柱体始终相连）', 2, 40, 1),
-        gSelect('histDisplayMode', '多列显示方式', [
-          ['facet', '分面显示（推荐）'],
-          ['overlay', '半透明叠加']
-        ]),
-        gSelect('histAxisMode', '分面 X 轴范围', [
-          ['auto', '自动判断（推荐）'],
-          ['independent', '每列独立 X 轴'],
-          ['shared', '所有列共享 X 轴']
-        ]),
-        gSelect('histXRangePreset', 'X 轴显示紧凑度', [
-          ['compact', '紧凑（不额外扩展）'],
-          ['standard', '标准（两侧各约 1 个 bin）'],
-          ['relaxed', '宽松（两侧各约 2 个 bin）'],
-          ['manual', '手动范围 / 自定义外边距']
-        ]),
-        gRange('histXPaddingPct', '手动模式外边距 %（独立分面使用）', 0, 50, 1),
-        histogramManualRangeHtml(s),
-        gSelect('histogramScale', '纵轴含义', [
-          ['frequency', '频数 Frequency'],
-          ['density', '概率密度 Density']
-        ]),
-        gRange('histFacetGap', '分面额外间距（刻度文字之外）', 0, 60, 2),
-        gCheck('histShowAxisBreak', '非零起点显示 X 轴截断标记'),
-        gRange('opacity', '柱透明度', 0.15, 1, 0.05),
-        gRange('lineWidth', '柱边框粗细', 0, 4, 0.1)
-      ]) + '<div class="method-badge"><b>绘图规则：</b>分箱决定统计柱宽；X 轴范围只改变柱子的视觉粗细和两侧留白，不改变频数。柱体始终按真实 bin 区间紧密相连，不会因为调坐标范围而在柱间产生空隙。</div>';
+      // v1.9.70：直方图面板统一交给 app.js 的 histPropertyHtml（图表工作台与图形
+      // 工作室共用同一份定义），键名与本补丁的 galleryHistogram 渲染完全一致，
+      // 避免两套面板各说各话、出现“调了没反应”的控件。
+      return histPropertyHtml();
     }
     if (id === 'density' && type === 'kde') {
       // v0.19.0: 只显示当前图形形式真正生效的设置。以前三种形式的控件全部堆在一起，
@@ -744,7 +833,9 @@
     const type = state.gallery.type;
     if (type === 'hist') {
       const rangeLabel = ({compact:'紧凑',standard:'标准',relaxed:'宽松',manual:'手动'})[s.histXRangePreset] || '标准';
-      return `分箱：${s.histAutoBins ? '自动' : `${Math.round(Number(s.bins) || 10)} 个`}；纵轴：${s.histogramScale === 'density' ? 'Density' : 'Frequency'}；X 轴：${s.histAxisMode === 'shared' ? '共享' : s.histAxisMode === 'independent' ? '独立' : '自动判断'}；显示范围：${rangeLabel}`;
+      const modeLabel = ({facet:'分面',dodge:'并排',overlay:'叠放',stacked:'堆叠'})[s.histDisplayMode] || '分面';
+      const scaleLabel = ({frequency:'Frequency',density:'Density',percent:'Percent'})[s.histogramScale] || 'Frequency';
+      return `分箱：${s.histAutoBins ? '自动' : `${Math.round(Number(s.bins) || 10)} 个`}；排列：${s.histMirror ? '镜像（两条系列上下相对）' : modeLabel}；纵轴：${scaleLabel}；X 轴：${s.histAxisMode === 'shared' ? '共享' : s.histAxisMode === 'independent' ? '独立' : '自动判断'}；显示范围：${rangeLabel}`;
     }
     if (type === 'kde') {
       const mode = ({curve:'KDE 曲线','hist-kde':'Histogram + KDE',ridge:'Ridgeline'})[s.kdeDisplayMode] || 'KDE 曲线';
@@ -778,15 +869,20 @@
     const rows = state.gallery.rows.filter(r => Number.isFinite(r.Value));
     if (!rows.length) return '';
     const groups = [...new Set(rows.map(r => String(r.Group || 'All')))];
-    const densityMode = s.histogramScale === 'density';
+    const scale = ['frequency', 'density', 'percent'].includes(s.histogramScale) ? s.histogramScale : 'frequency';
     if (!String(s.xTitle || '').trim()) s.xTitle = 'Value';
-    if (isDefaultHistogramAxisTitle(s.yTitle)) s.yTitle = densityMode ? 'Density' : 'Frequency';
+    if (isDefaultHistogramAxisTitle(s.yTitle)) s.yTitle = scale === 'density' ? 'Density' : scale === 'percent' ? 'Percent (%)' : 'Frequency';
     const autoIndependent = histogramNeedsIndependentAxes(groups, rows);
     const independent = s.histAxisMode === 'independent' || (s.histAxisMode === 'auto' && autoIndependent);
-    const useFacet = groups.length > 1 && s.histDisplayMode === 'facet';
+    const mode = ['facet', 'dodge', 'overlay', 'stacked'].includes(s.histDisplayMode) ? s.histDisplayMode : 'facet';
+    const useFacet = groups.length > 1 && mode === 'facet';
+    const useMirror = s.histMirror === true && groups.length === 2 && !useFacet;
     const legend = s.legend && groups.length > 1 ? histogramLegendLayout(groups, W, base, s) : { svg: '', rows: 0, height: 0 };
-    if (useFacet && independent) {
-      // Gap = room for the previous panel's X tick labels + user-controlled extra whitespace.
+    const yTicksFor = maxV => scale === 'density' ? densityTicks(maxV) : histogramFrequencyTicks(maxV);
+
+    if (useFacet) {
+      // Facet panels. X domains are either per-group (independent) or one shared
+      // domain computed from all values; both paths share the layout below.
       const labelBand = num(s.tickLength, 6) + num(s.xTickSize, 12) + 8;
       const panelGap = labelBand + clampLocal(num(s.histFacetGap, 14), 0, 60);
       const legendReserve = legend.rows ? legend.height + 8 : 0;
@@ -794,15 +890,17 @@
       const bottomReserve = labelBand + (s.xTitleVisible !== false ? num(s.xTitleSize, 15) + 30 : 12);
       const availableHeight = Math.max(180, H - top - bottomReserve);
       const panelHeight = Math.max(58, (availableHeight - panelGap * (groups.length - 1)) / groups.length);
+      const sharedGeometry = independent ? null : resolvedHistogramGeometry(rows.map(r => Number(r.Value)), s.bins, s.histAutoBins);
+      const sharedDisplay = sharedGeometry ? histogramDisplayDomain(sharedGeometry, s, false) : null;
       let out = legend.svg;
       groups.forEach((group, gi) => {
         const vals = histogramSeriesValues(rows, group);
-        const geometry = resolvedHistogramGeometry(vals, s.bins, s.histAutoBins);
-        const display = histogramDisplayDomain(geometry, s, false);
+        const geometry = sharedGeometry || resolvedHistogramGeometry(vals, s.bins, s.histAutoBins);
+        const display = sharedDisplay || histogramDisplayDomain(geometry, s, false);
         const groupRows = rows.filter(r => String(r.Group || 'All') === group);
-        const heights = histogramCounts(groupRows, [group], geometry, densityMode)[0];
+        const heights = histogramCounts(groupRows, [group], geometry, scale)[0];
         const rawMax = Math.max(0, ...heights);
-        const yTicks = densityMode ? densityTicks((rawMax || 1) * 1.08) : histogramFrequencyTicks((rawMax || 1) * 1.08);
+        const yTicks = yTicksFor((rawMax || 1) * 1.08);
         const yMax = yTicks[yTicks.length - 1] || 1;
         const xTicks = histogramDisplayTicks(display, geometry, 10);
         const xStep = xTicks.length > 1 ? Math.min(...xTicks.slice(1).map((v, i) => Math.abs(v - xTicks[i])).filter(v => v > 0)) : geometry.binWidth;
@@ -822,13 +920,53 @@
       out += histogramDraggableAxisTitles(W, H, { ...base, t: top, h: availableHeight }, s);
       return out;
     }
-    // One metric / shared-axis comparison. Every group uses exactly the same bin edges.
+
+    if (useMirror) {
+      // Mirrored histogram: exactly two groups, group 0 upward and group 1 downward
+      // from a shared baseline; Y ticks show absolute values on both sides.
+      const geometry = resolvedHistogramGeometry(rows.map(r => Number(r.Value)), s.bins, s.histAutoBins);
+      const display = histogramDisplayDomain(geometry, s, true);
+      const h0 = histogramCounts(rows.filter(r => String(r.Group || 'All') === groups[0]), [groups[0]], geometry, scale)[0];
+      const h1 = histogramCounts(rows.filter(r => String(r.Group || 'All') === groups[1]), [groups[1]], geometry, scale)[0];
+      const overall = Math.max(1e-12, ...h0, ...h1);
+      const yTicks = yTicksFor(overall * 1.06);
+      const yMax = Math.max(yTicks[yTicks.length - 1] || 1, overall);
+      const xTicks = histogramDisplayTicks(display, geometry, 10);
+      const xStep = xTicks.length > 1 ? Math.min(...xTicks.slice(1).map((v, i) => Math.abs(v - xTicks[i])).filter(v => v > 0)) : geometry.binWidth;
+      const yStep = yTicks.length > 1 ? yTicks[1] - yTicks[0] : 1;
+      const legendReserve = legend.rows ? legend.height + 8 : 0;
+      const panel = { ...base, t: base.t + legendReserve, h: Math.max(90, base.h - legendReserve) };
+      const xMap = mapLinear(display.domainMin, display.domainMax, panel.l, panel.l + panel.w);
+      const baseY = panel.t + panel.h / 2;
+      const halfH = panel.h / 2 - 8;
+      const upMap = v => baseY - v / yMax * halfH;
+      const downMap = v => baseY + v / yMax * halfH;
+      let out = legend.svg;
+      out += drawMirrorHalf(panel, h0, 0, xMap, baseY, halfH, yMax, geometry, s, true);
+      out += drawMirrorHalf(panel, h1, 1, xMap, baseY, halfH, yMax, geometry, s, false);
+      out += `<line x1="${panel.l}" y1="${baseY}" x2="${panel.l + panel.w}" y2="${baseY}" stroke="${s.axisColor || '#20262b'}" stroke-width="${(num(s.axisWidth, 1.35) * 0.7).toFixed(2)}" stroke-opacity="0.55"/>`;
+      // Axes are appended after bars so the bars can never cover them.
+      out += drawMirrorAxes(panel, { s, xMap, xTicks, xStep, yTicks, yStep, baseY, geometry: display, upMap, downMap });
+      out += histogramDraggableAxisTitles(W, H, panel, s);
+      return out;
+    }
+
+    // Single-panel comparison: dodge / overlay / stacked share identical bin edges.
     const values = rows.map(r => Number(r.Value));
     const geometry = resolvedHistogramGeometry(values, s.bins, s.histAutoBins);
     const display = histogramDisplayDomain(geometry, s, true);
-    const allHeights = histogramCounts(rows, groups, geometry, densityMode);
-    const rawMax = Math.max(0, ...allHeights.flat());
-    const yTicks = densityMode ? densityTicks((rawMax || 1) * 1.08) : histogramFrequencyTicks((rawMax || 1) * 1.08);
+    let allHeights;
+    if (mode === 'stacked' && scale === 'percent') {
+      // 堆叠 + 百分比：各段表示该 bin 内的构成占比，整柱合计 100%。
+      const raw = histogramCounts(rows, groups, geometry, 'frequency');
+      const binTotals = Array.from({ length: geometry.bins }, (_, i) => raw.reduce((a, h) => a + h[i], 0));
+      allHeights = raw.map(h => h.map((c, i) => binTotals[i] > 0 ? c / binTotals[i] * 100 : 0));
+    } else {
+      allHeights = histogramCounts(rows, groups, geometry, scale);
+    }
+    const colTotals = Array.from({ length: geometry.bins }, (_, i) => allHeights.reduce((a, h) => a + h[i], 0));
+    const rawMax = Math.max(0, ...(mode === 'stacked' ? colTotals : allHeights.flat()));
+    const yTicks = yTicksFor((rawMax || 1) * 1.08);
     const yMax = yTicks[yTicks.length - 1] || 1;
     const xTicks = histogramDisplayTicks(display, geometry, 10);
     const xStep = xTicks.length > 1 ? Math.min(...xTicks.slice(1).map((v, i) => Math.abs(v - xTicks[i])).filter(v => v > 0)) : geometry.binWidth;
@@ -838,9 +976,9 @@
     const xMap = mapLinear(display.domainMin, display.domainMax, panel.l, panel.l + panel.w);
     const yMap = mapLinear(0, yMax, panel.t + panel.h, panel.t + 6);
     let out = legend.svg;
-    groups.forEach((group, gi) => {
-      out += drawHistogramBars(panel, allHeights[gi], gi, xMap, yMap, geometry, s, groups.length > 1);
-    });
+    if (mode === 'dodge') out += drawDodgeBars(panel, allHeights, xMap, yMap, geometry, s);
+    else if (mode === 'stacked') out += drawStackedBars(panel, allHeights, xMap, yMap, geometry, s);
+    else groups.forEach((group, gi) => { out += drawHistogramBars(panel, allHeights[gi], gi, xMap, yMap, geometry, s, groups.length > 1); });
     out += drawNumericAxes(panel, {
       s, xMap, yMap, xTicks, yTicks, xStep, yStep, geometry: display,
       showXLabels: true,

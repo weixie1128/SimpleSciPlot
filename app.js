@@ -504,7 +504,21 @@ function normalizeTextSettings(){
   g.radarFill=false;g.radarShowMarkers=g.radarShowMarkers!==false;g.radarLevels=Math.max(2,Number(g.radarLevels)||4);g.radarLabelOffset=Number(g.radarLabelOffset??30);g.radarShowTickLabels=g.radarShowTickLabels!==false;g.radarTickDecimals=Number.isFinite(Number(g.radarTickDecimals))?Number(g.radarTickDecimals):0;g.radarTickLabelSize=Number(g.radarTickLabelSize??11);g.radarTickLabelPosition=g.radarTickLabelPosition||'top';g.radarTickLabelOffset=Number(g.radarTickLabelOffset??10);g.radarTheme=g.radarTheme||'rose';g.radarGradientMode=g.radarGradientMode||'radial';g.radarGridColor=g.radarGridColor||'#c8aebc';g.radarSpokeColor=g.radarSpokeColor||'#9e8794';g.radarGridWidth=Number(g.radarGridWidth??.9);g.radarSpokeWidth=Number(g.radarSpokeWidth??1.15);g.radarBandMode='theme-gradient';g.radarSmartHighlight=g.radarSmartHighlight!==false;g.radarHighlightThreshold=0;g.radarHighlightStrength=Number(g.radarHighlightStrength??.24);
 }
 
+// v1.9.69：屏幕上常驻显示当前构建版本号，用于一眼确认浏览器加载的是不是最新文件。
+// 版本号来自 index.html 的 <meta name="foodlab-build">，三处版本永远同步。
+function showBuildVersion(){
+  const v=(document.querySelector('meta[name="foodlab-build"]')||{}).content||'unknown';
+  let b=document.getElementById('build-version-badge');
+  if(!b){
+    b=document.createElement('div');
+    b.id='build-version-badge';
+    b.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99999;font:11px/1.4 Arial,sans-serif;color:#5f6d75;background:rgba(255,255,255,.85);border:1px solid #cbd8d3;border-radius:6px;padding:2px 8px;pointer-events:none;box-shadow:0 1px 4px rgba(16,42,34,.12)';
+    document.body.appendChild(b);
+  }
+  b.textContent='v'+v;
+}
 function init(){
+  showBuildVersion();
   restoreProjectName();
   applyLastPalette();
   normalizeTextSettings();
@@ -2509,19 +2523,52 @@ function gallerySeriesPropertyHtml(type,index=0){
   html+=gallerySection('全部系列配色',[galleryPaletteBlock()]);return html;
 }
 function histPropertyHtml(){
-  // v1.9.68：直方图面板的唯一来源，避免两份定义（旧版还在这里放柱透明度/边框粗细，
-  // 与「数据系列」重复且对已生成的系列无效）。
+  // v1.9.70：直方图面板唯一来源。图表工作台（renderGallerySettings）与图形工作室
+  // 属性面板（chart-fixes.js 的 gallerySpecificPropertyHtml 补丁）都调用本函数，
+  // 键名与 chart-fixes.js 的 galleryHistogram 渲染补丁完全一致，杜绝两套面板。
+  const s=state.gallery.settings;
+  const manualRange=`<div class="field" style="margin-top:8px;${s.histXRangePreset==='manual'?'':'opacity:.58'}">
+    <label>手动 X 轴范围（单图 / 共享 X 轴）</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+      <input type="number" step="any" data-hist-manual-axis="histManualXMin" placeholder="Min（自动）" value="${Number.isFinite(Number(s.histManualXMin))?escAttr(String(s.histManualXMin)):''}">
+      <input type="number" step="any" data-hist-manual-axis="histManualXMax" placeholder="Max（自动）" value="${Number.isFinite(Number(s.histManualXMax))?escAttr(String(s.histManualXMax)):''}">
+    </div>
+    <small>仅改变显示范围，不改变分箱和频数。多变量独立分面使用「紧凑度」分别扩展各自 X 轴。</small>
+  </div>`;
   return gallerySection('柱体与分箱',[
-    gRange('bins','分箱数量',4,60,1),
-    gSelect('histLayout','排列方式',[['side','并排'],['overlay','叠放（半透明）'],['stacked','堆叠']]),
-    gSelect('histStat','纵轴统计量',[['count','频数（Count）'],['density','密度（Density）'],['percent','百分比（%）']]),
-    gCheck('histMirror','镜像直方图（两条系列，第二条向下）')
+    gCheck('histAutoBins','自动分箱（Freedman–Diaconis / Sturges，推荐）'),
+    gRange('bins','手动分箱数量（2–40，自动分箱开启时不生效；越少柱越宽，柱体始终相连）',2,40,1),
+    gSelect('histDisplayMode','多列排列方式',[
+      ['facet','分面：每组一个小图（推荐）'],
+      ['dodge','并排：同一图内每个 bin 逐组并排'],
+      ['overlay','叠放：同一图内半透明叠加'],
+      ['stacked','堆叠：同一图内每个 bin 逐组堆叠']
+    ]),
+    gCheck('histMirror','镜像直方图（仅两条系列：第一列向上、第二列向下）')
+  ])+gallerySection('纵轴统计量',[
+    gSelect('histogramScale','Y 轴含义',[
+      ['frequency','频数 Frequency'],
+      ['density','概率密度 Density'],
+      ['percent','百分比 %（各组占自身样本数；堆叠时占该 bin 合计）']
+    ])
+  ])+gallerySection('X 轴范围',[
+    gSelect('histAxisMode','分面 X 轴范围',[['auto','自动判断（推荐）'],['independent','每列独立 X 轴'],['shared','所有列共享 X 轴']]),
+    gSelect('histXRangePreset','X 轴显示紧凑度',[
+      ['compact','紧凑（不额外扩展）'],
+      ['standard','标准（两侧各约 1 个 bin）'],
+      ['relaxed','宽松（两侧各约 2 个 bin）'],
+      ['manual','手动范围 / 自定义外边距']
+    ]),
+    gRange('histXPaddingPct','手动模式外边距 %（独立分面使用）',0,50,1),
+    manualRange,
+    gRange('histFacetGap','分面额外间距（刻度文字之外）',0,60,2),
+    gCheck('histShowAxisBreak','非零起点显示 X 轴截断标记')
   ])+gallerySection('区间高亮',[
-    gCheck('histHighlight','启用区间高亮'),
-    gNumber('histHlMin','高亮左边界',-100000000,100000000,.01),
-    gNumber('histHlMax','高亮右边界',-100000000,100000000,.01),
-    gColor('histHighlightColor','区间外颜色')
-  ])+`<div class="hint">柱透明度、边框粗细和边框颜色在「数据系列」里逐系列设置，这里不再重复。镜像模式仅对两条系列有效，Y 轴刻度显示绝对值；堆叠模式自动按组累加。</div>`;
+    gCheck('histHighlight','启用区间高亮（完全落在区间内的柱变色）'),
+    gNumber('histHlMin','高亮左边界（含）',-100000000,100000000,.01),
+    gNumber('histHlMax','高亮右边界（含）',-100000000,100000000,.01),
+    gColor('histHighlightColor','高亮颜色')
+  ])+`<div class="hint">柱透明度、边框粗细与边框颜色在「数据系列」中逐系列设置，这里不再重复。分箱决定统计柱宽；X 轴范围只改变两侧留白，不改变频数；柱体始终按真实 bin 区间紧密相连。镜像模式仅对恰好两条系列生效。</div>`;
 }
 function gallerySection(title,items){return `<div class="object-property-section"><h3>${title}</h3>${items.join('')}</div>`}
 function galleryDragHint(name){return `<div class="hint">${name}可在图中直接拖动，也可以输入精确坐标。</div>`}
