@@ -373,7 +373,7 @@ const defaultChartSettings = {
   barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barBorderColorMode:'auto', barBorderColor:'#000000', barLineMode:false,barLineWidth:1.8,barLineMarker:true,
   seriesSubEnabled:false, seriesSubGap:10, seriesSubAutoSize:6,
   errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0, errorCustomValue:0.3, customPointErrors:{},
-  legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3,
+  legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3, legendSymbol:'auto',
   legendFrameStyle:'solid', legendFrameWidth:1, legendFrameColor:'#7d898f', legendFrameRadius:2, legendFrameFill:'#ffffff',
   legendShadow:true, legendShadowX:2, legendShadowY:3, legendShadowBlur:3, legendShadowOpacity:.28,
   letters:true, letterScheme:'within', postHoc:'duncan', letterSize:11, letterWeight:400, letterOffset:10,
@@ -385,7 +385,7 @@ const defaultChartSettings = {
   b3ViewDir:'right',b3LayerDx:0,b3LayerDy:0,b3YAxisEdge:'auto',b3ZAxisEdge:'auto',b3XAxisEdge:'front',
   // v1.9.6：Z 轴独立完整设置
   wfZTitleVisible:true,wfZTitleSize:12,wfZTitleColor:'',wfZTitleWeight:400,
-  wfZLabelColor:'',wfZLabelWeight:400,wfZShowTicks:true,wfZTickLength:7,
+  wfZLabelColor:'',wfZLabelWeight:400,wfZShowTicks:true,wfZTickLength:7,wfZAxisWidth:1.35,wfZLabelGap:3,
   wfAzim:-39,wfElev:26,
   background:'#ffffff'
 };
@@ -3123,13 +3123,15 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   }
   // 5) 棱线：前轴粗，后轮廓细
   const ac=s.axisColor,aw=s.axisWidth;
+  // v1.9.65：Z 轴粗细可单独设置（0＝跟随坐标轴粗细）
+  const zaw=Number(s.wfZAxisWidth)>0?Number(s.wfZAxisWidth):aw;
   // v1.9.52：瀑布图盒子棱分色——三条坐标轴棱保持深色，其余棱与顶面用网格线颜色
   // 仅绘制三条坐标轴主棱，不画完整盒子轮廓
   out+=`<g data-object="axis-box" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,0)[0].toFixed(1)},${P(0,0,0)[1].toFixed(1)} L${P(1,0,0)[0].toFixed(1)},${P(1,0,0)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,K)[0].toFixed(1)},${P(zEdgeNx,0,K)[1].toFixed(1)}"/>`
     +`<path d="M${P(sideNx,0,0)[0].toFixed(1)},${P(sideNx,0,0)[1].toFixed(1)} L${P(sideNx,1,0)[0].toFixed(1)},${P(sideNx,1,0)[1].toFixed(1)}"/>`
     +`</g>`;
+  out+=`<path data-object="axis-z" class="chart-object" d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,K)[0].toFixed(1)},${P(zEdgeNx,0,K)[1].toFixed(1)}" stroke="${ac}" stroke-width="${zaw}" fill="none" stroke-linecap="square"/>`;
   // 6) X 刻度（前底边）
   const rot=automaticXTickRotation(xs.ticks.map(t=>t.label));
   out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
@@ -3148,11 +3150,13 @@ function renderWaterfall(W,H,M,plotW,plotH,xvals,gs,colors,b){
   if(K>=1&&s.wfZLabels){
     const ztLen=(s.wfZTickLength!=null?+s.wfZTickLength:7);
     const showZt=(s.wfZShowTicks!==false)&&ztLen>0;
+    // v1.9.65：层标签离轴距离可调（0–40），不再固定 4px + 奇偶错位
+    const zGap=Math.max(0,Number(s.wfZLabelGap)||0);
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k);
-      const ox=dir>0?(ztLen+4+((k%2)*18)):-(ztLen+4+((k%2)*18));
+      const ox=dir>0?(ztLen+zGap):-(ztLen+zGap);
       const anchor=dir>0?'start':'end',lx=p[0]+ox,ly=p[1]+4,tickX=dir>0?p[0]+ztLen:p[0]-ztLen;
-      if(showZt)out+=wfLine(p,[tickX,p[1]],ac,aw);
-      out+=`<text data-object="axis-z" class="chart-object" x="${lx.toFixed(1)}" y="${ly}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" fill="${ac}">${esc(gs[k])}</text>`;}
+      if(showZt)out+=wfLine(p,[tickX,p[1]],ac,zaw);
+      out+=`<text data-object="axis-z" class="chart-object" x="${lx.toFixed(1)}" y="${ly}" text-anchor="${anchor}" font-size="${s.wfZLabelSize}" font-weight="${s.wfZLabelWeight||400}" fill="${s.wfZLabelColor||ac}">${esc(gs[k])}</text>`;}
     if(s.wfZAxisTitle){
       const mid=P(zEdgeNx,0,K/2),ang=Math.atan2(-dy,dir*dx)*180/Math.PI,L=Math.hypot(dx,dy)||1,nxO=dir*dy/L,nyO=dx/L;
       const tx=mid[0]+nxO*30,ty=mid[1]+nyO*30-6;
@@ -3363,11 +3367,13 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     }
   });
   // 4b) 坐标轴重绘：永远压在柱体之上，柱边框颜色/半透明柱不会遮住坐标轴
+  // v1.9.65：Z 轴棱单独成组，粗细由「Z 轴粗细」控制（0＝跟随坐标轴粗细）
+  const zaw=Number(s.wfZAxisWidth)>0?Number(s.wfZAxisWidth):aw;
   out+=`<g class="b3-axis-edges" stroke="${ac}" stroke-width="${aw}" fill="none" stroke-linecap="square">`
     +`<path d="M${P(0,0,xK)[0].toFixed(1)},${P(0,0,xK)[1].toFixed(1)} L${P(1,0,xK)[0].toFixed(1)},${P(1,0,xK)[1].toFixed(1)}"/>`
     +`<path d="M${P(yNx,0,yK)[0].toFixed(1)},${P(yNx,0,yK)[1].toFixed(1)} L${P(yNx,1,yK)[0].toFixed(1)},${P(yNx,1,yK)[1].toFixed(1)}"/>`
-    +`<path d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}"/>`
     +`</g>`;
+  out+=`<path data-object="axis-z" class="chart-object" d="M${P(zEdgeNx,0,0)[0].toFixed(1)},${P(zEdgeNx,0,0)[1].toFixed(1)} L${P(zEdgeNx,0,KD)[0].toFixed(1)},${P(zEdgeNx,0,KD)[1].toFixed(1)}" stroke="${ac}" stroke-width="${zaw}" fill="none" stroke-linecap="square"/>`;
   out+=`<g data-object="axis-x" class="chart-object" stroke="${ac}" stroke-width="${aw}" fill="none">`;
   if(s.showXTicks)xs.ticks.forEach(tk=>{const pt=P(tk.n,0,xK);out+=wfLine(pt,[pt[0],pt[1]+s.tickLength],ac,aw);});
   out+='</g>';
@@ -3389,10 +3395,11 @@ function renderBar3D(W,H,xvals,gs,colors,b){
     const nxO=ey/el*sgn, nyO=-ex/el*sgn; // 外法线：右侧时反向
     const zFs = s.wfZLabelSize || s.yTickSize;
     const tickLen = s.wfZShowTicks ? (Number(s.wfZTickLength)||0) : 0;
-    const labelGap = tickLen + zFs*0.75; // 标签离轴距离：刻度线 + 字号自适应
+    // v1.9.65：标签离轴距离改为可调（刻度线 + 层标签离轴距离）
+    const labelGap = tickLen + Math.max(0,Number(s.wfZLabelGap)||0);
     const zCol = s.wfZLabelColor || ac;
     for(let k=0;k<=K;k++){const p=P(zEdgeNx,0,k + tD/2); // v1.9.52：对齐柱组纵深中心
-      if(tickLen>0)out+=wfLine(p,[p[0]+nxO*tickLen,p[1]+nyO*tickLen],ac,aw);
+      if(tickLen>0)out+=wfLine(p,[p[0]+nxO*tickLen,p[1]+nyO*tickLen],ac,zaw);
       const ox2=p[0]+nxO*labelGap,oy2=p[1]+nyO*labelGap;
       out+=`<text data-object="axis-z" class="chart-object" x="${ox2.toFixed(1)}" y="${(oy2+zFs*0.35).toFixed(1)}" text-anchor="middle" font-size="${zFs}" font-weight="${s.wfZLabelWeight||400}" fill="${zCol}" transform="rotate(${zAng.toFixed(1)} ${ox2.toFixed(1)} ${(oy2+zFs*0.35).toFixed(1)})">${esc(gs[k])}</text>`;}
     if(s.wfZTitleVisible&&s.wfZAxisTitle){
@@ -3613,8 +3620,14 @@ function legendLayout(gs,colors){
   let content='';
   gs.forEach((g,i)=>{
     const col=horizontal?i%cols:0,row=horizontal?Math.floor(i/cols):i,ox=colX[col],oy=row*rowH+rowH*.52,c=colors[i%colors.length],st=getSeriesStyle(i);
-    if(state.chart.type==='bar'||state.chart.type==='bar3d'||state.chart.type==='waterfall')content+=`<rect data-object="legend" x="${ox}" y="${oy-font*.42}" width="${symbolW}" height="${Math.max(12,font*.82)}" fill="${c}" stroke="${darken(c,.25)}" stroke-width=".6"/><text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
-    else content+=`<line data-object="legend" x1="${ox}" x2="${ox+symbolW}" y1="${oy}" y2="${oy}" stroke="${c}" stroke-width="${st.lineWidth}"/>${seriesMarkersVisible()?markerLegend(ox+symbolW/2,oy,c,i):''}<text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.12}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
+    const _sym=s.legendSymbol||'auto';
+    // 自动：柱状/3D 柱用色块，折线/曲线/瀑布图用线条（可按需强制切换）
+    const _useSwatch=_sym==='swatch'||(_sym==='auto'&&(state.chart.type==='bar'||state.chart.type==='bar3d'));
+    if(_useSwatch)content+=`<rect data-object="legend" x="${ox}" y="${oy-font*.42}" width="${symbolW}" height="${Math.max(12,font*.82)}" fill="${c}" stroke="${darken(c,.25)}" stroke-width=".6"/><text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
+    else{
+      const _showMk=seriesMarkersVisible()||(state.chart.type==='waterfall'&&s.wfShowMarkers&&st.showMarker!==false);
+      content+=`<line data-object="legend" x1="${ox}" x2="${ox+symbolW}" y1="${oy}" y2="${oy}" stroke="${c}" stroke-width="${st.lineWidth}"/>${_showMk?markerLegend(ox+symbolW/2,oy,c,i):''}<text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.12}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}">${esc(g)}</text>`;
+    }
   });
   return {content,width:cursor,height:Math.max(rowH,rows*rowH),padX:14,padY:10};
 }
@@ -3835,14 +3848,16 @@ function renderProperties(){
     selectField('wfZLabelWeight','层标签字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
     colorField('wfZLabelColor','层标签颜色'),
     checkField('wfZShowTicks','显示 Z 轴刻度线'),
-    rangeField('wfZTickLength','刻度线长度',0,18,1)])
+    rangeField('wfZTickLength','刻度线长度',0,18,1),
+    rangeField('wfZAxisWidth','Z 轴粗细',.5,5,.1),
+    rangeField('wfZLabelGap','层标签离轴距离',0,40,1)])
   +'<div class="object-property-section"><h3>Z 轴标题</h3></div>'+fieldGroup([
     checkField('wfZTitleVisible','显示 Z 轴标题'),
     textField('wfZAxisTitle','标题文字'),
     rangeField('wfZTitleSize','标题字号',9,30,1),
     selectField('wfZTitleWeight','标题字重',[['300','细体'],['400','常规'],['500','中等'],['600','半粗'],['700','粗体']]),
     colorField('wfZTitleColor','标题颜色')])
-  +'<div class="hint">标签离轴距离随字号自动增大，不会与刻度线或坐标轴重叠。</div>';}
+  +'<div class="hint">「层标签离轴距离」控制层标签与 Z 轴之间的空白（默认 3px，调大即远离、调小即贴近）；Z 轴粗细独立于 X/Y 轴。</div>';}
   else if(id==='frame'){name='图片边框';html=fieldGroup([
     selectField('frameMode','边框形式',[['lb','仅左、下轴'],['lbr','左、下、右三边'],['box','完整四边框'],['none','不显示边框']]),rangeField('frameWidth','边框粗细',.5,6,.1),colorField('frameColor','边框颜色')
   ]);}
@@ -3974,7 +3989,7 @@ function renderProperties(){
   ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
   else if(id==='error'){name='误差棒';const et=getSettingValue('errorType');const isCustom=et==='custom',isPoint=et==='custom-point';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值'],['custom-point','逐点自定义（在线表格）']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'')+(isPoint?customPointErrorTable()+'<div class="hint">在每个数据点一行的表格里填单侧误差长度，留空按 0 处理；各点误差相互独立。</div>':'');}
   else if(id==='legend'){name='图例内容';
-    html=fieldGroup([checkField('legendVisible','显示图例'),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
+    html=fieldGroup([checkField('legendVisible','显示图例'),selectField('legendSymbol','图例符号',[['auto','自动（柱状＝色块，折线/曲线/瀑布＝线条）'],['line','线条（有标记时带标记）'],['swatch','色块']]),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。「图例符号」可强制把任何图形改成线条或色块。多系列时可以使用多列排版；图例边框、阴影在「图例边框」里设置。</div>`;}
   else if(id==='legend-frame'){name='图例边框';html=fieldGroup([
     selectField('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),
     numberLegendFrameField('x','水平位置'),numberLegendFrameField('y','垂直位置'),checkLegendFrameField('autoSize','自动适应图例大小'),numberLegendFrameField('width','边框宽度'),numberLegendFrameField('height','边框高度'),
