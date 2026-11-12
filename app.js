@@ -3192,13 +3192,12 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   const cA=Math.cos(A),sA=Math.sin(A),cE=Math.cos(E),sE=Math.sin(E);
   const M={l:104,r:42,t:58,b:102};
   const plotW=W-M.l-M.r,plotH=H-M.t-M.b;
-  const kS=1/Nx*(1+clamp(Number(s.b3LayerDx)||0,0,200)/100); // 层间沿 Z 轴（纵深）错开
-  const xStagger=clamp(Number(s.b3LayerDy)||0,0,200)/100*(1/Nx)*0.5; // 层间沿 X 轴（横向）错开，每层在 X 方向偏移
-  const u=(nx,k)=>(nx-.5)*cA-(k-K/2)*kS*sA;
-  const v=(nx,ny,k)=>ny*cE+((nx-.5)*sA+(k-K/2)*kS*cA)*sE;
+  const kS=1/Nx*(1+clamp(Number(s.b3LayerDx)||0,0,200)/100); // 层间沿 Z 轴（纵深）错开：缩放深度坐标，拉大层间距
+  const xS=1+clamp(Number(s.b3LayerDy)||0,0,200)/100;        // 层间沿 X 轴（横向）错开：缩放 X 坐标，拉大类别间距（与 Z 同理，不平移柱体）
+  const u=(nx,k)=>(nx-.5)*xS*cA-(k-K/2)*kS*sA;
+  const v=(nx,ny,k)=>ny*cE+((nx-.5)*xS*sA+(k-K/2)*kS*cA)*sE;
   let minU=1e9,maxU=-1e9,minV=1e9,maxV=-1e9;
-  const nxMaxOff=(K/2)*xStagger;
-  for(const nx of [-nxMaxOff,0,1,1+nxMaxOff])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
+  for(const nx of [0,1])for(const k of [0,KD])for(const ny of [0,1]){const uu=u(nx,k),vv=v(nx,ny,k);if(uu<minU)minU=uu;if(uu>maxU)maxU=uu;if(vv<minV)minV=vv;if(vv>maxV)maxV=vv;}
   const L=Math.min((plotW-24)/(maxU-minU),(plotH-16)/(maxV-minV));
   const ox=M.l+plotW/2-L*(minU+maxU)/2;
   const oy=M.t+plotH/2+L*(minV+maxV)/2;
@@ -3222,7 +3221,7 @@ function renderBar3D(W,H,xvals,gs,colors,b){
   gs.forEach((g,k)=>{xvals.forEach((x,i)=>{
     const d=(model.byGroup.get(String(g))||[]).find(r=>String(r.x)===String(x));
     if(!d)return;
-    const cx=(i+.5)/Nx+(k-K/2)*xStagger;
+    const cx=(i+.5)/Nx;
     rows.push({g,k,i,d,c:wfColorForLayer(k,gs.length,colors),cx,x0:cx-barWnx/2,x1:cx+barWnx/2,
       yBase:yN(Math.max(bmin,0)),yTop:yN(d.mean),
       near:-(cx-.5)*sA-(k+tD/2-K/2)*kS*cA});
@@ -3905,8 +3904,8 @@ function renderProperties(){
     rangeField('b3Azim','水平旋转角（方位）',-20,90,1),
     rangeField('b3Elev','俯仰角（仰角）',5,80,1),
     selectField('b3ViewDir','纵深方向',[['right','向右后方（默认）'],['left','向左后方']]),
-    rangeField('b3LayerDx','层间沿 Z 轴（纵深）错开',0,200,1),
-    rangeField('b3LayerDy','层间沿 X 轴（横向）错开',0,200,1)])
+    rangeField('b3LayerDx','层间纵深间距（Z 轴）',0,200,1),
+    rangeField('b3LayerDy','层间横向间距（X 轴）',0,200,1)])
 +'<div style="margin:2px 0 10px"><button type="button" data-action="b3ResetView" class="ghost" style="padding:6px 12px;border:1px solid #c9d2d8;border-radius:5px;background:#f4f7f9;cursor:pointer;font-size:12px">复位视角与图例位置</button></div>'
 +'<div class="hint">也可以直接在图表空白处按住拖动来旋转视角；图例（或色条）可直接拖到任意位置，双击它即可回到默认位置。柱体形状、粗细、边框和渐变在「柱体形状与颜色」面板里改。</div>';}
   else if(id==='b3-colors'){name='柱体形状与颜色';html=
