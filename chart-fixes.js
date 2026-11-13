@@ -71,6 +71,7 @@
     if (!Number.isFinite(Number(s.kdeHistBins))) s.kdeHistBins = 8;
     if (!Number.isFinite(Number(s.kdeHistOpacity))) s.kdeHistOpacity = 0.35;
     if (typeof s.kdeHistEnabled !== 'boolean') s.kdeHistEnabled = false;
+    if (!['series', 'custom'].includes(s.kdeHistColorMode)) s.kdeHistColorMode = 'series';
     if (typeof s.kdeHistColor !== 'string' || !s.kdeHistColor) s.kdeHistColor = '#b8b8b8';
     if (!Number.isFinite(Number(s.kdeFacetGap))) s.kdeFacetGap = 22;
     if (!Number.isFinite(Number(s.kdeRidgeOverlap))) s.kdeRidgeOverlap = 0.55;
@@ -780,7 +781,8 @@
         extra.push(gallerySection('直方图部分（仅“直方图 + 曲线”形式）', [
           gCheck('kdeHistAutoBins', '自动分组'),
           ...(autoBins ? [] : [gRange('kdeHistBins', '手动组数', 3, 30, 1)]),
-          gColor('kdeHistColor', '直方柱颜色（可与曲线不同）'),
+          gSelect('kdeHistColorMode', '直方柱颜色', [['series', '跟随各组曲线（默认）'], ['custom', '统一自定义颜色']]),
+          ...(s.kdeHistColorMode === 'custom' ? [gColor('kdeHistColor', '直方柱颜色')] : []),
           gRange('kdeHistOpacity', '直方柱透明度', 0.05, 1, 0.01),
           gRange('kdeFacetGap', '小图之间的间距', 8, 60, 2)
         ]));
@@ -792,7 +794,8 @@
           ...(histOn ? [
             gCheck('kdeHistAutoBins', '自动分组'),
             ...(autoBins ? [] : [gRange('kdeHistBins', '手动组数', 3, 30, 1)]),
-            gColor('kdeHistColor', '直方柱颜色'),
+            gSelect('kdeHistColorMode', '直方柱颜色', [['series', '跟随各组曲线（默认）'], ['custom', '统一自定义颜色']]),
+            ...(s.kdeHistColorMode === 'custom' ? [gColor('kdeHistColor', '直方柱颜色')] : []),
             gRange('kdeHistOpacity', '直方柱透明度', 0.05, 1, 0.01)
           ] : [])
         ]));
@@ -1148,11 +1151,12 @@
     // v1.9.79: curve mode can optionally overlay semi-transparent histograms.
     const histOn = s.kdeHistEnabled === true;
     const histOpacityCurve = clampLocal(num(s.kdeHistOpacity, 0.35), 0.05, 1);
-    const histFillCurve = s.kdeHistColor || '#b8b8b8';
     let histGeometry = null;
     if (histOn) histGeometry = resolvedHistogramGeometry(allValues, s.kdeHistBins, s.kdeHistAutoBins);
     groups.forEach((g, i) => {
       const st = getGallerySeriesStyle(i), curve = curves[i], d = kdePath(curve, xMap, yMap);
+      // v1.9.82: default is each group's own curve color so bars and curve match.
+      const histFillCurve = s.kdeHistColorMode === 'custom' ? (s.kdeHistColor || '#b8b8b8') : st.color;
       let body = '';
       // Histogram bars go behind the fill path so they are partially visible.
       if (histOn && histGeometry) {
@@ -1225,8 +1229,11 @@
     const lineW = clampLocal(num(s.kdeLineWidth, 1.5), 0.5, 5);
     const lineOpacity = clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1);
     const histOpacity = clampLocal(num(s.kdeHistOpacity, 0.35), 0.05, 1);
-    const histFill = s.kdeHistColor || '#b8b8b8';
     groups.forEach((g, gi) => {
+      const st = getGallerySeriesStyle(gi);
+      // v1.9.82: bars follow each group's curve color by default, so the histogram
+      // and its curve read as one series; switch to custom for one unified color.
+      const histFill = s.kdeHistColorMode === 'custom' ? (s.kdeHistColor || '#b8b8b8') : st.color;
       const vals = finiteValues(rows.filter(r => String(r.Group || 'All') === g).map(r => r.Value));
       const bw = kdeBandwidthFor(vals, s);
       const curve = kdeCurveFor(vals, xMin, xMax, bw, 190);
@@ -1242,7 +1249,6 @@
       const panel = { l: p.l, t: top + gi * (panelH + gap), w: p.w, h: panelH };
       const xMap = scaleLinear(xMin, xMax, panel.l, panel.l + panel.w);
       const yMap = scaleLinear(0, ymax, panel.t + panel.h, panel.t + 5);
-      const st = getGallerySeriesStyle(gi);
       let body = '';
       densities.forEach((d, bi) => {
         const left = geometry.domainMin + bi * geometry.binWidth;
