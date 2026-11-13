@@ -504,8 +504,9 @@ function normalizeTextSettings(){
   g.radarFill=false;g.radarShowMarkers=g.radarShowMarkers!==false;g.radarLevels=Math.max(2,Number(g.radarLevels)||4);g.radarLabelOffset=Number(g.radarLabelOffset??30);g.radarShowTickLabels=g.radarShowTickLabels!==false;g.radarTickDecimals=Number.isFinite(Number(g.radarTickDecimals))?Number(g.radarTickDecimals):0;g.radarTickLabelSize=Number(g.radarTickLabelSize??11);g.radarTickLabelPosition=g.radarTickLabelPosition||'top';g.radarTickLabelOffset=Number(g.radarTickLabelOffset??10);g.radarTheme=g.radarTheme||'rose';g.radarGradientMode=g.radarGradientMode||'radial';g.radarGridColor=g.radarGridColor||'#c8aebc';g.radarSpokeColor=g.radarSpokeColor||'#9e8794';g.radarGridWidth=Number(g.radarGridWidth??.9);g.radarSpokeWidth=Number(g.radarSpokeWidth??1.15);g.radarBandMode='theme-gradient';g.radarSmartHighlight=g.radarSmartHighlight!==false;g.radarHighlightThreshold=0;g.radarHighlightStrength=Number(g.radarHighlightStrength??.24);
 }
 
-// v1.9.69：屏幕上常驻显示当前构建版本号，用于一眼确认浏览器加载的是不是最新文件。
-// 版本号来自 index.html 的 <meta name="foodlab-build">，三处版本永远同步。
+// v1.9.74：版本号只保留左下角这一个角标，避免页脚再显示第二个版本号。
+// 角标版本读取 index.html 的 <meta name="foodlab-build">，所以显示的一定是当前真正加载的版本；
+// 页脚标签由 boot-guard 写入，浏览器缓存或补丁包覆盖不全时可能还是旧版本号，因此这里直接隐藏。
 function showBuildVersion(){
   const v=(document.querySelector('meta[name="foodlab-build"]')||{}).content||'unknown';
   let b=document.getElementById('build-version-badge');
@@ -516,6 +517,8 @@ function showBuildVersion(){
     document.body.appendChild(b);
   }
   b.textContent='v'+v;
+  const foot=document.querySelector('.sidebar-foot');
+  if(foot) foot.style.display='none';
 }
 function init(){
   showBuildVersion();
@@ -2568,8 +2571,7 @@ function histPropertyHtml(){
     ]),
     gRange('histXPaddingPct','手动模式外边距 %（独立分面使用）',0,50,1,{disabled:s.histXRangePreset!=='manual'}),
     manualRange,
-    gRange('histFacetGap','分面额外间距（刻度文字之外）',0,60,2),
-    gCheck('histShowAxisBreak','非零起点显示 X 轴截断标记')
+    gRange('histFacetGap','分面额外间距（刻度文字之外）',0,60,2)
   ])+gallerySection('区间高亮',[
     gCheck('histHighlight','启用区间高亮（完全落在区间内的柱变色）'),
     gNumber('histHlMin','高亮左边界（含）',-100000000,100000000,.01),

@@ -53,7 +53,6 @@
     if (!Number.isFinite(Number(s.histXPaddingPct))) s.histXPaddingPct = 6;
     if (s.histManualXMin === undefined) s.histManualXMin = null;
     if (s.histManualXMax === undefined) s.histManualXMax = null;
-    if (typeof s.histShowAxisBreak !== 'boolean') s.histShowAxisBreak = true;
     // KDE uses dedicated styling so line thickness and fill opacity no longer
     // collide with generic series opacity / lineWidth settings.
     if (!['curve', 'hist-kde', 'ridge'].includes(s.kdeDisplayMode)) s.kdeDisplayMode = 'curve';
@@ -315,20 +314,8 @@
     const meanLocal = stats.reduce((sum, x) => sum + x.range, 0) / stats.length;
     return globalMax - globalMin > meanLocal * 4.5;
   }
-  function drawXAxisBreak(panel, geometry, s) {
-    if (s.histShowAxisBreak === false) return '';
-    // A truncated continuous X axis is valid for a histogram, but the break mark
-    // prevents the left Y-axis intersection from being misread as x = 0.
-    if (geometry.domainMin <= 0 && geometry.domainMax >= 0) return '';
-    const axis = s.axisColor || '#20262b';
-    const y = panel.t + panel.h;
-    const x = panel.l + 11;
-    return `<g data-gobject="axis-x" class="chart-object" pointer-events="none">
-      <rect x="${x - 5}" y="${y - 4}" width="23" height="9" fill="${s.background || '#fff'}"/>
-      <line x1="${x}" y1="${y + 4}" x2="${x + 7}" y2="${y - 4}" stroke="${axis}" stroke-width="${num(s.axisWidth, 1.35)}"/>
-      <line x1="${x + 8}" y1="${y + 4}" x2="${x + 15}" y2="${y - 4}" stroke="${axis}" stroke-width="${num(s.axisWidth, 1.35)}"/>
-    </g>`;
-  }
+  // v1.9.75: 删掉 X 轴左端的“//”截断标记。直方图 X 轴被裁到非零起点是正常显示，
+  // 轴本身并没有断开，这个标记只会挡住第一个刻度、看起来像断轴。
   function drawNumericAxes(panel, { s, xMap, yMap, xTicks, yTicks, xStep, yStep, geometry, showXLabels = true, showYLabels = true, boxMode = true }) {
     const axis = s.axisColor || '#20262b';
     const sw = num(s.axisWidth, 1.35);
@@ -360,7 +347,6 @@
         out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw/2}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
         out += `<text x="${x + dx}" y="${panel.t + panel.h + tick + xSize + 4}" text-anchor="${anchor}" font-size="${xSize}" font-weight="${xWeight}" fill="${s.xTickColor || axis}">${esc(prettyNumber(v, xStep))}</text>`;
       });
-      out += drawXAxisBreak(panel, geometry, s);
     }
     return out;
   }
@@ -500,7 +486,6 @@
       out += `<line x1="${x}" x2="${x}" y1="${panel.t + panel.h - sw/2}" y2="${panel.t + panel.h + tick}" stroke="${axis}" stroke-width="${sw}"/>`;
       out += `<text x="${x + dx}" y="${panel.t + panel.h + tick + xSize + 4}" text-anchor="${anchor}" font-size="${xSize}" font-weight="${num(s.xTickWeight, 400)}" fill="${s.xTickColor || axis}">${esc(prettyNumber(v, xStep))}</text>`;
     });
-    out += drawXAxisBreak(panel, geometry, s);
     return out;
   }
   function estimateLegendTextWidth(text, fontSize) {
