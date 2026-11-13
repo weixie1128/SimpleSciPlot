@@ -2673,7 +2673,9 @@ async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(
     // v2 参数文件携带 seriesStyles（含每系列独立设置的填充色等），一并恢复。
     var _names=galleryStudioSeriesNames();var _def=(typeof templates!=='undefined'&&templates.foodchem)?templates.foodchem.colors:[];
     while(state.gallery.palette.length<_names.length&&_def.length){state.gallery.palette.push(_def[state.gallery.palette.length%_def.length])}
-    if(obj.seriesStyles&&typeof obj.seriesStyles==='object'){Object.keys(obj.seriesStyles).forEach(function(k){var i=Number(k);if(Number.isFinite(i)&&i>=0&&i<_names.length&&obj.seriesStyles[k]&&typeof obj.seriesStyles[k]==='object')state.gallery.seriesStyles[i]=Object.assign({color:state.gallery.palette[i%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,pointSize:state.gallery.settings.pointSize,markerShape:'circle',markerFill:state.gallery.type==='radar'?'white':'series'},obj.seriesStyles[k])})}
+    // v1.9.83：系列颜色必须以参数文件里的 palette 为准。此前会把文件里存下的 color 一并恢复，
+    // 导致导入后颜色卡在导出时的旧配色上（换配色、套新参数都没反应）。
+    if(obj.seriesStyles&&typeof obj.seriesStyles==='object'){Object.keys(obj.seriesStyles).forEach(function(k){var i=Number(k);if(!Number.isFinite(i)||i<0||i>=_names.length)return;var src=obj.seriesStyles[k];if(!src||typeof src!=='object')return;var own=Object.assign({},src);if(own.fillColor&&src.color&&String(own.fillColor).toLowerCase()===String(src.color).toLowerCase())delete own.fillColor;delete own.color;state.gallery.seriesStyles[i]=Object.assign({},own,{color:state.gallery.palette[i%state.gallery.palette.length]})})}
     ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
 // sp1 spec → 画廊模式图参数

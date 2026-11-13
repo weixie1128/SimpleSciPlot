@@ -71,7 +71,7 @@
     if (!Number.isFinite(Number(s.kdeHistBins))) s.kdeHistBins = 8;
     if (!Number.isFinite(Number(s.kdeHistOpacity))) s.kdeHistOpacity = 0.35;
     if (typeof s.kdeHistEnabled !== 'boolean') s.kdeHistEnabled = false;
-    if (!['series', 'custom'].includes(s.kdeHistColorMode)) s.kdeHistColorMode = 'series';
+    if (!['series', 'pergroup', 'custom'].includes(s.kdeHistColorMode)) s.kdeHistColorMode = 'series';
     if (typeof s.kdeHistColor !== 'string' || !s.kdeHistColor) s.kdeHistColor = '#b8b8b8';
     if (!Number.isFinite(Number(s.kdeFacetGap))) s.kdeFacetGap = 22;
     if (!Number.isFinite(Number(s.kdeRidgeOverlap))) s.kdeRidgeOverlap = 0.55;
@@ -777,12 +777,21 @@
       if (rugOn) style.push(gRange('kdeRugHeight', '小短线高度', 3, 18, 1));
 
       const extra = [];
+      const histGroups = galleryStudioSeriesNames();
+      const histColorModeOptions = [
+        ['series', '跟随各组曲线（默认）'],
+        ['pergroup', '分别自定义颜色'],
+        ['custom', '统一自定义颜色']
+      ];
+      const histColorControls = s.kdeHistColorMode === 'pergroup'
+        ? histGroups.map((g, i) => gColor('kdeHistColor' + i, g))
+        : (s.kdeHistColorMode === 'custom' ? [gColor('kdeHistColor', '统一颜色')] : []);
       if (mode === 'hist-kde') {
         extra.push(gallerySection('直方图部分（仅“直方图 + 曲线”形式）', [
           gCheck('kdeHistAutoBins', '自动分组'),
           ...(autoBins ? [] : [gRange('kdeHistBins', '手动组数', 3, 30, 1)]),
-          gSelect('kdeHistColorMode', '直方柱颜色', [['series', '跟随各组曲线（默认）'], ['custom', '统一自定义颜色']]),
-          ...(s.kdeHistColorMode === 'custom' ? [gColor('kdeHistColor', '直方柱颜色')] : []),
+          gSelect('kdeHistColorMode', '直方柱颜色', histColorModeOptions),
+          ...histColorControls,
           gRange('kdeHistOpacity', '直方柱透明度', 0.05, 1, 0.01),
           gRange('kdeFacetGap', '小图之间的间距', 8, 60, 2)
         ]));
@@ -794,8 +803,8 @@
           ...(histOn ? [
             gCheck('kdeHistAutoBins', '自动分组'),
             ...(autoBins ? [] : [gRange('kdeHistBins', '手动组数', 3, 30, 1)]),
-            gSelect('kdeHistColorMode', '直方柱颜色', [['series', '跟随各组曲线（默认）'], ['custom', '统一自定义颜色']]),
-            ...(s.kdeHistColorMode === 'custom' ? [gColor('kdeHistColor', '直方柱颜色')] : []),
+            gSelect('kdeHistColorMode', '直方柱颜色', histColorModeOptions),
+            ...histColorControls,
             gRange('kdeHistOpacity', '直方柱透明度', 0.05, 1, 0.01)
           ] : [])
         ]));
@@ -1156,7 +1165,10 @@
     groups.forEach((g, i) => {
       const st = getGallerySeriesStyle(i), curve = curves[i], d = kdePath(curve, xMap, yMap);
       // v1.9.82: default is each group's own curve color so bars and curve match.
-      const histFillCurve = s.kdeHistColorMode === 'custom' ? (s.kdeHistColor || '#b8b8b8') : st.color;
+      // v1.9.84: per-group custom color is now possible; empty slot falls back to the curve color.
+      const histFillCurve = s.kdeHistColorMode === 'custom'
+        ? (s.kdeHistColor || '#b8b8b8')
+        : (s.kdeHistColorMode === 'pergroup' ? (s['kdeHistColor' + i] || st.color) : st.color);
       let body = '';
       // Histogram bars go behind the fill path so they are partially visible.
       if (histOn && histGeometry) {
@@ -1233,7 +1245,9 @@
       const st = getGallerySeriesStyle(gi);
       // v1.9.82: bars follow each group's curve color by default, so the histogram
       // and its curve read as one series; switch to custom for one unified color.
-      const histFill = s.kdeHistColorMode === 'custom' ? (s.kdeHistColor || '#b8b8b8') : st.color;
+      const histFill = s.kdeHistColorMode === 'custom'
+        ? (s.kdeHistColor || '#b8b8b8')
+        : (s.kdeHistColorMode === 'pergroup' ? (s['kdeHistColor' + gi] || st.color) : st.color);
       const vals = finiteValues(rows.filter(r => String(r.Group || 'All') === g).map(r => r.Value));
       const bw = kdeBandwidthFor(vals, s);
       const curve = kdeCurveFor(vals, xMin, xMax, bw, 190);
