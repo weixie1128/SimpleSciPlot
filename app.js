@@ -2406,7 +2406,7 @@ function bindGalleryStudioObjects(){
 function bindGalleryStudioDraggables(){
   const svg=$('#paperSvg');if(!svg)return;
   bindAnnotationEndpointHandles(svg,state.gallery,()=>{renderGalleryStudioCanvas();renderGalleryStudioLayers();renderGalleryStudioProperties()});
-  $$('[data-gdrag]').forEach(el=>el.addEventListener('pointerdown',e=>{
+  $$('#chartStage [data-gdrag]').forEach(el=>el.addEventListener('pointerdown',e=>{
     if(e.target.closest('[data-annotation-handle]'))return;
     e.preventDefault();e.stopPropagation();const key=el.dataset.gdrag,start=svgPoint(svg,e),snap=galleryDragSnapshot(key,el);el.setPointerCapture(e.pointerId);
     state.gallery.selected=key==='annotation'?`annotation:${el.dataset.gannotationId}`:key==='xTitle'?'axis-x':key==='yTitle'?'axis-y':key==='legendFrame'?'legend-frame':key==='methodNote'?'method-note':key;if(key==='annotation')state.gallery.selectedAnnotation=el.dataset.gannotationId;
@@ -2415,10 +2415,17 @@ function bindGalleryStudioDraggables(){
     el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
   }));
 }
+function galleryTransformXY(el,fallbackX,fallbackY){
+  const m=/translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)\s*\)/.exec(el?.getAttribute?.('transform')||'');
+  return m?{x:Number(m[1]),y:Number(m[2])}:{x:fallbackX,y:fallbackY};
+}
 function galleryDragSnapshot(key,el=null){
   const s=state.gallery.settings;if(key==='annotation'){const ann=state.gallery.annotations.find(a=>a.id===el?.dataset.gannotationId);return ann?structuredClone(ann):{}}
   if(key==='title')return{x:s.titleX??s.width/2,y:s.titleY??38};if(key==='subtitle')return{x:s.subtitleX??s.width/2,y:s.subtitleY??58};
-  if(key==='legend')return{x:s.legendX??120,y:s.legendY??62};if(key==='legendFrame')return{x:s.legendFrameX??108,y:s.legendFrameY??50};if(key==='methodNote')return{x:s.methodNoteX??s.width-24,y:s.methodNoteY??s.height-10};
+  // v1.9.73：图例/图例边框的起点以画布上真实的 transform 为准，避免第一下拖动跳位。
+  if(key==='legend')return galleryTransformXY(el,s.legendX??120,s.legendY??62);
+  if(key==='legendFrame')return galleryTransformXY(el,s.legendFrameX??108,s.legendFrameY??50);
+  if(key==='methodNote')return{x:s.methodNoteX??s.width-24,y:s.methodNoteY??s.height-10};
   if(key==='xTitle')return{x:s.xTitleX??s.width/2,y:s.xTitleY??s.height-24};return{x:s.yTitleX??28,y:s.yTitleY??s.height/2};
 }
 function galleryApplyAnnotationDrag(el,snap,dx,dy){

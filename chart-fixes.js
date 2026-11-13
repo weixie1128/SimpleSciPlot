@@ -515,17 +515,21 @@
     const itemGap = Math.max(12, fontSize * 0.85);
     const rowGap = Math.max(4, fontSize * 0.28);
     const rowHeight = Math.max(marker, fontSize) + rowGap;
-    const x0 = num(s.legendX, base.l + 8);
-    const y0 = num(s.legendY, Math.max(34, base.t - 28));
-    const usableWidth = Math.max(100, W - base.l - 24);
+    const lx = num(s.legendX, base.l + 8);
+    const ly = num(s.legendY, Math.max(34, base.t - 28));
     const widths = groups.map(g => marker + markerGap + estimateLegendTextWidth(g, fontSize) + itemGap);
-    const totalWidth = widths.reduce((a, b) => a + b, 0) - itemGap;
-    const forceOneRow = totalWidth <= usableWidth;
+    // v1.9.73：图例改成“局部坐标 + translate(legendX, legendY)”。
+    // 旧版把每一项按绝对坐标画好，拖拽时又给整组加 translate，等于坐标叠了两次，
+    // 所以一拖就跳、拖不准。现在和散点/KDE 图例一致，拖多少走多少。
+    // 同时真正读取「排列方向」和「横向列数」，纵向才能生效。
+    const vertical = s.legendOrientation === 'vertical';
+    const columns = vertical ? 1 : Math.max(1, Math.min(groups.length, Number(s.legendColumns) || groups.length));
     const rows = [];
     let current = [], used = 0;
+    const rowWidthLimit = columns > 1 ? Infinity : Math.max(100, W - lx - 24);
     groups.forEach((g, gi) => {
       const w = widths[gi];
-      if (!forceOneRow && current.length && used + w > usableWidth) {
+      if (current.length && (current.length >= columns || used + w > rowWidthLimit)) {
         rows.push(current);
         current = [];
         used = 0;
@@ -536,8 +540,8 @@
     if (current.length) rows.push(current);
     let items = '';
     rows.forEach((row, ri) => {
-      let x = x0;
-      const baseline = y0 + ri * rowHeight;
+      let x = 0;
+      const baseline = ri * rowHeight;
       row.forEach(item => {
         const st = getGallerySeriesStyle(item.gi);
         const markerY = baseline - fontSize * 0.78;
@@ -550,7 +554,7 @@
     return {
       rows: rows.length,
       height,
-      svg: `<g data-gobject="legend" data-gdrag="legend" class="chart-object draggable">${items}</g>`
+      svg: `<g data-gobject="legend" data-gdrag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})">${items}</g>`
     };
   }
   function histogramDraggableAxisTitles(W, H, p, s) {
