@@ -2492,8 +2492,6 @@ function gallerySpecificPropertyHtml(type,id){
     gCheck('showOutliers','显示异常点'),
     gCheck('showPoints','叠加原始数据点'),
     gRange('pointSize','原始点大小',1,10,.5),
-    gRange('whiskerWidth','须线粗细',.5,4,.1),
-    gRange('medianWidth','中位线粗细',.5,5,.1),
     gRange('opacity','填充透明度',.1,1,.05)
   ])+`<div class="method-badge"><b>当前口径：</b>四分位数＝${esc(boxMethodLabels().quartile)}；须线＝${esc(boxMethodLabels().whisker)}。论文方法部分照这一行写即可。</div>`;
   if(id==='regression')return gallerySection('关系分析',[
@@ -2528,8 +2526,8 @@ function gallerySeriesPropertyHtml(type,index=0){
   const names=galleryStudioSeriesNames(),name=names[index]||`Series ${index+1}`,style=getGallerySeriesStyle(index);
   let html=`<div class="series-picker">${names.map((n,i)=>`<button class="${i===index?'active':''}" data-gseries-select="${i}">${esc(n)}</button>`).join('')}</div>`;
   html+=gallerySection(`系列样式 · ${name}`,[gSeriesColor(index,'颜色'),gSeriesRange(index,'opacity','透明度',.1,1,.05)]);
-  if(['kde','box','violin','scatter','bubble','radar'].includes(type))html+=gallerySection('线与点',[gSeriesRange(index,'lineWidth','线宽',.5,7,.1),gSeriesRange(index,'pointSize','点大小',1,16,.5),gSeriesSelect(index,'markerShape','标记形状',[['circle','圆形'],['square','方形'],['triangle','上三角'],['triangleDown','下三角'],['diamond','菱形'],['star','五角星'],['pentagon','五边形'],['hexagon','六边形'],['plus','加号'],['cross','叉号']]),gSeriesSelect(index,'markerFill','标记填充',[['series','同系列颜色'],['white','白色空心']])]);
-  if(['box','violin','hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'lineWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
+  if(['kde','box','violin','scatter','bubble','radar'].includes(type))html+=gallerySection('线与点',[gSeriesRange(index,'lineWidth',['box','violin'].includes(type)?'线宽（须线 / 中位线 / 端帽）':'线宽',.5,7,.1),gSeriesRange(index,'pointSize','点大小',1,16,.5),gSeriesSelect(index,'markerShape','标记形状',[['circle','圆形'],['square','方形'],['triangle','上三角'],['triangleDown','下三角'],['diamond','菱形'],['star','五角星'],['pentagon','五边形'],['hexagon','六边形'],['plus','加号'],['cross','叉号']]),gSeriesSelect(index,'markerFill','标记填充',[['series','同系列颜色'],['white','白色空心']])]);
+  if(['box','violin','hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'borderWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
   html+=gallerySection('全部系列配色',[galleryPaletteBlock()]);return html;
 }
 function histPropertyHtml(){
@@ -2582,7 +2580,7 @@ function histPropertyHtml(){
 function gallerySection(title,items){return `<div class="object-property-section"><h3>${title}</h3>${items.join('')}</div>`}
 function galleryDragHint(name){return `<div class="hint">${name}可在图中直接拖动，也可以输入精确坐标。</div>`}
 function getGallerySeriesStyle(index){
-  if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series'}};
+  if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,borderWidth:1.2,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series'}};
   return state.gallery.seriesStyles[index];
 }
 function gSeriesWrap(index,key,label,input){const v=getGallerySeriesStyle(index)[key];return `<div class="field"><label><span>${label}</span><output data-gseries-out="${index}:${key}">${esc(v)}</output></label>${input}</div>`}
