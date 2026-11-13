@@ -69,7 +69,9 @@
     if (!Number.isFinite(Number(s.kdeRugHeight))) s.kdeRugHeight = 8;
     if (typeof s.kdeHistAutoBins !== 'boolean') s.kdeHistAutoBins = true;
     if (!Number.isFinite(Number(s.kdeHistBins))) s.kdeHistBins = 8;
-    if (!Number.isFinite(Number(s.kdeHistOpacity))) s.kdeHistOpacity = 0.24;
+    if (!Number.isFinite(Number(s.kdeHistOpacity))) s.kdeHistOpacity = 0.35;
+    if (typeof s.kdeHistEnabled !== 'boolean') s.kdeHistEnabled = false;
+    if (typeof s.kdeHistColor !== 'string' || !s.kdeHistColor) s.kdeHistColor = '#b8b8b8';
     if (!Number.isFinite(Number(s.kdeFacetGap))) s.kdeFacetGap = 22;
     if (!Number.isFinite(Number(s.kdeRidgeOverlap))) s.kdeRidgeOverlap = 0.55;
     if (!Number.isFinite(Number(s.kdeRidgeHeight))) s.kdeRidgeHeight = 0.78;
@@ -778,8 +780,21 @@
         extra.push(gallerySection('直方图部分（仅“直方图 + 曲线”形式）', [
           gCheck('kdeHistAutoBins', '自动分组'),
           ...(autoBins ? [] : [gRange('kdeHistBins', '手动组数', 3, 30, 1)]),
-          gRange('kdeHistOpacity', '直方柱透明度', 0.05, 0.55, 0.01),
+          gColor('kdeHistColor', '直方柱颜色（可与曲线不同）'),
+          gRange('kdeHistOpacity', '直方柱透明度', 0.05, 1, 0.01),
           gRange('kdeFacetGap', '小图之间的间距', 8, 60, 2)
+        ]));
+      }
+      if (mode === 'curve') {
+        const histOn = s.kdeHistEnabled === true;
+        extra.push(gallerySection('叠加直方图（仅“多条曲线”形式）', [
+          gCheck('kdeHistEnabled', '曲线下方叠加半透明直方图'),
+          ...(histOn ? [
+            gCheck('kdeHistAutoBins', '自动分组'),
+            ...(autoBins ? [] : [gRange('kdeHistBins', '手动组数', 3, 30, 1)]),
+            gColor('kdeHistColor', '直方柱颜色'),
+            gRange('kdeHistOpacity', '直方柱透明度', 0.05, 1, 0.01)
+          ] : [])
         ]));
       }
       if (mode === 'ridge') {
@@ -1130,9 +1145,33 @@
     const lineW = clampLocal(num(s.kdeLineWidth, 1.5), 0.5, 5);
     const lineOpacity = clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1);
     const fillOpacity = clampLocal(num(s.kdeFillOpacity, 0.4), 0, 1);
+    // v1.9.79: curve mode can optionally overlay semi-transparent histograms.
+    const histOn = s.kdeHistEnabled === true;
+    const histOpacityCurve = clampLocal(num(s.kdeHistOpacity, 0.35), 0.05, 1);
+    const histFillCurve = s.kdeHistColor || '#b8b8b8';
+    let histGeometry = null;
+    if (histOn) histGeometry = resolvedHistogramGeometry(allValues, s.kdeHistBins, s.kdeHistAutoBins);
     groups.forEach((g, i) => {
       const st = getGallerySeriesStyle(i), curve = curves[i], d = kdePath(curve, xMap, yMap);
       let body = '';
+      // Histogram bars go behind the fill path so they are partially visible.
+      if (histOn && histGeometry) {
+        const vals = finiteValues(rows.filter(r => String(r.Group || 'All') === g).map(r => r.Value));
+        const counts = Array(histGeometry.bins).fill(0);
+        vals.forEach(v => {
+          let bi = Math.floor((v - histGeometry.domainMin) / histGeometry.binWidth);
+          if (v === histGeometry.domainMax) bi = histGeometry.bins - 1;
+          if (bi >= 0 && bi < histGeometry.bins) counts[bi] += 1;
+        });
+        const densities = counts.map(cc => cc / (Math.max(1, vals.length) * histGeometry.binWidth));
+        densities.forEach((dens, bi) => {
+          if (!(dens > 0)) return;
+          const left = histGeometry.domainMin + bi * histGeometry.binWidth;
+          const right = left + histGeometry.binWidth;
+          const x1 = xMap(left), x2 = xMap(right), yy = yMap(dens);
+          body += `<rect x="${x1}" y="${yy}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, p.t + p.h - yy)}" fill="${histFillCurve}" fill-opacity="${histOpacityCurve}" stroke="${histFillCurve}" stroke-opacity="0.55" stroke-width="0.6"/>`;
+        });
+      }
       if (s.kdeFillEnabled && fillOpacity > 0) body += `<path d="${d} L${xMap(xmax)},${yMap(ymin)} L${xMap(xmin)},${yMap(ymin)} Z" fill="${st.fillColor || st.color}" fill-opacity="${fillOpacity}" stroke="none"/>`;
       body += `<path d="${d}" fill="none" stroke="${st.color}" stroke-opacity="${lineOpacity}" stroke-width="${lineW}"${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>`;
       body += kdeRugSvg(rows.filter(r => String(r.Group || 'All') === g).map(r => r.Value), xMap, p.t + p.h, st.color, s);
@@ -1185,7 +1224,8 @@
     const dash = kdeDash(s.kdeLineStyle), dashAttr = dash ? ` stroke-dasharray="${dash}"` : '';
     const lineW = clampLocal(num(s.kdeLineWidth, 1.5), 0.5, 5);
     const lineOpacity = clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1);
-    const histOpacity = clampLocal(num(s.kdeHistOpacity, 0.24), 0.05, 0.55);
+    const histOpacity = clampLocal(num(s.kdeHistOpacity, 0.35), 0.05, 1);
+    const histFill = s.kdeHistColor || '#b8b8b8';
     groups.forEach((g, gi) => {
       const vals = finiteValues(rows.filter(r => String(r.Group || 'All') === g).map(r => r.Value));
       const bw = kdeBandwidthFor(vals, s);
@@ -1208,7 +1248,7 @@
         const left = geometry.domainMin + bi * geometry.binWidth;
         const right = left + geometry.binWidth;
         const x1 = xMap(left), x2 = xMap(right), y = yMap(d);
-        body += `<rect x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, panel.t + panel.h - y)}" fill="${st.color}" fill-opacity="${histOpacity}" stroke="${st.color}" stroke-opacity="0.55" stroke-width="0.7"/>`;
+        body += `<rect x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="${Math.max(0, panel.t + panel.h - y)}" fill="${histFill}" fill-opacity="${histOpacity}" stroke="${histFill}" stroke-opacity="0.55" stroke-width="0.7"/>`;
       });
       const dPath = kdePath(curve, xMap, yMap);
       // v0.19.0: the fill switch now applies here too. This mode used to ignore
