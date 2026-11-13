@@ -63,7 +63,7 @@
     // v0.19.0: outline only by default. Overlapping translucent fills turn
     // muddy with three or more groups, which is the usual case.
     if (typeof s.kdeFillEnabled !== 'boolean') s.kdeFillEnabled = false;
-    if (!Number.isFinite(Number(s.kdeFillOpacity))) s.kdeFillOpacity = 0.14;
+    if (!Number.isFinite(Number(s.kdeFillOpacity))) s.kdeFillOpacity = 0.4;
     if (!['solid', 'dashed', 'dotted', 'dashdot'].includes(s.kdeLineStyle)) s.kdeLineStyle = 'solid';
     if (typeof s.kdeShowRug !== 'boolean') s.kdeShowRug = false;
     if (!Number.isFinite(Number(s.kdeRugHeight))) s.kdeRugHeight = 8;
@@ -537,7 +537,10 @@
           const cy = markerY + marker / 2;
           items += `<line x1="${x}" y1="${cy}" x2="${x + marker}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`;
         } else {
-          items += `<rect x="${x}" y="${markerY}" width="${marker}" height="${marker}" fill="${st.color}"/>`;
+          // v1.9.78：色块宽高比可调，默认 1.6（不再是又扁又长的横条）。
+          const ratio = clampLocal(num(s.legendSwatchRatio, 1.6), 0.6, 5);
+          const swH = Math.min(marker / ratio, marker * 0.92), swW = swH * ratio;
+          items += `<rect x="${x + (marker - swW) / 2}" y="${markerY + (marker - swH) / 2}" width="${swW}" height="${swH}" fill="${st.color}"/>`;
         }
         items += `<text x="${x + marker + markerGap}" y="${baseline}" font-size="${fontSize}" font-weight="${num(s.legendWeight, 400)}" fill="${s.axisColor || '#20262b'}">${esc(item.g)}</text>`;
         x += item.w;
@@ -614,8 +617,11 @@
         // v1.9.77：散点图例默认仍是点标记（最贴合主图），但共享的
         // 「图例符号」设置可强制成线段或色块。
         const sym = String(s.legendSymbol || 'auto');
+        const swRatio = clampLocal(num(s.legendSwatchRatio, 1.6), 0.6, 5);
+        let swW = Math.min(markerBox, font * 2.2), swH = swW / swRatio;
+        if (swH > font * 1.15) { swH = font * 1.15; swW = swH * swRatio; }
         const glyph = sym === 'swatch'
-          ? `<rect x="${x}" y="${cy - Math.max(5, font * 0.36)}" width="${markerBox}" height="${Math.max(10, font * 0.72)}" fill="${st.color}"/>`
+          ? `<rect x="${x + (markerBox - swW) / 2}" y="${cy - swH / 2}" width="${swW}" height="${swH}" fill="${st.color}"/>`
           : sym === 'line'
             ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
             : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="1.1"`);
@@ -712,9 +718,9 @@
     const names = galleryStudioSeriesNames();
     const name = names[index] || `Series ${index + 1}`;
     let html = `<div class="series-picker">${names.map((n, i) => `<button class="${i === index ? 'active' : ''}" data-gseries-select="${i}">${esc(n)}</button>`).join('')}</div>`;
-    html += gallerySection(`KDE 系列颜色 · ${name}`, [gSeriesColor(index, '颜色')]);
+    html += gallerySection(`KDE 系列颜色 · ${name}`, [gSeriesColor(index, '线条颜色'), gSeriesColorKey(index, 'fillColor', '填充颜色（曲线下方）')]);
     html += gallerySection('全部系列配色', [galleryPaletteBlock()]);
-    html += '<div class="method-badge"><b>KDE 样式规则：</b>曲线粗细、线透明度和填充透明度统一在“核密度曲线”对象中控制，避免系列透明度与填充透明度互相覆盖。</div>';
+    html += '<div class="method-badge"><b>KDE 样式规则：</b>曲线粗细、线透明度和填充深浅统一在“核密度曲线”对象中控制；填充颜色按系列单独设置，不再强制与线条同色。</div>';
     return html;
   };
   gallerySpecificPropertyHtml = function patchedGallerySpecificPropertyHtml(type, id) {
@@ -763,7 +769,7 @@
           ['true', '半透明填充']
         ])
       ];
-      if (fillOn) style.push(gRange('kdeFillOpacity', '填充深浅', 0, 0.5, 0.01));
+      if (fillOn) style.push(gRange('kdeFillOpacity', '填充深浅（1 = 不透明）', 0, 1, 0.01));
       style.push(gCheck('kdeShowRug', '底部画出每个数据点的小短线'));
       if (rugOn) style.push(gRange('kdeRugHeight', '小短线高度', 3, 18, 1));
 
@@ -1077,7 +1083,10 @@
       // KDE legend is line-based by default (curves), but the shared 图例符号
       // setting can force a filled color block here too.
       if (String(s.legendSymbol || 'auto') === 'swatch') {
-        content += `<rect x="${x}" y="${y + font * 0.16}" width="${symbol}" height="${Math.max(10, font * 0.72)}" fill="${st.color}" fill-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}"/>`;
+        const swRatio = clampLocal(num(s.legendSwatchRatio, 1.6), 0.6, 5);
+        let swW = Math.min(symbol, font * 2.2), swH = swW / swRatio;
+        if (swH > font * 1.15) { swH = font * 1.15; swW = swH * swRatio; }
+        content += `<rect x="${x + (symbol - swW) / 2}" y="${cy - swH / 2}" width="${swW}" height="${swH}" fill="${st.fillColor || st.color}" fill-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" stroke="${st.color}" stroke-width="0.8"/>`;
       } else {
         content += `<line x1="${x}" y1="${cy}" x2="${x + symbol}" y2="${cy}" stroke="${st.color}" stroke-width="${lineW}" stroke-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/>`;
       }
@@ -1120,11 +1129,11 @@
     const dash = kdeDash(s.kdeLineStyle), dashAttr = dash ? ` stroke-dasharray="${dash}"` : '';
     const lineW = clampLocal(num(s.kdeLineWidth, 1.5), 0.5, 5);
     const lineOpacity = clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1);
-    const fillOpacity = clampLocal(num(s.kdeFillOpacity, 0.14), 0, 0.5);
+    const fillOpacity = clampLocal(num(s.kdeFillOpacity, 0.4), 0, 1);
     groups.forEach((g, i) => {
       const st = getGallerySeriesStyle(i), curve = curves[i], d = kdePath(curve, xMap, yMap);
       let body = '';
-      if (s.kdeFillEnabled && fillOpacity > 0) body += `<path d="${d} L${xMap(xmax)},${yMap(ymin)} L${xMap(xmin)},${yMap(ymin)} Z" fill="${st.color}" fill-opacity="${fillOpacity}" stroke="none"/>`;
+      if (s.kdeFillEnabled && fillOpacity > 0) body += `<path d="${d} L${xMap(xmax)},${yMap(ymin)} L${xMap(xmin)},${yMap(ymin)} Z" fill="${st.fillColor || st.color}" fill-opacity="${fillOpacity}" stroke="none"/>`;
       body += `<path d="${d}" fill="none" stroke="${st.color}" stroke-opacity="${lineOpacity}" stroke-width="${lineW}"${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>`;
       body += kdeRugSvg(rows.filter(r => String(r.Group || 'All') === g).map(r => r.Value), xMap, p.t + p.h, st.color, s);
       out += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;
@@ -1204,8 +1213,8 @@
       const dPath = kdePath(curve, xMap, yMap);
       // v0.19.0: the fill switch now applies here too. This mode used to ignore
       // it entirely, so ticking 曲线下方填充 in the panel did nothing at all.
-      const facetFillOpacity = clampLocal(num(s.kdeFillOpacity, 0.14), 0, 0.5);
-      if (s.kdeFillEnabled && facetFillOpacity > 0) body += `<path d="${dPath} L${xMap(xMax)},${yMap(0)} L${xMap(xMin)},${yMap(0)} Z" fill="${st.color}" fill-opacity="${Math.min(0.3, facetFillOpacity + 0.04)}" stroke="none"/>`;
+      const facetFillOpacity = clampLocal(num(s.kdeFillOpacity, 0.4), 0, 1);
+      if (s.kdeFillEnabled && facetFillOpacity > 0) body += `<path d="${dPath} L${xMap(xMax)},${yMap(0)} L${xMap(xMin)},${yMap(0)} Z" fill="${st.fillColor || st.color}" fill-opacity="${facetFillOpacity}" stroke="none"/>`;
       body += `<path d="${dPath}" fill="none" stroke="${st.color}" stroke-opacity="${lineOpacity}" stroke-width="${lineW}"${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>`;
       body += kdeRugSvg(vals, xMap, panel.t + panel.h, st.color, s);
       out += `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;
@@ -1223,7 +1232,7 @@
     const heightScale = clampLocal(num(s.kdeRidgeHeight, 0.78), 0.35, 1.2);
     const rowStep = p.h / Math.max(1, groups.length + 0.45 - overlap * 0.45);
     const ridgeH = rowStep * heightScale * (1 + overlap * 0.45);
-    const fillOpacity = clampLocal(num(s.kdeFillOpacity, 0.14), 0, 0.5);
+    const fillOpacity = clampLocal(num(s.kdeFillOpacity, 0.4), 0, 1);
     const lineOpacity = clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1);
     const lineW = clampLocal(num(s.kdeLineWidth, 1.5), 0.5, 5);
     const dash = kdeDash(s.kdeLineStyle), dashAttr = dash ? ` stroke-dasharray="${dash}"` : '';
@@ -1233,7 +1242,7 @@
       const st = getGallerySeriesStyle(i), peak = peaks[i];
       const yMap = d => baseline - d / peak * ridgeH;
       const curve = curves[i], path = kdePath(curve, xMap, yMap);
-      if (s.kdeFillEnabled && fillOpacity > 0) out += `<path data-gobject="series" data-gseries="${i}" class="chart-object" d="${path} L${xMap(domain.max)},${baseline} L${xMap(domain.min)},${baseline} Z" fill="${st.color}" fill-opacity="${Math.min(0.32, fillOpacity + 0.04)}" stroke="none"/>`;
+      if (s.kdeFillEnabled && fillOpacity > 0) out += `<path data-gobject="series" data-gseries="${i}" class="chart-object" d="${path} L${xMap(domain.max)},${baseline} L${xMap(domain.min)},${baseline} Z" fill="${st.fillColor || st.color}" fill-opacity="${fillOpacity}" stroke="none"/>`;
       out += `<path data-gobject="series" data-gseries="${i}" class="chart-object" d="${path}" fill="none" stroke="${st.color}" stroke-opacity="${lineOpacity}" stroke-width="${lineW}"${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>`;
       out += `<line x1="${xMap(domain.min)}" x2="${xMap(domain.max)}" y1="${baseline}" y2="${baseline}" stroke="${s.axisColor || '#20262b'}" stroke-width="0.65" stroke-opacity="0.42"/>`;
       out += `<text x="${p.l + 64}" y="${baseline - 4}" text-anchor="end" font-size="${Math.max(10, num(s.yTickSize, 12))}" font-weight="${s.yTickWeight || 400}" fill="${st.color}">${esc(g)}</text>`;
