@@ -531,7 +531,14 @@
       row.forEach(item => {
         const st = getGallerySeriesStyle(item.gi);
         const markerY = baseline - fontSize * 0.78;
-        items += `<rect x="${x}" y="${markerY}" width="${marker}" height="${marker}" fill="${st.color}"/>`;
+        // v1.9.77：图例符号跟随「图例符号」设置。直方图的自动值仍是色块，
+        // 但强制选「线条」时改成与折线一致的线段，不再永远画方块。
+        if (String(s.legendSymbol || 'auto') === 'line') {
+          const cy = markerY + marker / 2;
+          items += `<line x1="${x}" y1="${cy}" x2="${x + marker}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`;
+        } else {
+          items += `<rect x="${x}" y="${markerY}" width="${marker}" height="${marker}" fill="${st.color}"/>`;
+        }
         items += `<text x="${x + marker + markerGap}" y="${baseline}" font-size="${fontSize}" font-weight="${num(s.legendWeight, 400)}" fill="${s.axisColor || '#20262b'}">${esc(item.g)}</text>`;
         x += item.w;
       });
@@ -604,8 +611,15 @@
         const st = getGallerySeriesStyle(i);
         const cy = padY + r * rowH + rowH / 2;
         const fill = st.markerFill === 'white' ? 'white' : st.color;
-        const marker = markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="1.1"`);
-        itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${marker}<text x="${x + markerBox + 7}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="#263238">${esc(groups[i])}</text></g>`;
+        // v1.9.77：散点图例默认仍是点标记（最贴合主图），但共享的
+        // 「图例符号」设置可强制成线段或色块。
+        const sym = String(s.legendSymbol || 'auto');
+        const glyph = sym === 'swatch'
+          ? `<rect x="${x}" y="${cy - Math.max(5, font * 0.36)}" width="${markerBox}" height="${Math.max(10, font * 0.72)}" fill="${st.color}"/>`
+          : sym === 'line'
+            ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
+            : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="1.1"`);
+        itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${glyph}<text x="${x + markerBox + 7}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="#263238">${esc(groups[i])}</text></g>`;
         x += itemWidths[i] + gap;
       }
     }
@@ -1060,8 +1074,13 @@
       const st = getGallerySeriesStyle(i);
       const cy = y + font * 0.58;
       const dash = kdeDash(s.kdeLineStyle);
-      // KDE legend is line-based (not a bar-chart color block).
-      content += `<line x1="${x}" y1="${cy}" x2="${x + symbol}" y2="${cy}" stroke="${st.color}" stroke-width="${lineW}" stroke-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/>`;
+      // KDE legend is line-based by default (curves), but the shared 图例符号
+      // setting can force a filled color block here too.
+      if (String(s.legendSymbol || 'auto') === 'swatch') {
+        content += `<rect x="${x}" y="${y + font * 0.16}" width="${symbol}" height="${Math.max(10, font * 0.72)}" fill="${st.color}" fill-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}"/>`;
+      } else {
+        content += `<line x1="${x}" y1="${cy}" x2="${x + symbol}" y2="${cy}" stroke="${st.color}" stroke-width="${lineW}" stroke-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/>`;
+      }
       content += `<text x="${x + symbol + 9}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="#263238">${esc(g)}</text>`;
     });
     const lx = s.legendX ?? p.l, ly = s.legendY ?? Math.max(18, p.t - font - 20);
