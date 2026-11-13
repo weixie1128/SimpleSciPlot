@@ -2659,7 +2659,11 @@ async function galleryImportPalette(file){try{var obj=JSON.parse(await readAsTex
 function galleryApplyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.gallery.palette=colors;state.gallery.seriesStyles={};clearModuleSeriesStyles();rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
-function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:2,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),seriesStyles:state.gallery.seriesStyles&&typeof state.gallery.seriesStyles==='object'?JSON.parse(JSON.stringify(state.gallery.seriesStyles)):{}};
+function galleryExportStyle(){var s=state.gallery.settings||{};var pal=state.gallery.palette.filter(function(c){return typeof c==='string'&&(/^#/.test(c)||isGradientPaint(c))});
+  // v1.9.85：调色板写"图上真实生效的颜色"（逐系列解析），否则颜色改在“数据系列”里时导出的 palette 还是旧的默认色，
+  // 导入回来颜色就对不上——这正是"参数没导出颜色"的原因。
+  try{var _names=galleryStudioSeriesNames();if(_names.length){var _res=[];for(var _i=0;_i<_names.length;_i++){_res.push(getGallerySeriesStyle(_i).color)}if(_res.length===_names.length&&_res.every(function(c){return typeof c==='string'&&c}))pal=_res}}catch(_e){}
+  var payload={type:'foodlab-gallery-style',version:2,palette:pal,settings:Object.assign({},s),seriesStyles:state.gallery.seriesStyles&&typeof state.gallery.seriesStyles==='object'?JSON.parse(JSON.stringify(state.gallery.seriesStyles)):{}};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));
     if(obj.protocol==='sp1'||(obj.meta&&obj.meta.chartType&&obj.colors&&Array.isArray(obj.colors.series))){
@@ -2673,9 +2677,17 @@ async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(
     // v2 参数文件携带 seriesStyles（含每系列独立设置的填充色等），一并恢复。
     var _names=galleryStudioSeriesNames();var _def=(typeof templates!=='undefined'&&templates.foodchem)?templates.foodchem.colors:[];
     while(state.gallery.palette.length<_names.length&&_def.length){state.gallery.palette.push(_def[state.gallery.palette.length%_def.length])}
-    // v1.9.83：系列颜色必须以参数文件里的 palette 为准。此前会把文件里存下的 color 一并恢复，
-    // 导致导入后颜色卡在导出时的旧配色上（换配色、套新参数都没反应）。
-    if(obj.seriesStyles&&typeof obj.seriesStyles==='object'){Object.keys(obj.seriesStyles).forEach(function(k){var i=Number(k);if(!Number.isFinite(i)||i<0||i>=_names.length)return;var src=obj.seriesStyles[k];if(!src||typeof src!=='object')return;var own=Object.assign({},src);if(own.fillColor&&src.color&&String(own.fillColor).toLowerCase()===String(src.color).toLowerCase())delete own.fillColor;delete own.color;state.gallery.seriesStyles[i]=Object.assign({},own,{color:state.gallery.palette[i%state.gallery.palette.length]})})}
+    // v1.9.85：seriesStyles.color 就是图上真实颜色，必须恢复，否则按 palette 覆盖会把自定义组色洗掉。
+    if(obj.seriesStyles&&typeof obj.seriesStyles==='object'&&Object.keys(obj.seriesStyles).length){
+      var _restored={};
+      Object.keys(obj.seriesStyles).forEach(function(k){var i=Number(k);if(!Number.isFinite(i)||i<0||i>=_names.length)return;var src=obj.seriesStyles[k];if(!src||typeof src!=='object')return;var own=Object.assign({},src);if(typeof own.color!=='string'||!own.color)own.color=state.gallery.palette[i%state.gallery.palette.length];_restored[i]=own});
+      // 旧版文件（1.9.82 之前）会把三组都写成同一个灰；此时若 palette 本身是多色，以 palette 为准修正。
+      var _ck=Object.keys(_restored);
+      var _vals=_ck.map(function(k){return String(_restored[k].color).toLowerCase()});
+      var _uniq=Array.from(new Set(_vals));
+      if(_ck.length>1&&_uniq.length===1&&state.gallery.palette.length>1){_ck.forEach(function(k){_restored[k].color=state.gallery.palette[Number(k)%state.gallery.palette.length]})}
+      state.gallery.seriesStyles=_restored;
+    }
     ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
 // sp1 spec → 画廊模式图参数
