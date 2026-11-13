@@ -2659,15 +2659,22 @@ async function galleryImportPalette(file){try{var obj=JSON.parse(await readAsTex
 function galleryApplyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.gallery.palette=colors;state.gallery.seriesStyles={};clearModuleSeriesStyles();rememberPalette(colors);renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();toast('已应用 '+colors.length+' 个颜色')}
-function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:1,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s)};
+function galleryExportStyle(){var s=state.gallery.settings||{};var payload={type:'foodlab-gallery-style',version:2,palette:state.gallery.palette.filter(function(c){return typeof c==='string'&&/^#/.test(c)}),settings:Object.assign({},s),seriesStyles:state.gallery.seriesStyles&&typeof state.gallery.seriesStyles==='object'?JSON.parse(JSON.stringify(state.gallery.seriesStyles)):{}};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function galleryImportStyle(file){try{var obj=JSON.parse(await readAsText(file));
     if(obj.protocol==='sp1'||(obj.meta&&obj.meta.chartType&&obj.colors&&Array.isArray(obj.colors.series))){
       applySp1SpecToGallery(obj);state.gallery.seriesStyles={};clearModuleSeriesStyles();ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('已套用 StyleGrab 样式（sp1）');return;
     }
     if(obj.type!=='foodlab-gallery-style'||!obj.settings)throw new Error('不是图参数文件');
-    Object.assign(state.gallery.settings,obj.settings);if(Array.isArray(obj.palette)&&obj.palette.length){state.gallery.palette=obj.palette}
-    state.gallery.seriesStyles={};clearModuleSeriesStyles();ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
+    Object.assign(state.gallery.settings,obj.settings);
+    if(Array.isArray(obj.palette)&&obj.palette.length){state.gallery.palette=obj.palette}
+    state.gallery.seriesStyles={};clearModuleSeriesStyles();
+    // v1.9.81：导入后按系列数补齐配色，避免旧参数里颜色数少于组数时多条曲线挤成同一色；
+    // v2 参数文件携带 seriesStyles（含每系列独立设置的填充色等），一并恢复。
+    var _names=galleryStudioSeriesNames();var _def=(typeof templates!=='undefined'&&templates.foodchem)?templates.foodchem.colors:[];
+    while(state.gallery.palette.length<_names.length&&_def.length){state.gallery.palette.push(_def[state.gallery.palette.length%_def.length])}
+    if(obj.seriesStyles&&typeof obj.seriesStyles==='object'){Object.keys(obj.seriesStyles).forEach(function(k){var i=Number(k);if(Number.isFinite(i)&&i>=0&&i<_names.length&&obj.seriesStyles[k]&&typeof obj.seriesStyles[k]==='object')state.gallery.seriesStyles[i]=Object.assign({color:state.gallery.palette[i%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,pointSize:state.gallery.settings.pointSize,markerShape:'circle',markerFill:state.gallery.type==='radar'?'white':'series'},obj.seriesStyles[k])})}
+    ensureGalleryPositions();renderGalleryStudioLayers();renderGalleryStudioProperties();renderGalleryStudioCanvas();syncGalleryQuickControls();toast('图参数已套用')}
   catch(err){toast('导入失败：'+(err.message||''))}}
 // sp1 spec → 画廊模式图参数
 function applySp1SpecToGallery(spec){
@@ -2724,7 +2731,7 @@ function bindGalleryStudioPropertyInputs(){
     analyzeGalleryData();renderGalleryStudioCanvas();syncGalleryQuickControls();
     $$(`[data-gsetting="${key}"]`).forEach(peer=>{if(peer!==el&&peer.type!=='checkbox')peer.value=state.gallery.settings[key]});
     $$(`[data-gout="${key}"]`).forEach(out=>out.textContent=state.gallery.settings[key]);
-    if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins'].includes(key))renderGalleryStudioProperties();
+    if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled'].includes(key))renderGalleryStudioProperties();
   };
   $$('[data-gsetting]').forEach(el=>{el.addEventListener('input',()=>applySetting(el));el.addEventListener('change',()=>applySetting(el))});
   $('#radarTransposeBtn')?.addEventListener('click',()=>{if(state.gallery.type!=='radar')return;state.gallery.rows=state.gallery.rows.map(r=>({Group:r.Indicator,Indicator:r.Group,Value:r.Value}));renderGalleryStudioCanvas();renderGalleryStudioProperties();syncGalleryQuickControls()});
@@ -5024,7 +5031,20 @@ function analyzeUnivariate(rows){
   let anova=null,pairwise=[],letters={},methodName='—';
   if(groups.size>1){const result=runUnivariateInference(rows);anova=result.anova;pairwise=result.pairwise;letters=result.letters;methodName=result.methodName}
   const sigCount=pairwise.filter(x=>x.p<.05).length,method=boxMethodLabels(),omnibus=anova?`${anova.methodName||methodName} ${anova.pMain<.05?'检出':'未检出'}总体组间差异（${formatPText(anova.pMain)}）`:'未执行组间检验',pairText=pairwise.length?`；${methodName} 中有 ${sigCount} 组两两比较达到校正后 p<0.05` : '';
-  return {kind:'univariate',table,anova,pairwise,letters,methodName,boxMethod:method,summary:[['有效观测',all.length],['组别数',table.length],['总体均值',formatNumber(mean(all),3)],['总体检验 p',anova?formatP(anova.pMain):'—']],text:`共分析 ${all.length} 个原始观测，包含 ${table.length} 个组。${table.length>1?`${highest.Group} 的均值最高，${lowest.Group} 的均值最低。`:''} ${omnibus}${pairText}。箱线图四分位数采用“${method.quartile}”，须线采用“${method.whisker}”。`};
+  const chartType = String(state.gallery.type || '');
+  let tailNote = '';
+  if (chartType === 'box') {
+    tailNote = `箱线图四分位数采用“${method.quartile}”，须线采用“${method.whisker}”。`;
+  } else if (chartType === 'violin') {
+    tailNote = '小提琴图以 KDE 曲线描绘每组密度，默认叠加箱线统计。';
+  } else if (chartType === 'kde') {
+    const bwMode = s.kdeBandwidthMode === 'manual' ? '手动' : 'Silverman 规则自动';
+    tailNote = `KDE 带宽为 ${bwMode}，曲线采用高斯核函数平滑。`;
+  } else if (chartType === 'hist') {
+    const binRule = s.histAutoBins !== false ? 'Freedman–Diaconis 规则自动' : `手动 ${s.bins || 8} 组`;
+    tailNote = `直方图分箱为 ${binRule}，柱体高度为原始频数。`;
+  }
+  return {kind:'univariate',table,anova,pairwise,letters,methodName,boxMethod:method,summary:[['有效观测',all.length],['组别数',table.length],['总体均值',formatNumber(mean(all),3)],['总体检验 p',anova?formatP(anova.pMain):'—']],text:`共分析 ${all.length} 个原始观测，包含 ${table.length} 个组。${table.length>1?`${highest.Group} 的均值最高，${lowest.Group} 的均值最低。`:''} ${omnibus}${pairText}${tailNote?`。${tailNote}`:''}`};
 }
 
 function fisherLsdPairwise(groups,mse,df){
