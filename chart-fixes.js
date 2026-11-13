@@ -4,7 +4,7 @@
  *
  * Histogram principles in this patch:
  * - X is always a true continuous linear numeric axis.
- * - The left/right domain boundaries are explicitly ticked; truncated X axes show a break mark.
+ * - X tick labels always follow one regular nice step; padded display edges are not labelled.
  * - Histogram bars always occupy the full bin interval and remain touching.
  * - Apparent bar width is controlled only through binning (auto/manual bin count), never by shrinking SVG rectangles.
  * - Multi-variable facets reserve space for tick labels, so panel spacing does not overlap labels.
@@ -261,16 +261,17 @@
     if (!(Number.isFinite(min) && Number.isFinite(max) && max > min)) return [geometry.domainMin, geometry.domainMax];
     const target = Math.max(3, maxTicks - 1);
     const step = niceStepLocal((max - min) / target);
-    const innerStart = Math.ceil((min - step * 1e-9) / step) * step;
-    const ticks = [Number(min.toFixed(12))];
-    for (let v = innerStart; v <= max + step * 1e-9; v += step) {
-      const vv = Number(v.toFixed(12));
-      if (Math.abs(vv - min) < step * 0.22 || Math.abs(vv - max) < step * 0.22) continue;
-      ticks.push(vv);
+    // v1.9.76: only emit regular nice-step ticks. The padded display boundaries
+    // used to be forced in as extra labels (e.g. 0.05 next to 0.1/0.2/0.3),
+    // which looked like a stray tick with a broken interval.
+    const start = Math.ceil((min - step * 1e-9) / step) * step;
+    const ticks = [];
+    for (let v = start; v <= max + step * 1e-9; v += step) {
+      ticks.push(Number(v.toFixed(12)));
       if (ticks.length > 40) break;
     }
-    ticks.push(Number(max.toFixed(12)));
-    return [...new Set(ticks)].sort((a, b) => a - b);
+    if (ticks.length < 2) return [Number(min.toFixed(12)), Number(max.toFixed(12))];
+    return ticks;
   }
   function histogramCounts(rows, groups, geometry, scale = 'frequency') {
     const counts = groups.map(() => Array(geometry.bins).fill(0));
