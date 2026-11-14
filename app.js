@@ -2520,7 +2520,7 @@ function gallerySpecificPropertyHtml(type,id){
       gRange('significanceFontSize','标记字号',8,26,1),
       gRange('significanceLineWidth','括号线宽',.5,4,.1),
       gColor('significanceColor','括号与文字颜色'),
-      gRange('significanceOffset','距数据顶部',2,30,1),
+      gRange('significanceOffset','标注距离（括号距数据顶 / 每箱标注距箱顶）',2,30,1),
       gRange('significanceStep','多层括号之间的间距',8,40,1)
     ])+`<div class="stat-method-note"><b>当前：</b>${esc(statisticalMethodLabel())}。不同检验的假设和多重比较校正不同，p 值与标记可能因此变化。</div>`;
   }
@@ -5422,7 +5422,20 @@ function significancePairsForGroups(groups){
   const levels=[];pairs.forEach(pair=>{let level=0;while(levels[level]?.some(q=>!(pair.j<q.i||pair.i>q.j)))level++;(levels[level]||(levels[level]=[])).push(pair);pair.level=level});
   return pairs;
 }
-function significanceLabel(pair){const s=state.gallery.settings;if(s.significanceLabelMode==='pvalue')return pair.p<.001?'p < 0.001':`p = ${formatNumber(pair.p,3)}`;return pair.stars}
+function significanceLabel(pair){
+  const s=state.gallery.settings;if(!pair)return'';
+  if(s.significanceLabelMode==='pvalue')return formatPValueLabel(pair.p);
+  return pair.stars||starsForP(pair.p);
+}
+// v1.9.89: 原实现把 p<0.001 一律写成「p < 0.001」，看起来不像算出来的具体值。
+// 现在给到实际值：>=0.01 三位小数；0.0001~0.01 两位有效数字；更小用科学计数法。
+function formatPValueLabel(p){
+  const v=Number(p);
+  if(!Number.isFinite(v))return 'p = —';
+  if(v>=0.01)return `p = ${v.toFixed(3)}`;
+  if(v>=0.0001)return `p = ${Number(v.toPrecision(2))}`;
+  return `p = ${v.toExponential(1)}`;
+}
 // v0.20.0: 多层括号之间的间距 now really controls the vertical gap between
 // bracket levels. The old code hard-coded 0.09 of the data range per level and
 // only used significanceStep for the tiny end caps, so the control appeared to
@@ -5443,15 +5456,19 @@ function significanceLettersSvg(groups,xAt,yMap,dataMax,range){
 }
 // v1.9.87: 每箱上方直接标注（各箱对比第 1 组）。与括号模式不同，这里读原始 pairwise
 // 记录而不是 significancePairsForGroups()，否则默认的“只标显著”过滤会把 ns 全部丢掉。
+// v1.9.89: 标注改为贴着各自箱顶须线（间距由「偏移距离」控制），参照组也标 ref，
+// 不再统一吊在数据顶部。
 function significancePerBoxSvg(groups,xAt,yMap,dataMax,range){
   const s=state.gallery.settings,a=state.gallery.analysis;
   if(!s.significanceEnabled||s.significanceDisplay!=='perbox')return'';
   const pairs=a?.pairwise||[];
   if(!pairs.length||groups.length<2)return'';
-  const ref=groups[0],y=yMap(dataMax+range*(.06+(Number(s.significanceOffset)||0)/220));
+  const ref=groups[0],gap=6+(Number(s.significanceOffset)||10);
+  const valsOf=g=>state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value);
   let out='<g data-gobject="significance" class="chart-object">';
   groups.forEach((g,i)=>{
-    if(i===0)return; // 第 1 组是参照组，自身不标
+    const y=yMap(boxStats(valsOf(g)).high)-gap;
+    if(i===0){out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">ref</text>`;return}
     const rec=pairs.find(r=>(r.a===ref&&r.b===g)||(r.a===g&&r.b===ref));
     if(!rec)return;
     out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(significanceLabel(rec))}</text>`;
@@ -5460,7 +5477,7 @@ function significancePerBoxSvg(groups,xAt,yMap,dataMax,range){
 }
 function galleryBox(W,H,violin){
   const s=state.gallery.settings,p=galleryPlotBox(W,H),groups=[...new Set(state.gallery.rows.map(r=>r.Group))],all=state.gallery.rows.map(r=>r.Value),dataMin=Math.min(...all),dataMax=Math.max(...all),range=(dataMax-dataMin)||1,pairs=significancePairsForGroups(groups),maxLevel=pairs.length?Math.max(...pairs.map(x=>x.level))+1:0;
-  const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,labelBand=s.significanceEnabled&&(s.significanceDisplay==='letters'||s.significanceDisplay==='perbox'),extraTop=showBrackets?range*(.18+maxLevel*step):labelBand?range*.18:range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
+  const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,lettersBand=s.significanceEnabled&&s.significanceDisplay==='letters',extraTop=showBrackets?range*(.18+maxLevel*step):lettersBand?range*.18:range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
   let out=commonAxes(W,H,p,groups,yTicks,(v,i)=>xAt(i),yMap)+galleryLegend(groups);
   groups.forEach((g,i)=>{const vals=state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value),stt=boxStats(vals),x=xAt(i),st=getGallerySeriesStyle(i),bw=Math.min(84,xStep*(s.boxWidth||.48));let body='';
     if(violin){const curve=kdeFor(vals,dataMin-range*.08,dataMax+range*.08,80,s.bandwidth),mx=Math.max(...curve.map(q=>q[1]))||1,right=curve.map(q=>[x+(q[1]/mx)*bw/2,yMap(q[0])]),left=[...curve].reverse().map(q=>[x-(q[1]/mx)*bw/2,yMap(q[0])]);body+=`<path d="M${right[0][0]},${right[0][1]} ${right.slice(1).map(q=>'L'+q[0]+','+q[1]).join(' ')} ${left.map(q=>'L'+q[0]+','+q[1]).join(' ')} Z" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
