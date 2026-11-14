@@ -616,7 +616,8 @@
         if (i >= groups.length) break;
         const st = getGallerySeriesStyle(i);
         const cy = padY + r * rowH + rowH / 2;
-        const fill = st.markerFill === 'white' ? 'white' : st.color;
+        const mColor = st.markerColor || st.color;
+        const fill = st.markerFill === 'white' ? 'white' : mColor;
         // v1.9.77：散点图例默认仍是点标记（最贴合主图），但共享的
         // 「图例符号」设置可强制成线段或色块。
         const sym = String(s.legendSymbol || 'auto');
@@ -627,7 +628,7 @@
           ? `<rect x="${x + (markerBox - swW) / 2}" y="${cy - swH / 2}" width="${swW}" height="${swH}" fill="${st.color}"/>`
           : sym === 'line'
             ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
-            : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="1.1"`);
+            : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
         itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${glyph}<text x="${x + markerBox + 7}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="#263238">${esc(groups[i])}</text></g>`;
         x += itemWidths[i] + gap;
       }
@@ -1401,8 +1402,9 @@
         const radius = bubble && Number.isFinite(r.Size)
           ? st.pointSize + (r.Size - smin) / (smax - smin || 1) * Math.max(5, st.pointSize * 2)
           : st.pointSize;
-        const fill = st.markerFill === 'white' ? 'white' : st.color;
-        const attrs = `fill="${fill}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="1.05"`;
+        const mColor = st.markerColor || st.color;
+        const fill = st.markerFill === 'white' ? 'white' : mColor;
+        const attrs = `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.05"`;
         return markerShapeSvg(st.markerShape, xMap(r.X), yMap(r.Y), radius, attrs);
       }).join('');
       out += `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;

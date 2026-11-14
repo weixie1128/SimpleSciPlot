@@ -406,7 +406,7 @@ const defaultGallerySettings = {
   legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameFill:'#ffffff',legendFrameRadius:3,
   legendShadow:true,legendShadowX:2,legendShadowY:3,legendShadowBlur:3,legendShadowOpacity:.25,
   bins:10,bandwidth:0,opacity:.72,pointSize:4,lineWidth:2,markerShape:'circle',markerFill:'series',annotationSize:12,pieLabelSize:12,radarLabelSize:12,
-  showPoints:true,showMean:true,showMedian:true,showOutliers:true,boxWidth:.48,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,
+  showPoints:true,showMean:true,showMedian:true,showWhiskerLine:true,showOutliers:true,boxWidth:.48,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,
   boxQuartileMethod:'linear7',boxWhiskerMethod:'iqr15',boxWhiskerPercentile:5,statMethod:'anovaLsd',correlationMethod:'pearson',methodNoteVisible:true,methodNoteX:null,methodNoteY:null,methodNoteSize:10,methodNoteColor:'#5f6d75',
   significanceEnabled:true,significanceDisplay:'brackets',significancePairMode:'significant',significanceLabelMode:'stars',significanceFontSize:11,significanceLineWidth:1,significanceColor:'#20262b',significanceOffset:10,significanceStep:18,
   orientation:'vertical',donut:false,normalize:false,showRegression:true,showCorrelation:true,
@@ -2489,6 +2489,7 @@ function gallerySpecificPropertyHtml(type,id){
     ...(id==='violin-elements'?[gCheck('violinShowBox','在小提琴内叠加箱线（Violin + Box 合体）')]:[]),
     gCheck('showMean','显示平均值（空心圆点）'),
     gCheck('showMedian','显示中位数（横线）'),
+    gCheck('showWhiskerLine','箱体中间贯穿竖线（关掉＝只在箱体上下各画一段）'),
     gCheck('showOutliers','显示异常点'),
     gCheck('showPoints','叠加原始数据点'),
     gRange('pointSize','原始点大小',1,10,.5),
@@ -2505,18 +2506,24 @@ function gallerySpecificPropertyHtml(type,id){
   if(id==='stack-mode')return gallerySection('堆叠方式',[gCheck('normalize','百分比堆叠'),gSelect('orientation','方向',[['vertical','纵向'],['horizontal','横向']])]);
   if(id==='stacked-error')return gallerySection('误差棒与数值标注',[gCheck('stackedShowError','显示误差棒（读取 Error 列）'),gRange('stackedErrorWidth','误差棒粗细',.5,4,.1),gRange('stackedErrorCapWidth','误差棒端线宽',1,10,.5),gColor('stackedErrorColor','误差棒颜色'),gCheck('stackedShowValue','在每段内标注数值'),gRange('stackedValueSize','数值字号',8,24,1),gRange('stackedValueDecimals','数值小数位',0,4,1)])+`<div class="method-badge">误差棒按整柱合计（各段误差平方和开根）画在柱顶；数值标注在每段中心。</div>`;
   if(id==='pie-label')return gallerySection('饼图标签',[gCheck('donut','圆环图'),gCheck('showCorrelation','显示百分比标签'),gRange('pieLabelSize','百分比字号',8,28,1)]);
-  if(id==='significance')return gallerySection('差异显著性',[
-    gSelect('statMethod','用哪种检验',[['anovaLsd','常规：单因素方差分析 + Fisher LSD 两两比较'],['welchHolm','方差不齐时：Welch 方差分析 + Holm 校正'],['kruskalHolm','数据不正态时：Kruskal–Wallis + Mann–Whitney（Holm 校正）']]),
-    gCheck('significanceEnabled','在图上标出显著性'),
-    gSelect('significanceDisplay','怎么标',[['brackets','连线括号 + 标记'],['letters','字母分组（a、b、c）'],['none','不显示']]),
-    gSelect('significancePairMode','标哪些比较',[['significant','只标有显著差异的'],['control','只和第一组比'],['all','所有两两组合都标']]),
-    gSelect('significanceLabelMode','括号上写什么',[['stars','星号（* / ** / ***）'],['pvalue','具体 p 值'],['letters','字母分组']]),
-    gRange('significanceFontSize','标记字号',8,26,1),
-    gRange('significanceLineWidth','括号线宽',.5,4,.1),
-    gColor('significanceColor','括号与文字颜色'),
-    gRange('significanceOffset','距数据顶部',2,30,1),
-    gRange('significanceStep','多层括号之间的间距',8,40,1)
-  ])+`<div class="stat-method-note"><b>当前：</b>${esc(statisticalMethodLabel())}。不同检验的假设和多重比较校正不同，p 值与标记可能因此变化。</div>`;
+  if(id==='significance'){
+    // v1.9.88: 原来「怎么标」（brackets/perbox/letters）+「括号上写什么」（星号/p 值）两个下拉
+    // 让人以为重复。现在合并成一个「怎么标」，一次选定标记方式和内容。
+    const sigStyleOptions=[['brackets|stars','连线括号 + 星号（* / ** / *** / ns）'],['brackets|pvalue','连线括号 + 具体 p 值'],['perbox|stars','每个箱子上方 + 星号（对比第 1 组）'],['perbox|pvalue','每个箱子上方 + p 值（对比第 1 组）'],['letters|stars','字母分组（a、b、c）'],['none|stars','不显示']];
+    const sigStyle=(state.gallery.settings.significanceDisplay||'brackets')+'|'+(state.gallery.settings.significanceLabelMode||'stars');
+    const sigStyleHtml=`<div class="field"><label><span>怎么标</span></label><select data-gsig-style>${sigStyleOptions.map(([v,n])=>`<option value="${v}" ${v===sigStyle?'selected':''}>${n}</option>`).join('')}</select></div>`;
+    return gallerySection('差异显著性',[
+      gSelect('statMethod','用哪种检验',[['anovaLsd','常规：单因素方差分析 + Fisher LSD 两两比较'],['welchHolm','方差不齐时：Welch 方差分析 + Holm 校正'],['kruskalHolm','数据不正态时：Kruskal–Wallis + Mann–Whitney（Holm 校正）']]),
+      gCheck('significanceEnabled','在图上标出显著性'),
+      sigStyleHtml,
+      ...(state.gallery.settings.significanceDisplay==='brackets'?[gSelect('significancePairMode','标哪些比较',[['significant','只标有显著差异的'],['control','只和第一组比'],['all','所有两两组合都标']])]:[]),
+      gRange('significanceFontSize','标记字号',8,26,1),
+      gRange('significanceLineWidth','括号线宽',.5,4,.1),
+      gColor('significanceColor','括号与文字颜色'),
+      gRange('significanceOffset','距数据顶部',2,30,1),
+      gRange('significanceStep','多层括号之间的间距',8,40,1)
+    ])+`<div class="stat-method-note"><b>当前：</b>${esc(statisticalMethodLabel())}。不同检验的假设和多重比较校正不同，p 值与标记可能因此变化。</div>`;
+  }
   if(id==='heatmap-scale')return gallerySection('相关计算方法',[gSelect('correlationMethod','相关方法',[['pearson','Pearson 线性相关'],['spearman','Spearman 秩相关']]),gSelect('heatmapCluster','聚类排序',[['none','不聚类'],['rows','仅行聚类'],['cols','仅列聚类'],['both','行列都聚类']]),gCheck('heatmapShowDendrogram','显示聚类树')])+gallerySection('热图色阶',[gSelect('heatmapPalette','色阶方案',Object.entries(HEATMAP_PALETTES).map(([k,v])=>[k,v.name])),heatmapPalettePreview(),gHeatColor('heatmapLowColor','负相关 / 低值颜色'),gHeatColor('heatmapMidColor','零值 / 中间颜色'),gHeatColor('heatmapHighColor','正相关 / 高值颜色'),gHeatColor('heatmapDiagonalColor','对角线颜色'),gCheck('heatmapShowValues','显示数值'),gRange('heatmapValueSize','格内数字字号',7,24,1),gRange('heatmapXLabelSize','顶部标签字号',8,28,1),gRange('heatmapYLabelSize','左侧标签字号',8,28,1),gRange('heatmapCellGap','格子间距',0,6,.5),gColor('heatmapGridStroke','格子边线颜色'),gRange('heatmapGridStrokeWidth','格子边线粗细',0,3,.1)])+gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gOrientationButtons('heatmapColorBarOrientation','色带方向'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1)])+`<div class="method-badge"><b>当前矩阵：</b>${esc(correlationMethodLabel())}</div>`;
   if(id==='method-note')return gallerySection('方法说明',[gCheck('methodNoteVisible','在图中显示方法说明'),gNumber('methodNoteX','水平位置',0,1800,1),gNumber('methodNoteY','垂直位置',0,1200,1),gRange('methodNoteSize','字号',7,20,1),gColor('methodNoteColor','颜色')])+`<div class="method-badge">${esc(galleryMethodNoteText())}</div>`+galleryDragHint('方法说明');
   if(id==='radar-grid')return gallerySection('雷达坐标与网格',[`<div class="field"><button type="button" id="radarTransposeBtn" style="width:100%;padding:8px;border:1px solid #c9d0d4;border-radius:7px;background:#f7f9f8;cursor:pointer;font-size:13px">切换数据方向：组 ↔ 指标</button><div class="small-note" style="color:#8a969c;font-size:11px;margin-top:5px;line-height:1.5">自动识别方向不对时，点一下交换行列。</div></div>`,gCheck('normalize','按指标 0–1 归一化'),gText('radarMin','起始刻度（留空=自动）'),gText('radarMax','结束刻度（留空=自动）'),gRange('radarLevels','分段数',2,8,1),gCheck('radarShowTickLabels','显示同心刻度数值'),gRange('radarTickLabelSize','刻度数字字号',7,24,1),gRange('radarTickDecimals','刻度小数位',0,4,1),gSelect('radarTickLabelPosition','刻度数值位置',[['top','顶部轴旁'],['left','左侧'],['right','右侧']]),gRange('radarTickLabelOffset','刻度数值偏移',0,30,1),gRange('radarLabelSize','轴标签字号',8,28,1),gRange('radarLabelOffset','轴标签与网格距离',8,70,1),gRange('radarGridWidth','同心网格粗细',.4,3,.1),gRange('radarSpokeWidth','放射线粗细',.4,3,.1)])+gallerySection('自动论文背景',[gSelect('radarTheme','渐变色系',Object.entries(RADAR_THEMES).map(([k,v])=>[k,v.name])),gSelect('radarGradientMode','渐变方向',[['radial','中心 → 外圈'],['left-right','左 → 右'],['right-left','右 → 左'],['top-bottom','上 → 下'],['bottom-top','下 → 上'],['diag-down','左上 → 右下'],['diag-up','左下 → 右上']]),gCheck('radarSmartHighlight','显示整张雷达图渐变背景')])+gallerySection('系列呈现',[gCheck('radarShowMarkers','显示形状标记'),gRange('radarPointSize','节点大小',0,10,.5)])+`<div class="method-badge"><b>默认论文模式：</b>数据多边形不填充；所选色系可生成中心向外或单方向完整渐变背景，并自动匹配网格与放射线。</div>`;
@@ -2526,8 +2533,15 @@ function gallerySeriesPropertyHtml(type,index=0){
   const names=galleryStudioSeriesNames(),name=names[index]||`Series ${index+1}`,style=getGallerySeriesStyle(index);
   let html=`<div class="series-picker">${names.map((n,i)=>`<button class="${i===index?'active':''}" data-gseries-select="${i}">${esc(n)}</button>`).join('')}</div>`;
   html+=gallerySection(`系列样式 · ${name}`,[gSeriesColor(index,'颜色'),gSeriesRange(index,'opacity','透明度',.1,1,.05)]);
-  if(['kde','box','violin','scatter','bubble','radar'].includes(type))html+=gallerySection('线与点',[gSeriesRange(index,'lineWidth',['box','violin'].includes(type)?'线宽（须线 / 中位线 / 端帽）':'线宽',.5,7,.1),gSeriesRange(index,'pointSize','点大小',1,16,.5),gSeriesSelect(index,'markerShape','标记形状',[['circle','圆形'],['square','方形'],['triangle','上三角'],['triangleDown','下三角'],['diamond','菱形'],['star','五角星'],['pentagon','五边形'],['hexagon','六边形'],['plus','加号'],['cross','叉号']]),gSeriesSelect(index,'markerFill','标记填充',[['series','同系列颜色'],['white','白色空心']])]);
-  if(['box','violin','hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'borderWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
+  const markerFields=[gSeriesRange(index,'pointSize','点大小',1,16,.5),gSeriesColorKey(index,'markerColor','点颜色'),gSeriesSelect(index,'markerShape','标记形状',[['circle','圆形'],['square','方形'],['triangle','上三角'],['triangleDown','下三角'],['diamond','菱形'],['star','五角星'],['pentagon','五边形'],['hexagon','六边形'],['plus','加号'],['cross','叉号']]),gSeriesSelect(index,'markerFill','标记填充',[['series','同系列颜色'],['white','白色空心']])];
+  if(['box','violin'].includes(type)){
+    // v1.9.88: 须线、端帽、中位线、均值圈和箱体边框全部收进「线条」一栏，不再拆在「线与点 / 填充与边框」两处。
+    html+=gallerySection('线条（须线 / 端帽 / 中位线 / 箱体边框）',[gSeriesRange(index,'lineWidth','线宽（须线 / 中位线 / 端帽）',.5,7,.1),gSeriesRange(index,'borderWidth','箱体边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','箱体边框颜色')]);
+    html+=gallerySection('散点',markerFields);
+  }else if(['kde','scatter','bubble','radar'].includes(type)){
+    html+=gallerySection('线条与点',[gSeriesRange(index,'lineWidth','线宽',.5,7,.1),...markerFields]);
+  }
+  if(['hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'borderWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
   html+=gallerySection('全部系列配色',[galleryPaletteBlock()]);return html;
 }
 function histPropertyHtml(){
@@ -2746,6 +2760,12 @@ function bindGalleryStudioPropertyInputs(){
     if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled','kdeHistColorMode'].includes(key))renderGalleryStudioProperties();
   };
   $$('[data-gsetting]').forEach(el=>{el.addEventListener('input',()=>applySetting(el));el.addEventListener('change',()=>applySetting(el))});
+  // v1.9.88: 合并后的「怎么标」下拉一次写入标记方式 + 标记内容两个键。
+  $$('[data-gsig-style]').forEach(el=>el.addEventListener('change',()=>{
+    const [d,l]=String(el.value).split('|'),s=state.gallery.settings;
+    s.significanceDisplay=d;s.significanceLabelMode=l||'stars';
+    renderGalleryStudioCanvas();renderGalleryStudioProperties();
+  }));
   $('#radarTransposeBtn')?.addEventListener('click',()=>{if(state.gallery.type!=='radar')return;state.gallery.rows=state.gallery.rows.map(r=>({Group:r.Indicator,Indicator:r.Group,Value:r.Value}));renderGalleryStudioCanvas();renderGalleryStudioProperties();syncGalleryQuickControls()});
   $$('[data-gorientation]').forEach(btn=>btn.addEventListener('click',()=>{
     const key=btn.dataset.gorientation,value=btn.dataset.orientationValue;state.gallery.settings[key]=value;if(key==='legendOrientation')state.gallery.settings.legendColumns=value==='vertical'?1:Math.max(2,Math.min(galleryStudioSeriesNames().length||3,3));renderGalleryStudioProperties();renderGalleryStudioCanvas();
@@ -5421,9 +5441,26 @@ function significanceBracketsSvg(groups,pairs,xAt,yMap,dataMax,range){
 function significanceLettersSvg(groups,xAt,yMap,dataMax,range){
   const s=state.gallery.settings,a=state.gallery.analysis;if(!s.significanceEnabled||s.significanceDisplay!=='letters'||!a?.letters)return'';let out='<g data-gobject="significance" class="chart-object">';groups.forEach((g,i)=>{const label=a.letters[g]||'',y=yMap(dataMax+range*.09);if(label)out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(label)}</text>`});return out+'</g>';
 }
+// v1.9.87: 每箱上方直接标注（各箱对比第 1 组）。与括号模式不同，这里读原始 pairwise
+// 记录而不是 significancePairsForGroups()，否则默认的“只标显著”过滤会把 ns 全部丢掉。
+function significancePerBoxSvg(groups,xAt,yMap,dataMax,range){
+  const s=state.gallery.settings,a=state.gallery.analysis;
+  if(!s.significanceEnabled||s.significanceDisplay!=='perbox')return'';
+  const pairs=a?.pairwise||[];
+  if(!pairs.length||groups.length<2)return'';
+  const ref=groups[0],y=yMap(dataMax+range*(.06+(Number(s.significanceOffset)||0)/220));
+  let out='<g data-gobject="significance" class="chart-object">';
+  groups.forEach((g,i)=>{
+    if(i===0)return; // 第 1 组是参照组，自身不标
+    const rec=pairs.find(r=>(r.a===ref&&r.b===g)||(r.a===g&&r.b===ref));
+    if(!rec)return;
+    out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(significanceLabel(rec))}</text>`;
+  });
+  return out+'</g>';
+}
 function galleryBox(W,H,violin){
   const s=state.gallery.settings,p=galleryPlotBox(W,H),groups=[...new Set(state.gallery.rows.map(r=>r.Group))],all=state.gallery.rows.map(r=>r.Value),dataMin=Math.min(...all),dataMax=Math.max(...all),range=(dataMax-dataMin)||1,pairs=significancePairsForGroups(groups),maxLevel=pairs.length?Math.max(...pairs.map(x=>x.level))+1:0;
-  const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,extraTop=showBrackets?range*(.18+maxLevel*step):s.significanceDisplay==='letters'?range*.18:range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
+  const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,labelBand=s.significanceEnabled&&(s.significanceDisplay==='letters'||s.significanceDisplay==='perbox'),extraTop=showBrackets?range*(.18+maxLevel*step):labelBand?range*.18:range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
   let out=commonAxes(W,H,p,groups,yTicks,(v,i)=>xAt(i),yMap)+galleryLegend(groups);
   groups.forEach((g,i)=>{const vals=state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value),stt=boxStats(vals),x=xAt(i),st=getGallerySeriesStyle(i),bw=Math.min(84,xStep*(s.boxWidth||.48));let body='';
     if(violin){const curve=kdeFor(vals,dataMin-range*.08,dataMax+range*.08,80,s.bandwidth),mx=Math.max(...curve.map(q=>q[1]))||1,right=curve.map(q=>[x+(q[1]/mx)*bw/2,yMap(q[0])]),left=[...curve].reverse().map(q=>[x-(q[1]/mx)*bw/2,yMap(q[0])]);body+=`<path d="M${right[0][0]},${right[0][1]} ${right.slice(1).map(q=>'L'+q[0]+','+q[1]).join(' ')} ${left.map(q=>'L'+q[0]+','+q[1]).join(' ')} Z" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
@@ -5431,13 +5468,13 @@ function galleryBox(W,H,violin){
       // 白色半透明盒体画在小提琴内，须线/中位线/均值/散点共用下方代码，与图2 样式一致。
       if(s.violinShowBox!==false){const bw2=Math.max(2,bw*.5);body+=`<rect x="${x-bw2/2}" y="${yMap(stt.q3)}" width="${bw2}" height="${Math.max(0,yMap(stt.q1)-yMap(stt.q3))}" fill="rgba(255,255,255,.72)" stroke="#222" stroke-width="1.1"/>`}}
     else body+=`<rect x="${x-bw/2}" y="${yMap(stt.q3)}" width="${bw}" height="${yMap(stt.q1)-yMap(stt.q3)}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
-    body+=`<line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.low)}" y2="${yMap(stt.low)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.high)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`;
+    body+=(s.showWhiskerLine===false?`<line x1="${x}" x2="${x}" y1="${yMap(stt.q3)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.q1)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`:`<line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`)+`<line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.low)}" y2="${yMap(stt.low)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.high)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`;
     if(s.showMedian)body+=`<line x1="${x-bw/2}" x2="${x+bw/2}" y1="${yMap(stt.q2)}" y2="${yMap(stt.q2)}" stroke="#111" stroke-width="${s.medianWidth}"/>`;
     if(s.showMean)body+=`<circle cx="${x}" cy="${yMap(stt.mean)}" r="3.5" fill="white" stroke="#111"/>`;
-    if(s.showPoints)vals.forEach((v,j)=>{if(!s.showOutliers&&(v<stt.low||v>stt.high))return;const jitter=((j*37)%17-8)/8*bw*.36,attrs=`fill="${st.markerFill==='white'?'white':st.color}" stroke="${st.color}" stroke-width="1.2"`;body+=markerShapeSvg(st.markerShape,x+jitter,yMap(v),st.pointSize,attrs)});
+    if(s.showPoints)vals.forEach((v,j)=>{if(!s.showOutliers&&(v<stt.low||v>stt.high))return;const jitter=((j*37)%17-8)/8*bw*.36,mc=st.markerColor||st.color,attrs=`fill="${st.markerFill==='white'?'white':mc}" stroke="${mc}" stroke-width="1.2"`;body+=markerShapeSvg(st.markerShape,x+jitter,yMap(v),st.pointSize,attrs)});
     out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;
   });
-  if(s.significanceDisplay==='letters')out+=significanceLettersSvg(groups,xAt,yMap,dataMax,range);else out+=significanceBracketsSvg(groups,pairs,xAt,yMap,dataMax,range);
+  if(s.significanceDisplay==='letters')out+=significanceLettersSvg(groups,xAt,yMap,dataMax,range);else if(s.significanceDisplay==='perbox')out+=significancePerBoxSvg(groups,xAt,yMap,dataMax,range);else out+=significanceBracketsSvg(groups,pairs,xAt,yMap,dataMax,range);
   return out;
 }
 /* ===== v0.17.0 scatter/bubble axes =====
