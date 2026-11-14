@@ -2536,7 +2536,7 @@ function gallerySeriesPropertyHtml(type,index=0){
   const markerFields=[gSeriesRange(index,'pointSize','点大小',1,16,.5),gSeriesColorKey(index,'markerColor','点颜色'),gSeriesSelect(index,'markerShape','标记形状',[['circle','圆形'],['square','方形'],['triangle','上三角'],['triangleDown','下三角'],['diamond','菱形'],['star','五角星'],['pentagon','五边形'],['hexagon','六边形'],['plus','加号'],['cross','叉号']]),gSeriesSelect(index,'markerFill','标记填充',[['series','同系列颜色'],['white','白色空心']])];
   if(['box','violin'].includes(type)){
     // v1.9.88: 须线、端帽、中位线、均值圈和箱体边框全部收进「线条」一栏，不再拆在「线与点 / 填充与边框」两处。
-    html+=gallerySection('线条（须线 / 端帽 / 中位线 / 箱体边框）',[gSeriesRange(index,'lineWidth','线宽（须线 / 中位线 / 端帽）',.5,7,.1),gSeriesRange(index,'borderWidth','箱体边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','箱体边框颜色')]);
+    html+=gallerySection('线条（须线 / 端帽 / 中位线 / 箱体边框）',[gSeriesRange(index,'lineWidth','线宽（须线 / 中位线 / 端帽）',.5,7,.1),gSeriesSelect(index,'whiskerLineStyle','须线样式',[['solid','实线'],['dashed','虚线'],['dotted','点线'],['dashdot','点划线']]),gSeriesRange(index,'borderWidth','箱体边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','箱体边框颜色')]);
     html+=gallerySection('散点',markerFields);
   }else if(['kde','scatter','bubble','radar'].includes(type)){
     html+=gallerySection('线条与点',[gSeriesRange(index,'lineWidth','线宽',.5,7,.1),...markerFields]);
@@ -2594,7 +2594,7 @@ function histPropertyHtml(){
 function gallerySection(title,items){return `<div class="object-property-section"><h3>${title}</h3>${items.join('')}</div>`}
 function galleryDragHint(name){return `<div class="hint">${name}可在图中直接拖动，也可以输入精确坐标。</div>`}
 function getGallerySeriesStyle(index){
-  if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,borderWidth:1.2,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series'}};
+  if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,borderWidth:1.2,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series',whiskerLineStyle:'solid'}};
   return state.gallery.seriesStyles[index];
 }
 function gSeriesWrap(index,key,label,input){const v=getGallerySeriesStyle(index)[key];return `<div class="field"><label><span>${label}</span><output data-gseries-out="${index}:${key}">${esc(v)}</output></label>${input}</div>`}
@@ -5452,7 +5452,18 @@ function significanceBracketsSvg(groups,pairs,xAt,yMap,dataMax,range){
   return out+'</g>';
 }
 function significanceLettersSvg(groups,xAt,yMap,dataMax,range){
-  const s=state.gallery.settings,a=state.gallery.analysis;if(!s.significanceEnabled||s.significanceDisplay!=='letters'||!a?.letters)return'';let out='<g data-gobject="significance" class="chart-object">';groups.forEach((g,i)=>{const label=a.letters[g]||'',y=yMap(dataMax+range*.09);if(label)out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(label)}</text>`});return out+'</g>';
+  const s=state.gallery.settings,a=state.gallery.analysis;if(!s.significanceEnabled||s.significanceDisplay!=='letters'||!a?.letters)return'';
+  // v1.9.90: 字母组也贴各自箱顶，不再统一吊在图表最上方。
+  const gap=6+(Number(s.significanceOffset)||10),valsOf=g=>state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value);
+  let out='<g data-gobject="significance" class="chart-object">';groups.forEach((g,i)=>{const label=a.letters[g]||'';if(!label)return;const y=yMap(boxStats(valsOf(g)).high)-gap;out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(label)}</text>`});return out+'</g>';
+}
+// v1.9.90: 须线虚实线样式。厚度随线宽缩放，端帽仍是实线，与论文常见画法一致。
+function whiskerDashArray(style,lw){
+  const w=Math.max(.8,Number(lw)||1.2);
+  if(style==='dashed')return `${(w*3.2).toFixed(2)} ${(w*2.2).toFixed(2)}`;
+  if(style==='dotted')return `${w.toFixed(2)} ${(w*2).toFixed(2)}`;
+  if(style==='dashdot')return `${(w*4).toFixed(2)} ${(w*2).toFixed(2)} ${w.toFixed(2)} ${(w*2).toFixed(2)}`;
+  return '';
 }
 // v1.9.87: 每箱上方直接标注（各箱对比第 1 组）。与括号模式不同，这里读原始 pairwise
 // 记录而不是 significancePairsForGroups()，否则默认的“只标显著”过滤会把 ns 全部丢掉。
@@ -5477,7 +5488,7 @@ function significancePerBoxSvg(groups,xAt,yMap,dataMax,range){
 }
 function galleryBox(W,H,violin){
   const s=state.gallery.settings,p=galleryPlotBox(W,H),groups=[...new Set(state.gallery.rows.map(r=>r.Group))],all=state.gallery.rows.map(r=>r.Value),dataMin=Math.min(...all),dataMax=Math.max(...all),range=(dataMax-dataMin)||1,pairs=significancePairsForGroups(groups),maxLevel=pairs.length?Math.max(...pairs.map(x=>x.level))+1:0;
-  const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,lettersBand=s.significanceEnabled&&s.significanceDisplay==='letters',extraTop=showBrackets?range*(.18+maxLevel*step):lettersBand?range*.18:range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
+  const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,extraTop=showBrackets?range*(.18+maxLevel*step):range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
   let out=commonAxes(W,H,p,groups,yTicks,(v,i)=>xAt(i),yMap)+galleryLegend(groups);
   groups.forEach((g,i)=>{const vals=state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value),stt=boxStats(vals),x=xAt(i),st=getGallerySeriesStyle(i),bw=Math.min(84,xStep*(s.boxWidth||.48));let body='';
     if(violin){const curve=kdeFor(vals,dataMin-range*.08,dataMax+range*.08,80,s.bandwidth),mx=Math.max(...curve.map(q=>q[1]))||1,right=curve.map(q=>[x+(q[1]/mx)*bw/2,yMap(q[0])]),left=[...curve].reverse().map(q=>[x-(q[1]/mx)*bw/2,yMap(q[0])]);body+=`<path d="M${right[0][0]},${right[0][1]} ${right.slice(1).map(q=>'L'+q[0]+','+q[1]).join(' ')} ${left.map(q=>'L'+q[0]+','+q[1]).join(' ')} Z" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
@@ -5485,7 +5496,8 @@ function galleryBox(W,H,violin){
       // 白色半透明盒体画在小提琴内，须线/中位线/均值/散点共用下方代码，与图2 样式一致。
       if(s.violinShowBox!==false){const bw2=Math.max(2,bw*.5);body+=`<rect x="${x-bw2/2}" y="${yMap(stt.q3)}" width="${bw2}" height="${Math.max(0,yMap(stt.q1)-yMap(stt.q3))}" fill="rgba(255,255,255,.72)" stroke="#222" stroke-width="1.1"/>`}}
     else body+=`<rect x="${x-bw/2}" y="${yMap(stt.q3)}" width="${bw}" height="${yMap(stt.q1)-yMap(stt.q3)}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
-    body+=(s.showWhiskerLine===false?`<line x1="${x}" x2="${x}" y1="${yMap(stt.q3)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.q1)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`:`<line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`)+`<line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.low)}" y2="${yMap(stt.low)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.high)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`;
+    const wdash=whiskerDashArray(st.whiskerLineStyle,s.whiskerWidth),dashAttr=wdash?` stroke-dasharray="${wdash}"`:'';
+    body+=s.showWhiskerLine===false?`<line x1="${x}" x2="${x}" y1="${yMap(stt.q3)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/><line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.q1)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/>`:`<line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/>`+`<line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.low)}" y2="${yMap(stt.low)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.high)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`;
     if(s.showMedian)body+=`<line x1="${x-bw/2}" x2="${x+bw/2}" y1="${yMap(stt.q2)}" y2="${yMap(stt.q2)}" stroke="#111" stroke-width="${s.medianWidth}"/>`;
     if(s.showMean)body+=`<circle cx="${x}" cy="${yMap(stt.mean)}" r="3.5" fill="white" stroke="#111"/>`;
     if(s.showPoints)vals.forEach((v,j)=>{if(!s.showOutliers&&(v<stt.low||v>stt.high))return;const jitter=((j*37)%17-8)/8*bw*.36,mc=st.markerColor||st.color,attrs=`fill="${st.markerFill==='white'?'white':mc}" stroke="${mc}" stroke-width="1.2"`;body+=markerShapeSvg(st.markerShape,x+jitter,yMap(v),st.pointSize,attrs)});
