@@ -406,7 +406,7 @@ const defaultGallerySettings = {
   legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameFill:'#ffffff',legendFrameRadius:3,
   legendShadow:true,legendShadowX:2,legendShadowY:3,legendShadowBlur:3,legendShadowOpacity:.25,
   bins:10,bandwidth:0,opacity:.72,pointSize:4,lineWidth:2,markerShape:'circle',markerFill:'series',annotationSize:12,pieLabelSize:12,radarLabelSize:12,
-  showPoints:true,showMean:true,showMedian:true,showWhiskerLine:true,showOutliers:true,boxWidth:.48,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,
+  showPoints:true,showMean:true,showMedian:true,showWhiskerLine:true,showOutliers:true,boxWidth:.48,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,violinLayout:'overlay',violinBoxCaps:false,
   boxQuartileMethod:'linear7',boxWhiskerMethod:'iqr15',boxWhiskerPercentile:5,statMethod:'anovaLsd',correlationMethod:'pearson',methodNoteVisible:true,methodNoteX:null,methodNoteY:null,methodNoteSize:10,methodNoteColor:'#5f6d75',
   significanceEnabled:true,significanceDisplay:'brackets',significancePairMode:'significant',significanceLabelMode:'stars',significanceFontSize:11,significanceLineWidth:1,significanceColor:'#20262b',significanceOffset:10,significanceStep:18,
   orientation:'vertical',donut:false,normalize:false,showRegression:true,showCorrelation:true,
@@ -2486,7 +2486,7 @@ function gallerySpecificPropertyHtml(type,id){
     gRange('boxWhiskerPercentile','百分位范围（选上一项“百分位”时生效）',1,20,1)
   ])+gallerySection('图上画哪些元素',[
     gRange('boxWidth','箱体 / 小提琴宽度',.2,.9,.01),
-    ...(id==='violin-elements'?[gCheck('violinShowBox','在小提琴内叠加箱线（Violin + Box 合体）')]:[]),
+    ...(id==='violin-elements'?[gSelect('violinLayout','小提琴和箱线怎么组合',[['overlay','箱线叠加在小提琴内部'],['side','左箱线图 + 右半小提琴（并排）']]),gCheck('violinShowBox','在小提琴内叠加箱线（Violin + Box 合体）'),gCheck('violinBoxCaps','内部箱线画上下端帽（短横线）')]:[]),
     gCheck('showMean','显示平均值（空心圆点）'),
     gCheck('showMedian','显示中位数（横线）'),
     gCheck('showWhiskerLine','箱体中间贯穿竖线（关掉＝只在箱体上下各画一段）'),
@@ -2537,6 +2537,8 @@ function gallerySeriesPropertyHtml(type,index=0){
   if(['box','violin'].includes(type)){
     // v1.9.88: 须线、端帽、中位线、均值圈和箱体边框全部收进「线条」一栏，不再拆在「线与点 / 填充与边框」两处。
     html+=gallerySection('线条（须线 / 端帽 / 中位线 / 箱体边框）',[gSeriesRange(index,'lineWidth','线宽（须线 / 中位线 / 端帽）',.5,7,.1),gSeriesSelect(index,'whiskerLineStyle','须线样式',[['solid','实线'],['dashed','虚线'],['dotted','点线'],['dashdot','点划线']]),gSeriesRange(index,'borderWidth','箱体边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','箱体边框颜色')]);
+    // v1.9.91: 小提琴内部的箱体改为独立配色，不再和整把小提琴共用。
+    if(type==='violin')html+=gallerySection('小提琴内的箱体',[gSeriesColorKey(index,'boxFill','箱体填充色'),gSeriesColorKey(index,'boxBorderColor','箱体边框颜色'),gSeriesRange(index,'boxBorderWidth','箱体边框粗细',0,5,.1)]);
     html+=gallerySection('散点',markerFields);
   }else if(['kde','scatter','bubble','radar'].includes(type)){
     html+=gallerySection('线条与点',[gSeriesRange(index,'lineWidth','线宽',.5,7,.1),...markerFields]);
@@ -2594,7 +2596,7 @@ function histPropertyHtml(){
 function gallerySection(title,items){return `<div class="object-property-section"><h3>${title}</h3>${items.join('')}</div>`}
 function galleryDragHint(name){return `<div class="hint">${name}可在图中直接拖动，也可以输入精确坐标。</div>`}
 function getGallerySeriesStyle(index){
-  if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,borderWidth:1.2,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series',whiskerLineStyle:'solid'}};
+  if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,borderWidth:1.2,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series',whiskerLineStyle:'solid',boxFill:'#ffffff',boxBorderColor:'#222222',boxBorderWidth:1.1}};
   return state.gallery.seriesStyles[index];
 }
 function gSeriesWrap(index,key,label,input){const v=getGallerySeriesStyle(index)[key];return `<div class="field"><label><span>${label}</span><output data-gseries-out="${index}:${key}">${esc(v)}</output></label>${input}</div>`}
@@ -5491,16 +5493,21 @@ function galleryBox(W,H,violin){
   const step=significanceStepFactor(),showBrackets=s.significanceEnabled&&s.significanceDisplay==='brackets'&&pairs.length>0,extraTop=showBrackets?range*(.18+maxLevel*step):range*.12,min=dataMin-range*.12,max=dataMax+extraTop,yb=galleryBrokenY(min,max,p),yMap=yb?yb.map:scaleLinear(min,max,p.t+p.h,p.t),yTicks=yb?yb.ticks:makeTicks(min,max,null,6),xStep=p.w/groups.length,xAt=i=>p.l+(i+.5)*xStep;
   let out=commonAxes(W,H,p,groups,yTicks,(v,i)=>xAt(i),yMap)+galleryLegend(groups);
   groups.forEach((g,i)=>{const vals=state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value),stt=boxStats(vals),x=xAt(i),st=getGallerySeriesStyle(i),bw=Math.min(84,xStep*(s.boxWidth||.48));let body='';
-    if(violin){const curve=kdeFor(vals,dataMin-range*.08,dataMax+range*.08,80,s.bandwidth),mx=Math.max(...curve.map(q=>q[1]))||1,right=curve.map(q=>[x+(q[1]/mx)*bw/2,yMap(q[0])]),left=[...curve].reverse().map(q=>[x-(q[1]/mx)*bw/2,yMap(q[0])]);body+=`<path d="M${right[0][0]},${right[0][1]} ${right.slice(1).map(q=>'L'+q[0]+','+q[1]).join(' ')} ${left.map(q=>'L'+q[0]+','+q[1]).join(' ')} Z" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
-      // v0.24.0: 合体——小提琴内部叠加箱线（默认开），即论文常见的 Violin + Box plot。
-      // 白色半透明盒体画在小提琴内，须线/中位线/均值/散点共用下方代码，与图2 样式一致。
-      if(s.violinShowBox!==false){const bw2=Math.max(2,bw*.5);body+=`<rect x="${x-bw2/2}" y="${yMap(stt.q3)}" width="${bw2}" height="${Math.max(0,yMap(stt.q1)-yMap(stt.q3))}" fill="rgba(255,255,255,.72)" stroke="#222" stroke-width="1.1"/>`}}
-    else body+=`<rect x="${x-bw/2}" y="${yMap(stt.q3)}" width="${bw}" height="${yMap(stt.q1)-yMap(stt.q3)}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
+    const sideViolin=violin&&s.violinLayout==='side',cx=sideViolin?x-bw*.28:x;
+    let boxW=sideViolin?Math.max(10,bw*.46):bw,medianW=boxW;
+    if(violin){const curve=kdeFor(vals,dataMin-range*.08,dataMax+range*.08,80,s.bandwidth),mx=Math.max(...curve.map(q=>q[1]))||1;
+      if(sideViolin){const xv=x+bw*.26,half=curve.map(q=>[xv+(q[1]/mx)*bw*.44,yMap(q[0])]);body+=`<path d="M${half[0][0]},${half[0][1]} ${half.slice(1).map(q=>'L'+q[0]+','+q[1]).join(' ')} Z" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`}
+      else{const right=curve.map(q=>[x+(q[1]/mx)*bw/2,yMap(q[0])]),left=[...curve].reverse().map(q=>[x-(q[1]/mx)*bw/2,yMap(q[0])]);body+=`<path d="M${right[0][0]},${right[0][1]} ${right.slice(1).map(q=>'L'+q[0]+','+q[1]).join(' ')} ${left.map(q=>'L'+q[0]+','+q[1]).join(' ')} Z" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`}
+    }
+    if(violin&&!sideViolin){
+      if(s.violinShowBox!==false){boxW=Math.max(2,bw*.5);medianW=boxW;const bf=st.boxFill||'#ffffff',bbC=st.boxBorderColor||'#222222',bbW=(st.boxBorderWidth==null||st.boxBorderWidth==='')?1.1:Number(st.boxBorderWidth);body+=`<rect x="${cx-boxW/2}" y="${yMap(stt.q3)}" width="${boxW}" height="${Math.max(0,yMap(stt.q1)-yMap(stt.q3))}" fill="${bf}" stroke="${bbC}" stroke-width="${bbW}"/>`}
+    }else body+=`<rect x="${cx-boxW/2}" y="${yMap(stt.q3)}" width="${boxW}" height="${Math.max(0,yMap(stt.q1)-yMap(stt.q3))}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
     const wdash=whiskerDashArray(st.whiskerLineStyle,s.whiskerWidth),dashAttr=wdash?` stroke-dasharray="${wdash}"`:'';
-    body+=s.showWhiskerLine===false?`<line x1="${x}" x2="${x}" y1="${yMap(stt.q3)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/><line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.q1)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/>`:`<line x1="${x}" x2="${x}" y1="${yMap(stt.low)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/>`+`<line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.low)}" y2="${yMap(stt.low)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${x-bw*.25}" x2="${x+bw*.25}" y1="${yMap(stt.high)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`;
-    if(s.showMedian)body+=`<line x1="${x-bw/2}" x2="${x+bw/2}" y1="${yMap(stt.q2)}" y2="${yMap(stt.q2)}" stroke="#111" stroke-width="${s.medianWidth}"/>`;
-    if(s.showMean)body+=`<circle cx="${x}" cy="${yMap(stt.mean)}" r="3.5" fill="white" stroke="#111"/>`;
-    if(s.showPoints)vals.forEach((v,j)=>{if(!s.showOutliers&&(v<stt.low||v>stt.high))return;const jitter=((j*37)%17-8)/8*bw*.36,mc=st.markerColor||st.color,attrs=`fill="${st.markerFill==='white'?'white':mc}" stroke="${mc}" stroke-width="1.2"`;body+=markerShapeSvg(st.markerShape,x+jitter,yMap(v),st.pointSize,attrs)});
+    body+=s.showWhiskerLine===false?`<line x1="${cx}" x2="${cx}" y1="${yMap(stt.q3)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/><line x1="${cx}" x2="${cx}" y1="${yMap(stt.low)}" y2="${yMap(stt.q1)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/>`:`<line x1="${cx}" x2="${cx}" y1="${yMap(stt.low)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"${dashAttr}/>`;
+    if(!violin||sideViolin||s.violinBoxCaps===true){const cap=Math.max(5,boxW*.25);body+=`<line x1="${cx-cap}" x2="${cx+cap}" y1="${yMap(stt.low)}" y2="${yMap(stt.low)}" stroke="#222" stroke-width="${s.whiskerWidth}"/><line x1="${cx-cap}" x2="${cx+cap}" y1="${yMap(stt.high)}" y2="${yMap(stt.high)}" stroke="#222" stroke-width="${s.whiskerWidth}"/>`}
+    if(s.showMedian)body+=`<line x1="${cx-medianW/2}" x2="${cx+medianW/2}" y1="${yMap(stt.q2)}" y2="${yMap(stt.q2)}" stroke="#111" stroke-width="${s.medianWidth}"/>`;
+    if(s.showMean)body+=`<circle cx="${cx}" cy="${yMap(stt.mean)}" r="3.5" fill="white" stroke="#111"/>`;
+    if(s.showPoints)vals.forEach((v,j)=>{if(!s.showOutliers&&(v<stt.low||v>stt.high))return;const jitter=((j*37)%17-8)/8*boxW*.36,mc=st.markerColor||st.color,attrs=`fill="${st.markerFill==='white'?'white':mc}" stroke="${mc}" stroke-width="1.2"`;body+=markerShapeSvg(st.markerShape,cx+jitter,yMap(v),st.pointSize,attrs)});
     out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;
   });
   if(s.significanceDisplay==='letters')out+=significanceLettersSvg(groups,xAt,yMap,dataMax,range);else if(s.significanceDisplay==='perbox')out+=significancePerBoxSvg(groups,xAt,yMap,dataMax,range);else out+=significanceBracketsSvg(groups,pairs,xAt,yMap,dataMax,range);
