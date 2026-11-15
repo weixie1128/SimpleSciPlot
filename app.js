@@ -409,7 +409,7 @@ const defaultGallerySettings = {
   showPoints:true,showMean:true,showMedian:true,showWhiskerLine:true,showOutliers:true,boxWidth:.48,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,violinLayout:'overlay',violinBoxCaps:false,
   boxQuartileMethod:'linear7',boxWhiskerMethod:'iqr15',boxWhiskerPercentile:5,statMethod:'anovaLsd',correlationMethod:'pearson',methodNoteVisible:true,methodNoteX:null,methodNoteY:null,methodNoteSize:10,methodNoteColor:'#5f6d75',
   significanceEnabled:true,significanceDisplay:'brackets',significancePairMode:'significant',significanceLabelMode:'stars',significanceFontSize:11,significanceLineWidth:1,significanceColor:'#20262b',significanceOffset:10,significanceStep:18,
-  orientation:'vertical',donut:false,normalize:false,showRegression:true,showCorrelation:true,
+  orientation:'vertical',donut:false,normalize:false,showRegression:true,showCorrelation:true,scatterFitBand:true,scatterBandOpacity:.18,
   heatmapPalette:'greenMagenta',heatmapShowValues:true,heatmapCellGap:1,heatmapLowColor:'#CE5FA5',heatmapMidColor:'#D9D4C1',heatmapHighColor:'#58B66D',heatmapDiagonalColor:'#236B51',heatmapValueSize:10,heatmapXLabelSize:11,heatmapYLabelSize:11,heatmapColorBar:true,heatmapColorBarOrientation:'horizontal',heatmapCluster:'none',heatmapShowDendrogram:false,heatmapGridStroke:'#ffffff',heatmapGridStrokeWidth:.8,
   radarGridWidth:1,radarPointSize:3,radarFill:false,radarShowMarkers:true,radarLevels:4,radarMin:'auto',radarMax:'auto',radarLabelOffset:30,radarShowTickLabels:true,radarTickDecimals:0,radarTickLabelSize:11,radarTickLabelPosition:'top',radarTickLabelOffset:10,radarTheme:'rose',radarGradientMode:'radial',radarGridColor:'#c8aebc',radarSpokeColor:'#9e8794',radarGridWidth:.9,radarSpokeWidth:1.15,radarBandMode:'theme-gradient',radarSmartHighlight:true,radarHighlightThreshold:0,radarHighlightStrength:.24,
   stackedShowError:false,stackedShowValue:false,stackedValueSize:12,stackedValueDecimals:1,stackedErrorWidth:1,stackedErrorCapWidth:2.4,stackedErrorColor:'#263238',
@@ -455,7 +455,7 @@ function setWorkflowChart(type,{keepData=false}={}){
 function workflowChartLabel(type){
   // v1.5.3：thermal / spectrum 已在 PLAN_CHART_META 注册，但此处缺少中文名，
   // 导致图形选择页卡片标题回退成原始 id（显示为英文 thermal / spectrum）。
-  const map={bar:'分组柱状图',line:'带误差棒折线图',curve:'平滑曲线图',waterfall:'光谱瀑布图（3D堆叠）',bar3d:'3D 柱状图（纵深）',hist:'直方图',kde:'核密度图 KDE',box:'箱线图',violin:'小提琴图',scatter:'散点图',bubble:'气泡图',stacked:'堆叠条形图',pie:'饼图 / 圆环图',heatmap:'相关性热力图',radar:'雷达图',spectrum:'光谱图',thermal:'热分析图（DSC/TGA）'};
+  const map={bar:'分组柱状图',line:'带误差棒折线图',curve:'平滑曲线图',waterfall:'光谱瀑布图（3D堆叠）',bar3d:'3D 柱状图（纵深）',hist:'直方图',kde:'核密度图 KDE',box:'箱线图',violin:'小提琴图',scatter:'回归散点图',bubble:'气泡散点图',stacked:'堆叠条形图',pie:'饼图 / 圆环图',heatmap:'相关性热力图',radar:'雷达图',spectrum:'光谱图',thermal:'热分析图（DSC/TGA）'};
   return map[type]||type;
 }
 function workflowChartEnglishLabel(type){
@@ -4796,8 +4796,8 @@ const GALLERY_CHARTS=[
   {id:'kde',category:'数据分布',name:'核密度图 KDE',schema:'univariate',desc:'以平滑密度曲线显示分布形态、偏态和多峰特征。'},
   {id:'box',category:'数据分布',name:'箱线图',schema:'univariate',desc:'展示中位数、四分位数、须线与异常值，可叠加原始散点。'},
   {id:'violin',category:'数据分布',name:'小提琴图',schema:'univariate',desc:'结合核密度和箱线统计，同时观察分布形状与分位数。'},
-  {id:'scatter',category:'变量关系',name:'散点图',schema:'xy',desc:'分析两个连续变量的关系，可显示 Pearson 相关与线性回归。'},
-  {id:'bubble',category:'变量关系',name:'气泡图',schema:'xy',desc:'用 X、Y 和气泡大小同时表达三个变量。'},
+  {id:'scatter',category:'变量关系',name:'回归散点图',schema:'xy',desc:'分析两个连续变量的关系，显示拟合线、95% 置信带、Pearson 相关与 R²。'},
+  {id:'bubble',category:'变量关系',name:'气泡散点图',schema:'xy',desc:'用 X、Y 和气泡大小同时表达三个变量，可叠加拟合线。'},
   {id:'stacked',category:'组间比较',name:'堆叠条形图',schema:'composition',desc:'展示各类别内部组分构成，可切换原始值或百分比。'},
   {id:'pie',category:'组成比例',name:'饼图 / 圆环图',schema:'composition',desc:'展示少量组分占比。学术论文中应谨慎使用。'},
   {id:'heatmap',category:'多指标关系',name:'相关性热力图',schema:'matrix',desc:'计算数值指标的 Pearson 相关矩阵，并用色阶展示。'},

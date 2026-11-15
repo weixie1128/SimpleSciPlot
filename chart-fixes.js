@@ -42,6 +42,8 @@
     if (!['group', 'overall'].includes(s.scatterFitMode)) s.scatterFitMode = 'group';
     if (!['solid', 'dashed', 'dotted', 'dashdot'].includes(s.scatterRegressionLineStyle)) s.scatterRegressionLineStyle = 'solid';
     if (!Number.isFinite(Number(s.scatterRegressionLineWidth))) s.scatterRegressionLineWidth = 1.35;
+    if (typeof s.scatterFitBand !== 'boolean') s.scatterFitBand = true;
+    if (!Number.isFinite(Number(s.scatterBandOpacity))) s.scatterBandOpacity = 0.18;
     if (!['auto', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'manual'].includes(s.scatterStatsPosition)) s.scatterStatsPosition = 'auto';
     if (!Number.isFinite(Number(s.scatterStatsX))) s.scatterStatsX = 120;
     if (!Number.isFinite(Number(s.scatterStatsY))) s.scatterStatsY = 90;
@@ -575,6 +577,41 @@
   function scatterRegressionDash(style) {
     return ({ solid: '', dashed: '7 5', dotted: '1.6 4', dashdot: '8 4 2 4' })[style] ?? '';
   }
+  // v1.9.92: 拟合线旁的 95% 置信带（半透明）。按 t 分布算回归均值的置信区间：
+  // ŷ ± t(0.975, n-2)·s·sqrt(1/n + (x-x̄)²/Sxx)。
+  const T975 = [12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179, 2.160, 2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086, 2.080, 2.074, 2.069, 2.064, 2.060, 2.056, 2.052, 2.048, 2.045, 2.042];
+  function tCritical95(df) {
+    if (!(df > 0)) return 0;
+    if (df <= 30) return T975[Math.round(df) - 1];
+    if (df <= 120) return 2.042 + (1.980 - 2.042) * (df - 30) / 90;
+    return 1.96;
+  }
+  function regressionBandPath(rows, b0, b1, x1, x2, logX, xMap, yMap) {
+    const n = rows.length;
+    if (n < 3 || !(x2 > x1)) return '';
+    const xs = rows.map(r => Number(r.X)), ys = rows.map(r => Number(r.Y));
+    if (!xs.every(Number.isFinite) || !ys.every(Number.isFinite)) return '';
+    const tc = tCritical95(n - 2);
+    if (!(tc > 0)) return '';
+    const mx = xs.reduce((a, b) => a + b, 0) / n;
+    const sxx = xs.reduce((a, b) => a + (b - mx) * (b - mx), 0);
+    if (!(sxx > 0)) return '';
+    let sse = 0;
+    for (let i = 0; i < n; i++) { const e = ys[i] - (b0 + b1 * xs[i]); sse += e * e; }
+    const se = Math.sqrt(Math.max(0, sse) / (n - 2));
+    if (!Number.isFinite(se)) return '';
+    const N = 36, up = [], low = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, x = logX ? x1 * Math.pow(x2 / x1, t) : x1 + (x2 - x1) * t;
+      const yh = b0 + b1 * x;
+      if (!Number.isFinite(yh)) continue;
+      const half = tc * se * Math.sqrt(1 / n + (x - mx) * (x - mx) / sxx);
+      up.push(xMap(x).toFixed(2) + ',' + yMap(yh + half).toFixed(2));
+      low.push(xMap(x).toFixed(2) + ',' + yMap(yh - half).toFixed(2));
+    }
+    if (up.length < 2) return '';
+    return 'M' + up.join('L') + 'L' + low.reverse().join('L') + 'Z';
+  }
   function scatterLegend(groups, W, p, s) {
     if (!s.legend || !groups.length) return '';
     const font = Math.max(8, num(s.legendFontSize, 12));
@@ -833,6 +870,10 @@
           ['overall', '全部样本整体拟合']
         ]),
         gCheck('showRegression', '显示线性拟合'),
+        ...(state.gallery.settings.showRegression !== false ? [
+          gCheck('scatterFitBand', '显示 95% 置信带（拟合线旁半透明区域）'),
+          ...(state.gallery.settings.scatterFitBand !== false ? [gRange('scatterBandOpacity', '置信带透明度', 0.03, 0.6, 0.01)] : [])
+        ] : []),
         gSelect('scatterRegressionLineStyle', '拟合线型', [
           ['solid', '实线（推荐）'],
           ['dashed', '虚线'],
@@ -1346,7 +1387,12 @@
   try { globalThis.__foodlabScatterStatsSvg = scatterStatsSvg; } catch (_err) {}
   try { globalThis.__foodlabScatterDash = scatterRegressionDash; } catch (_err) {}
 
-  galleryScatter = function patchedGalleryScatter(W, H, bubble) {
+  // v1.9.93: 散点板块拆成共享内核 + 两个薄适配器。
+  // 内核只负责轴/裁剪/图例/绘制流程，mode 决定点大小是否随 Size 变化。
+  // 回归散点与气泡散点各自有独立入口，后续火山散点也复用这个内核，
+  // 三者互不嵌套 if，改动一个不会碰到另一个。
+  function galleryXyScatterCore(W, H, mode) {
+    const bubble = mode === 'bubble';
     const s = ensureFixSettings();
     const p = galleryPlotBox(W, H);
     const rows = state.gallery.rows.filter(r => Number.isFinite(r.X) && Number.isFinite(r.Y));
@@ -1395,6 +1441,33 @@
     const sizes = rows.map(r => r.Size).filter(Number.isFinite);
     const smin = sizes.length ? Math.min(...sizes) : 0;
     const smax = sizes.length ? Math.max(...sizes) : 1;
+    const analysis = state.gallery.analysis;
+    // v1.9.92: 95% 置信带先画，位于散点之下、拟合线之上（半透明，不遮住数据点）。
+    if (s.showRegression && s.scatterFitBand) {
+      const bandOp = clampLocal(num(s.scatterBandOpacity, .18), .03, .6);
+      const addBand = (rws, b0, b1, bx1, bx2, color, gi) => {
+        const d = regressionBandPath(rws, b0, b1, bx1, bx2, !!xr.log, xMap, yMap);
+        if (!d) return;
+        out += `<g data-gobject="fit-band"${gi == null ? '' : ` data-gseries="${gi}"`} class="chart-object"><path d="${d}" fill="${color}" fill-opacity="${bandOp}" stroke="none"/></g>`;
+      };
+      if (s.scatterFitMode === 'overall') {
+        const m = analysis?.overall;
+        if (m && Number.isFinite(m.slope) && Number.isFinite(m.intercept)) {
+          const bx = rows.map(r => Number(r.X)).filter(Number.isFinite);
+          addBand(rows, m.intercept, m.slope, Math.min(...bx), Math.max(...bx), '#333333', null);
+        }
+      } else {
+        const table = analysis?.table || [];
+        groups.forEach((g, gi) => {
+          const model = table.find(r => String(r.Group) === g);
+          if (!model || !Number.isFinite(Number(model.Slope)) || !Number.isFinite(Number(model.Intercept))) return;
+          const gr = rows.filter(r => String(r.Group || 'All') === g);
+          const gx = gr.map(r => Number(r.X)).filter(Number.isFinite);
+          if (gx.length < 3) return;
+          addBand(gr, Number(model.Intercept), Number(model.Slope), Math.min(...gx), Math.max(...gx), getGallerySeriesStyle(gi).color, gi);
+        });
+      }
+    }
     groups.forEach((g, gi) => {
       const st = getGallerySeriesStyle(gi);
       const groupRows = rows.filter(r => String(r.Group || 'All') === g);
@@ -1409,7 +1482,6 @@
       }).join('');
       out += `<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`;
     });
-    const analysis = state.gallery.analysis;
     const dash = scatterRegressionDash(s.scatterRegressionLineStyle);
     const lineWidth = clampLocal(num(s.scatterRegressionLineWidth, 1.35), 0.5, 4);
     const dashAttr = dash ? ` stroke-dasharray="${dash}"` : '';
@@ -1455,7 +1527,16 @@
     }
     out += '</g>';
     return out;
+  }
+
+  // 两个独立入口：回归散点 / 气泡散点。外观与拆分前逐像素一致。
+  const galleryRegressionScatter = (W, H) => galleryXyScatterCore(W, H, 'regression');
+  const galleryBubbleScatter = (W, H) => galleryXyScatterCore(W, H, 'bubble');
+  try { globalThis.__foodlabScatterCore = galleryXyScatterCore; } catch (_err) {}
+  galleryScatter = function patchedGalleryScatter(W, H, bubble) {
+    return bubble ? galleryBubbleScatter(W, H) : galleryRegressionScatter(W, H);
   };
+
   galleryDragSnapshot = function patchedGalleryDragSnapshot(key, el = null) {
     if (key === 'regression' && el?.dataset?.gdrag === 'regression') {
       const s = ensureFixSettings();
