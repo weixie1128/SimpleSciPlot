@@ -49,7 +49,7 @@
     if (!Number.isFinite(Number(s.scatterStatsY))) s.scatterStatsY = 90;
     if (!['neutral', 'series'].includes(s.scatterStatsColorMode)) s.scatterStatsColorMode = 'neutral';
     if (typeof s.scatterStatsFrame !== 'boolean') s.scatterStatsFrame = false;
-    if (!['r-r2', 'equation-r2'].includes(s.scatterStatsContent)) s.scatterStatsContent = 'r-r2';
+    if (!['r-r2', 'r-r2-p', 'r2-p', 'equation-r2', 'equation-r2-p'].includes(s.scatterStatsContent)) s.scatterStatsContent = 'r-r2';
     if (!Number.isFinite(Number(s.histFacetGap))) s.histFacetGap = 14;
     if (!['compact', 'standard', 'relaxed', 'manual'].includes(s.histXRangePreset)) s.histXRangePreset = 'standard';
     if (!Number.isFinite(Number(s.histXPaddingPct))) s.histXPaddingPct = 6;
@@ -665,7 +665,11 @@
           ? `<rect x="${x + (markerBox - swW) / 2}" y="${cy - swH / 2}" width="${swW}" height="${swH}" fill="${st.color}"/>`
           : sym === 'line'
             ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
-            : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
+            : sym === 'marker-line'
+              // v1.9.94：点线符号——短线穿过数据点，常见于论文图例（左线右点样式）。
+              ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.3, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
+                + markerShapeSvg(st.markerShape, x + markerBox / 2, cy, radius * 0.85, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`)
+              : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
         itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${glyph}<text x="${x + markerBox + 7}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="#263238">${esc(groups[i])}</text></g>`;
         x += itemWidths[i] + gap;
       }
@@ -683,14 +687,37 @@
     }
     return `${frame}<g data-gobject="legend" data-gdrag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})">${itemsSvg}</g>`;
   }
+  // v1.9.94: 统计标注支持写出 p 值（论文里常见 R² + p）。
+  // 组内模型没有现成 p 时，用 r 和 n 现场换算。
+  function scatterModelP(model) {
+    const direct = Number(model.P ?? model.p);
+    if (Number.isFinite(direct)) return direct;
+    const r = Number(model.Correlation ?? model.association), n = Number(model.n);
+    if (!Number.isFinite(r) || !(n > 2)) return NaN;
+    const df = n - 2, den = 1 - r * r;
+    if (r === 1 || r === -1) return 0;
+    if (!(den > 0)) return NaN;
+    const t = Math.abs(r) * Math.sqrt(df / den);
+    return Number.isFinite(t) && typeof tCdf === 'function' ? clampLocal(2 * (1 - tCdf(t, df)), 0, 1) : NaN;
+  }
+  function scatterPText(model) {
+    const p = scatterModelP(model);
+    if (!Number.isFinite(p)) return '';
+    return typeof formatPText === 'function' ? formatPText(p) : `p = ${p.toFixed(3)}`;
+  }
   function scatterStatsText(model, symbol, content) {
-    if (content === 'equation-r2') {
+    const r2 = formatNumber(model.R2 ?? model.r2, 3);
+    const pText = scatterPText(model);
+    const pPart = pText ? `, ${pText}` : '';
+    if (String(content).startsWith('equation')) {
       const slope = formatNumber(model.Slope ?? model.slope, 3);
       const intercept = formatNumber(model.Intercept ?? model.intercept, 3);
       const sign = Number(model.Intercept ?? model.intercept) >= 0 ? '+' : '−';
-      return `y = ${slope}x ${sign} ${String(intercept).replace('-', '')}, R² = ${formatNumber(model.R2 ?? model.r2, 3)}`;
+      return `y = ${slope}x ${sign} ${String(intercept).replace('-', '')}, R² = ${r2}${String(content).endsWith('-p') ? pPart : ''}`;
     }
-    return `${symbol} = ${formatNumber(model.Correlation ?? model.association, 3)}, R² = ${formatNumber(model.R2 ?? model.r2, 3)}`;
+    if (content === 'r2-p') return `R² = ${r2}${pPart}`;
+    const head = `${symbol} = ${formatNumber(model.Correlation ?? model.association, 3)}, R² = ${r2}`;
+    return content === 'r-r2-p' ? head + pPart : head;
   }
   function scatterStatsCorner(rows, p, xMap, yMap, boxW, boxH) {
     const margin = 12;
@@ -885,7 +912,10 @@
         gCheck('showCorrelation', '显示相关 / 回归统计'),
         gSelect('scatterStatsContent', '显示内容', [
           ['r-r2', 'r / ρ + R²'],
-          ['equation-r2', '回归方程 + R²']
+          ['r-r2-p', 'r / ρ + R² + p'],
+          ['r2-p', 'R² + p（不含相关系数）'],
+          ['equation-r2', '回归方程 + R²'],
+          ['equation-r2-p', '回归方程 + R² + p']
         ]),
         gRange('annotationSize', '统计文字字号', 8, 28, 1),
         gSelect('scatterStatsPosition', '位置', [
