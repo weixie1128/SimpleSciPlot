@@ -49,6 +49,8 @@
     if (!Number.isFinite(Number(s.scatterStatsY))) s.scatterStatsY = 90;
     if (!['neutral', 'series'].includes(s.scatterStatsColorMode)) s.scatterStatsColorMode = 'neutral';
     if (typeof s.scatterStatsFrame !== 'boolean') s.scatterStatsFrame = false;
+    if (typeof s.scatterStatsColor !== 'string' || !s.scatterStatsColor.trim()) s.scatterStatsColor = '#263238';
+    if (typeof s.legendColor !== 'string' || !s.legendColor.trim()) s.legendColor = '#263238';
     if (!['r-r2', 'r-r2-p', 'r2-p', 'equation-r2', 'equation-r2-p'].includes(s.scatterStatsContent)) s.scatterStatsContent = 'r-r2';
     if (!Number.isFinite(Number(s.histFacetGap))) s.histFacetGap = 14;
     if (!['compact', 'standard', 'relaxed', 'manual'].includes(s.histXRangePreset)) s.histXRangePreset = 'standard';
@@ -669,8 +671,13 @@
               // v1.9.94：点线符号——短线穿过数据点，常见于论文图例（左线右点样式）。
               ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.3, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
                 + markerShapeSvg(st.markerShape, x + markerBox / 2, cy, radius * 0.85, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`)
-              : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
-        itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${glyph}<text x="${x + markerBox + 7}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="#263238">${esc(groups[i])}</text></g>`;
+              : sym === 'none'
+                // v1.9.96：仅文字——不画任何符号，直接显示组名。
+                ? ''
+                : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
+        const textX = sym === 'none' ? x : x + markerBox + 7;
+        const textFill = sym === 'none' ? st.color : (s.legendColor || '#263238');
+        itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${glyph}<text x="${textX}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="${textFill}">${esc(groups[i])}</text></g>`;
         x += itemWidths[i] + gap;
       }
     }
@@ -775,7 +782,7 @@
       const cy = 7 + i * lineH + lineH / 2;
       const fill = st.markerFill === 'white' ? 'white' : st.color;
       const marker = markerShapeSvg(st.markerShape || 'circle', 10, cy, markerR, `fill="${fill}" fill-opacity="${st.opacity ?? 1}" stroke="${st.color}" stroke-width="1"`);
-      const color = s.scatterStatsColorMode === 'series' ? st.color : '#263238';
+      const color = s.scatterStatsColorMode === 'series' ? st.color : (s.scatterStatsColor || '#263238');
       content += `${marker}<text x="${20 + markerR}" y="${cy + font * 0.34}" font-size="${font}" font-weight="${num(s.globalFontWeight, 400)}" fill="${color}">${esc(label)}</text>`;
     });
     const frame = s.scatterStatsFrame ? `<rect x="0" y="0" width="${boxW}" height="${boxH}" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#c9d0d4" stroke-width="0.8"/>` : '';
@@ -929,9 +936,10 @@
         gNumber('scatterStatsX', '手动 X', 0, 1800, 1),
         gNumber('scatterStatsY', '手动 Y', 0, 1200, 1),
         gSelect('scatterStatsColorMode', '文字颜色', [
-          ['neutral', '统一深色（推荐）'],
+          ['neutral', '统一颜色（可自定义）'],
           ['series', '跟随系列颜色']
         ]),
+        ...(s.scatterStatsColorMode !== 'series' ? [gColor('scatterStatsColor', '统计文字颜色')] : []),
         gCheck('scatterStatsFrame', '显示白底边框')
       ]) + `<div class="method-badge"><b>当前方法：</b>${esc(correlationMethodLabel())}；${s.scatterFitMode === 'group' ? '每个 Group 独立进行普通最小二乘线性回归' : '全部样本合并进行普通最小二乘线性回归'}。统计标注可以直接在图中拖动。</div>` + galleryDragHint('统计标注');
     }
@@ -1181,15 +1189,20 @@
       const dash = kdeDash(s.kdeLineStyle);
       // KDE legend is line-based by default (curves), but the shared 图例符号
       // setting can force a filled color block here too.
-      if (String(s.legendSymbol || 'auto') === 'swatch') {
+      const symMode = String(s.legendSymbol || 'auto');
+      const lColor = s.legendColor || '#263238';
+      if (symMode === 'none') {
+        content += `<text x="${x}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="${st.color}">${esc(g)}</text>`;
+      } else if (symMode === 'swatch') {
         const swRatio = clampLocal(num(s.legendSwatchRatio, 1.6), 0.6, 5);
         let swW = Math.min(symbol, font * 2.2), swH = swW / swRatio;
         if (swH > font * 1.15) { swH = font * 1.15; swW = swH * swRatio; }
         content += `<rect x="${x + (symbol - swW) / 2}" y="${cy - swH / 2}" width="${swW}" height="${swH}" fill="${st.fillColor || st.color}" fill-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" stroke="${st.color}" stroke-width="0.8"/>`;
+        content += `<text x="${x + symbol + 9}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="${lColor}">${esc(g)}</text>`;
       } else {
         content += `<line x1="${x}" y1="${cy}" x2="${x + symbol}" y2="${cy}" stroke="${st.color}" stroke-width="${lineW}" stroke-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/>`;
+        content += `<text x="${x + symbol + 9}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="${lColor}">${esc(g)}</text>`;
       }
-      content += `<text x="${x + symbol + 9}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="#263238">${esc(g)}</text>`;
     });
     const lx = s.legendX ?? p.l, ly = s.legendY ?? Math.max(18, p.t - font - 20);
     return `<g data-gobject="legend" data-gdrag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})">${content}</g>`;
