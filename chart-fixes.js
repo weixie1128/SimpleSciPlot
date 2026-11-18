@@ -796,12 +796,10 @@
       const y = hasY ? Number(e.st.statsY) : base.y + offset;
       // 已经单独拖走的组不再占用自动堆叠高度，其余组保持紧凑排列。
       if (!hasY) offset += framed ? e.boxH : e.lineH;
-      const cy = 7 + e.lineH / 2, markerR = Math.max(2.8, e.font * 0.25);
-      const fill = e.st.markerFill === 'white' ? 'white' : e.st.color;
-      const marker = markerShapeSvg(e.st.markerShape || 'circle', 10, cy, markerR, `fill="${fill}" fill-opacity="${e.st.opacity ?? 1}" stroke="${e.st.color}" stroke-width="1"`);
+      const cy = 7 + e.lineH / 2;
       const frame = framed ? `<rect x="0" y="0" width="${e.boxW}" height="${e.boxH}" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#c9d0d4" stroke-width="0.8"/>` : '';
       const seriesAttr = overall ? '' : ` data-gstats-series="${e.gi}"`;
-      return `<g data-gobject="${overall ? 'regression' : 'series-stats'}" data-gdrag="regression"${seriesAttr} data-gdrag-x="${x}" data-gdrag-y="${y}" class="chart-object draggable" transform="translate(${x} ${y})">${frame}${marker}<text x="${20 + markerR}" y="${cy + e.font * 0.34}" font-size="${e.font}" font-weight="${e.weight}" fill="${e.color}">${esc(e.label)}</text></g>`;
+      return `<g data-gobject="${overall ? 'regression' : 'series-stats'}" data-gdrag="regression"${seriesAttr} data-gdrag-x="${x}" data-gdrag-y="${y}" class="chart-object draggable" transform="translate(${x} ${y})">${frame}<text x="2" y="${cy + e.font * 0.34}" font-size="${e.font}" font-weight="${e.weight}" fill="${e.color}">${esc(e.label)}</text></g>`;
     }).join('');
   }
   gallerySeriesPropertyHtml = function patchedGallerySeriesPropertyHtml(type, index = 0) {
