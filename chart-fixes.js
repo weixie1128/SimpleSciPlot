@@ -1547,11 +1547,11 @@
     const dashAttr = dash ? ` stroke-dasharray="${dash}"` : '';
     // Regression lines follow the axis scale: straight line for linear axes,
     // 48-point sampled curve when either axis is logarithmic.
-    const linePath = (b0, b1, x1, x2, stroke) => {
+    const linePath = (b0, b1, x1, x2, stroke, width = lineWidth) => {
       if (!Number.isFinite(b0) || !Number.isFinite(b1)) return '';
       if (!xr.log && !yr.log) {
         const y1 = b0 + b1 * x1, y2 = b0 + b1 * x2;
-        return `<line x1="${xMap(x1)}" y1="${yMap(y1)}" x2="${xMap(x2)}" y2="${yMap(y2)}" stroke="${stroke}" stroke-width="${lineWidth}"${dashAttr} stroke-linecap="round"/>`;
+        return `<line x1="${xMap(x1)}" y1="${yMap(y1)}" x2="${xMap(x2)}" y2="${yMap(y2)}" stroke="${stroke}" stroke-width="${width}"${dashAttr} stroke-linecap="round"/>`;
       }
       const N = 48; let d = '';
       for (let i = 0; i <= N; i++) {
@@ -1560,7 +1560,7 @@
         if (!Number.isFinite(yv)) continue;
         d += (d ? 'L' : 'M') + xMap(x) + ',' + yMap(yv);
       }
-      return d ? `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${lineWidth}"${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>` : '';
+      return d ? `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${width}"${dashAttr} stroke-linecap="round" stroke-linejoin="round"/>` : '';
     };
     if (s.scatterFitMode === 'overall') {
       const m = analysis?.overall;
@@ -1580,7 +1580,9 @@
         if (!gx.length) return;
         const gxMin = Math.min(...gx), gxMax = Math.max(...gx);
         if (s.showRegression && gx.length >= 2 && gxMax > gxMin && Number.isFinite(model.Slope) && Number.isFinite(model.Intercept)) {
-          out += `<g data-gobject="regression" data-gseries="${gi}" class="chart-object">${linePath(model.Intercept, model.Slope, gxMin, gxMax, st.color)}</g>`;
+          // 每个系列可单独设定本组拟合线宽；未设定时跟随全局“拟合线粗细”。
+          const groupWidth = clampLocal(num(st.fitLineWidth, num(s.scatterRegressionLineWidth, 1.35)), 0.5, 8);
+          out += `<g data-gobject="regression" data-gseries="${gi}" class="chart-object">${linePath(model.Intercept, model.Slope, gxMin, gxMax, st.color, groupWidth)}</g>`;
         }
       });
       out += scatterStatsSvg(rows, groups, table, p, xMap, yMap, s, false);
