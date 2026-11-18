@@ -418,6 +418,135 @@ const defaultGallerySettings = {
   colorScheme:'foodchem'
 };
 
+/* v1.9.100：导入数据后的默认外观
+ * 参数取自用户「图片参数库」的 8 份样式导出。只套用视觉参数：
+ * 不套用示例标题、坐标轴标题，也不套用图例坐标。
+ * 核密度原文件的灰紫色改为彩色曲线；3D 柱状图首色由 #999999 改为 NPG 红。 */
+const SSP_GALLERY_PRESET_BASE = {
+  fontEnglish:'Times New Roman',fontChinese:'Microsoft YaHei',globalFontWeight:400,
+  titleVisible:false,titleSize:17,titleWeight:600,titleColor:'#14212a',
+  subtitleEnabled:false,subtitleSize:11,subtitleWeight:400,subtitleColor:'#687783',
+  xTitleVisible:true,xTitleSize:21,xTitleWeight:400,xTitleColor:'#20262b',
+  yTitleVisible:true,yTitleSize:21,yTitleWeight:400,yTitleColor:'#20262b',
+  xTickSize:15,yTickSize:15,xTickWeight:400,yTickWeight:400,xTickColor:'#20262b',yTickColor:'#20262b',
+  axisWidth:1.5,axisColor:'#20262b',tickLength:6,showXTicks:true,showYTicks:true,
+  frameMode:'lb',frameWidth:1.5,frameColor:'#20262b',background:'#ffffff',
+  plotBgVisible:false,plotBg:'#f5f7f8',gridEnabled:false,gridVertical:false,gridColor:'#e3e7eb',gridWidth:1,
+  width:500,height:540,dpi:300,panelPreset:'small',
+  legend:true,legendFontSize:11,legendWeight:400,legendOrientation:'vertical',legendColumns:1,legendSymbol:'auto',legendSwatchRatio:1.2,
+  legendFrameStyle:'none',legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameRadius:3,legendFrameFill:'#ffffff',
+  legendShadow:true,legendShadowX:2,legendShadowY:3,legendShadowBlur:3,legendShadowOpacity:.25,
+  lineWidth:2,markerShape:'circle',markerFill:'series',opacity:.65,pointSize:4,annotationSize:12,
+  pieLabelSize:12,radarLabelSize:12,showPoints:true,showMean:true,showMedian:true,showWhiskerLine:false,showOutliers:true,
+  boxWidth:.37,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,
+  boxQuartileMethod:'linear7',boxWhiskerMethod:'iqr15',boxWhiskerPercentile:5,
+  statMethod:'anovaLsd',correlationMethod:'pearson',
+  methodNoteVisible:false,methodNoteSize:10,methodNoteColor:'#5f6d75',
+  significanceEnabled:true,significanceDisplay:'brackets',significancePairMode:'significant',significanceLabelMode:'stars',significanceFontSize:11,significanceLineWidth:1,significanceColor:'#20262b',significanceOffset:10,significanceStep:18,
+  orientation:'vertical',donut:false,normalize:false,showRegression:true,showCorrelation:true
+};
+const SSP_GALLERY_STYLE_PRESETS = {
+  box:{
+    palette:['#E64B35','#4DBBD5','#00A087'],
+    settings:{}
+  },
+  violin:{
+    palette:['#e73a23','#00abd1','#00A087'],
+    settings:{xTickSize:18,yTickSize:18,width:610,legendFontSize:16,legendSwatchRatio:1.1,opacity:.72,significanceFontSize:12,showMean:false,boxWidth:.26},
+    series:[
+      {color:'#e73a23',markerColor:'#db8f85'},
+      {color:'#00abd1',markerColor:'#a2deec'},
+      {color:'#00A087',markerColor:'#95c6bf'}
+    ].map(o=>({...o,opacity:.72,lineWidth:2,borderWidth:0,pointSize:2.5,markerShape:'circle',markerFill:'series',whiskerLineStyle:'solid',boxFill:'#ffffff',boxBorderColor:'#222222',boxBorderWidth:1.1}))
+  },
+  kde:{
+    palette:['#728128','#735ace','#9d437f'],
+    settings:{xTickSize:18,yTickSize:18,width:620,legendFontSize:14,legendSymbol:'swatch',legendSwatchRatio:1.4,lineWidth:0,opacity:.72,boxWidth:.48,kdeBandwidthMode:'manual',kdeLineWidth:1.8,kdeLineOpacity:.8,kdeFillEnabled:true,kdeFillOpacity:.73,kdeHistOpacity:.24},
+    series:[
+      {color:'#728128',fillColor:'#728128'},
+      {color:'#735ace',fillColor:'#735ace'},
+      {color:'#9d437f',fillColor:'#9d437f'}
+    ].map(o=>({...o,opacity:.72,lineWidth:0,pointSize:4,markerShape:'circle',markerFill:'series'}))
+  },
+  hist:{
+    palette:['#BC3C29','#0072B5','#E18727','#20854E','#7876B1','#6F99AD','#FFDC91','#EE4C97'],
+    settings:{xTickSize:18,yTickSize:18,frameMode:'box',width:640,height:700,panelPreset:'square',legendFontSize:16,legendOrientation:'horizontal',legendColumns:3,lineWidth:0,opacity:.72,boxWidth:.48,kdeFillOpacity:.14,kdeHistOpacity:.24}
+  }
+};
+const SSP_CHART_PRESET_BASE = {
+  fontEnglish:'Times New Roman',fontChinese:'Microsoft YaHei',globalFontWeight:400,
+  titleVisible:false,titleSize:17,titleWeight:600,titleColor:'#14212a',
+  subtitleEnabled:false,subtitleSize:11,subtitleWeight:400,subtitleColor:'#687783',
+  xTitleVisible:true,xTitleSize:21,xTitleWeight:400,xTitleColor:'#20262b',
+  yTitleVisible:true,yTitleSize:21,yTitleWeight:400,yTitleColor:'#20262b',
+  xTickSize:18,yTickSize:18,xTickWeight:400,yTickWeight:400,xTickColor:'#20262b',yTickColor:'#20262b',
+  axisWidth:1.5,axisColor:'#20262b',tickLength:6,showXTicks:true,showYTicks:true,
+  frameMode:'box',frameWidth:1.5,frameColor:'#20262b',background:'#ffffff',
+  gridEnabled:false,gridVertical:false,gridColor:'#e3e7eb',gridWidth:1,
+  canvasWidth:590,canvasHeight:540,pngDpi:300,panelPreset:'custom',tightExport:true,exportPadding:8,
+  legendVisible:true,legendSize:16,legendWeight:400,legendOrientation:'horizontal',legendColumns:3,
+  legendFrameStyle:'none',legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameRadius:2,legendFrameFill:'#ffffff',
+  legendShadow:true,legendShadowX:2,legendShadowY:3,legendShadowBlur:3,legendShadowOpacity:.28,
+  lineWidth:2.1,markerSize:4.7,markerShape:'circle',markerFill:'white',lineMode:'straight',
+  barGap:0,categoryWidth:.59,barOpacity:.96,barBorderWidth:0,barBorderColorMode:'auto',barBorderColor:'#000000',barLineMode:false,barLineWidth:1.8,barLineMarker:true,
+  errorWidth:1.3,errorCap:10,errorColorMode:'black',errorXOffset:0,
+  letters:true,letterScheme:'within',postHoc:'duncan',letterSize:15,letterWeight:400,letterOffset:8
+};
+const SSP_CHART_STYLE_PRESETS = {
+  bar:{
+    palette:['#E64B35','#4DBBD5','#00A087','#3C5488','#F39B7F','#8491B4','#91D1C2','#DC0000','#7E6148','#B09C85'],
+    settings:{}
+  },
+  line:{
+    palette:['#E64B35','#4DBBD5','#00A087','#3C5488','#F39B7F','#8491B4','#91D1C2','#DC0000','#7E6148','#B09C85'],
+    settings:{canvasWidth:670,legendOrientation:'vertical',legendColumns:1,lineWidth:2.5,markerSize:2.8,lineMode:'smooth',barGap:3,categoryWidth:.72,errorWidth:1.6,errorCap:9,errorColorMode:'series',letterWeight:'500',letterOffset:4},
+    series:[
+      {markerShape:'circle',markerSize:3.4},
+      {markerShape:'square',markerSize:3.4},
+      {markerShape:'triangle',markerSize:3.4},
+      {markerShape:'triangleDown',markerSize:2.8},
+      {markerShape:'diamond',markerSize:2.8},
+      {markerShape:'star',markerSize:2.8},
+      {markerShape:'pentagon',markerSize:2.8}
+    ].map(o=>({...o,lineWidth:2.5,markerFill:'series',barLine:true}))
+  },
+  bar3d:{
+    palette:['#E64B35','#4DBBD5','#00A087','#3C5488','#F39B7F','#8491B4','#91D1C2','#DC0000','#7E6148','#B09C85'],
+    settings:{xTitleSize:24,yTitleSize:24,canvasWidth:980,canvasHeight:660,panelPreset:'normal',legendSize:17,legendFrameStyle:'solid',barGap:16,categoryWidth:.63,barOpacity:1,errorWidth:1.15,errorColorMode:'series',letterSize:11,letterOffset:10,wfWallColor:'#ffffff',wfGridWidth:1.2,b3Azim:59,b3Elev:18,b3BarDepth:.35,b3ColorMode:'value'},
+    series:['circle','square','triangle'].map(sh=>({lineWidth:2.1,markerSize:4.7,markerShape:sh,markerFill:'white',barLine:true}))
+  },
+  waterfall:{
+    palette:['grad:ylorrd','grad:greens','grad:blues','#3C5488','#F39B7F','#8491B4','#91D1C2','#DC0000','#7E6148','#B09C85'],
+    settings:{xTitleSize:24,yTitleSize:24,canvasWidth:980,canvasHeight:660,panelPreset:'normal',legendVisible:false,legendSize:17,barGap:16,categoryWidth:.63,barOpacity:1,errorWidth:1.15,errorColorMode:'series',letterSize:11,letterOffset:10,wfLayerDx:72,wfLayerDy:103,wfWallColor:'#ffffff',wfGridWidth:1.2,b3Azim:50,b3Elev:23,b3BarDepth:.35,b3ColorMode:'value'},
+    series:['circle','square','triangle','hexagon','square','triangle'].map(sh=>({lineWidth:2.5,markerSize:4.7,markerShape:sh,markerFill:'white',barLine:true}))
+  }
+};
+function applyGalleryStylePreset(type=state.gallery.type){
+  const preset=SSP_GALLERY_STYLE_PRESETS[type];
+  if(!preset)return false;
+  Object.assign(state.gallery.settings,SSP_GALLERY_PRESET_BASE,preset.settings||{});
+  state.gallery.palette=(preset.palette||[]).slice();
+  state.gallery.seriesStyles={};
+  (preset.series||[]).forEach((st,i)=>{state.gallery.seriesStyles[String(i)]={...st}});
+  return true;
+}
+function applyChartStylePreset(type=state.chart.type){
+  const preset=SSP_CHART_STYLE_PRESETS[type==='curve'?'line':type];
+  if(!preset)return false;
+  Object.assign(state.chart.settings,SSP_CHART_PRESET_BASE,preset.settings||{});
+  if(preset.palette&&preset.palette.length){
+    state.chart.palette=preset.palette.slice();
+    try{if(typeof ensurePalette==='function')ensurePalette(chartGroups().length)}catch(_e){}
+  }
+  if(preset.series&&preset.series.length){
+    state.chart.seriesStyles={};
+    let groups=[];
+    try{groups=chartGroups()}catch(_e){}
+    preset.series.forEach((st,i)=>{state.chart.seriesStyles[groups[i]??`Series ${i+1}`]={...st}});
+  }
+  return true;
+}
+
 const HEATMAP_PALETTES={
   greenMagenta:{name:'绿–米灰–品红（参考风格）',low:'#CE5FA5',mid:'#D9D4C1',high:'#58B66D',diagonal:'#236B51'},
   blueRed:{name:'蓝–白–红',low:'#3C5488',mid:'#F7F7F7',high:'#B40426',diagonal:'#7A0019'},
@@ -960,7 +1089,7 @@ function processGalleryImported(rows,source){
   state.gallery.type=state.workflow.chartType;
   const normalized=normalizeGalleryRows(rows,galleryDef().schema);
   if(!normalized.length){showValidation('error','没有读取到有效数据',`当前需要 ${currentWorkflowSchema().name}。请使用平台生成的模板。`);return}
-  state.gallery.rows=normalized;state.gallery.sourceName=source;analyzeGalleryData();renderDataPreview();
+  state.gallery.rows=normalized;state.gallery.sourceName=source;applyGalleryStylePreset(state.gallery.type);analyzeGalleryData();renderDataPreview();
   showValidation('success',`导入成功：${normalized.length} 行`,`${workflowChartLabel(state.workflow.chartType)} · ${currentWorkflowSchema().name} · ${source}`);toast('数据已导入并完成初步分析');
 }
 
@@ -1405,7 +1534,9 @@ function finalizeImportedExperiment(parsed,errors,source,layout,inferred=null){
   if(errors.length)showValidation('warning',`已导入 ${parsed.length} 个有效值，但发现 ${errors.length} 个问题`,errors.slice(0,3).join('；'));
   else if(unevenSamples||unevenTechnical)showValidation('warning',`已导入 ${parsed.length} 个原始测定值`,`使用${layoutName}；共 ${independentCount} 个独立样品。${unevenSamples?'不同实验组合的平行样本数不一致。':''}${unevenTechnical?'部分样品的技术重复次数不一致。':''}`);
   else showValidation('success',`导入成功：${parsed.length} 个原始测定值`,`${layoutName} · ${independentCount} 个独立平行样本 · ${source} · 已从第一列识别 ${observedA.length} 个因素 A 水平${state.design.designType==='two'?` · ${observedB.length} 个因素 B 水平`:''}`);
+  // 先完成分析，chartGroups() 才有正确的组名，系列样式才能按组绑定。
   analyzeData();
+  applyChartStylePreset(state.chart.type);
   const qw=state.dataWarnings||[];
   if(qw.length)showValidation('warning','初步分析完成，但有 '+qw.length+' 条数据提醒',qw.slice(0,3).join('；')+(qw.length>3?' 等':''));
   toast('数据已导入并完成初步分析');
@@ -4915,7 +5046,7 @@ function renderGallery(){
 function resetGallerySettings(){
   const def=galleryDef(),s=state.gallery.settings;
   s.title=def.name;s.titleVisible=true;s.subtitle='';s.subtitleEnabled=false;s.xTitle=def.schema==='xy'?'X':def.schema==='composition'?'Category':'';s.yTitle=def.schema==='xy'?'Y':def.schema==='univariate'?'Value':def.id==='stacked'?'Value':'';
-  s.normalize=false;s.donut=false;s.orientation='vertical';s.showRegression=true;s.showCorrelation=true;s.heatmapShowValues=true;if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
+  s.normalize=false;s.donut=false;s.orientation='vertical';s.showRegression=true;s.showCorrelation=true;s.heatmapShowValues=true;if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
 function galleryTemplateRows(type=state.gallery.type){
