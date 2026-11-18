@@ -373,7 +373,7 @@ const defaultChartSettings = {
   barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barBorderColorMode:'auto', barBorderColor:'#000000', barLineMode:false,barLineWidth:1.8,barLineMarker:true,
   seriesSubEnabled:false, seriesSubGap:10, seriesSubAutoSize:6,
   errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0, errorCustomValue:0.3, customPointErrors:{},
-  legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3, legendSymbol:'none', legendSwatchRatio:1.6, legendColor:'#263238',
+  legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3, legendSymbol:'marker-line', legendSwatchRatio:1.6, legendColor:'#263238',
   legendFrameStyle:'solid', legendFrameWidth:1, legendFrameColor:'#7d898f', legendFrameRadius:2, legendFrameFill:'#ffffff',
   legendShadow:true, legendShadowX:2, legendShadowY:3, legendShadowBlur:3, legendShadowOpacity:.28,
   letters:true, letterScheme:'within', postHoc:'duncan', letterSize:11, letterWeight:400, letterOffset:10,
@@ -401,18 +401,20 @@ const defaultGallerySettings = {
   axisWidth:1.35,axisColor:'#20262b',tickLength:6,showXTicks:true,showYTicks:true,
   frameMode:'box',frameWidth:1.15,frameColor:'#20262b',background:'#ffffff',
   plotBgVisible:false,plotBg:'#f5f7f8',gridEnabled:false,gridVertical:false,gridColor:'#e3e7eb',gridWidth:1,
-  legend:true,legendX:120,legendY:62,legendFontSize:12,legendWeight:400,legendOrientation:'horizontal',legendColumns:3,legendSymbol:'none',legendSwatchRatio:1.6,legendColor:'#263238',
+  legend:true,legendX:120,legendY:62,legendFontSize:12,legendWeight:400,legendOrientation:'horizontal',legendColumns:3,legendSymbol:'marker-line',legendSwatchRatio:1.6,legendColor:'#263238',
   legendFrameStyle:'none',legendFrameX:108,legendFrameY:50,legendFrameWidthBox:260,legendFrameHeightBox:62,legendFrameAutoSize:true,
   legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameFill:'#ffffff',legendFrameRadius:3,
   legendShadow:true,legendShadowX:2,legendShadowY:3,legendShadowBlur:3,legendShadowOpacity:.25,
-  bins:10,bandwidth:0,opacity:.72,pointSize:4,lineWidth:2,markerShape:'circle',markerFill:'series',annotationSize:12,scatterStatsColor:'#263238',pieLabelSize:12,radarLabelSize:12,
+  bins:10,bandwidth:0,opacity:.72,pointSize:4,lineWidth:2,markerShape:'circle',markerFill:'series',annotationSize:12,scatterStatsColor:'#263238',scatterStatsWeight:400,pieLabelSize:12,pieLabelColor:'#ffffff',pieLabelWeight:600,radarLabelSize:12,
   showPoints:true,showMean:true,showMedian:true,showWhiskerLine:true,showOutliers:true,boxWidth:.48,whiskerWidth:1.1,medianWidth:1.5,violinShowBox:true,violinLayout:'overlay',violinBoxCaps:false,
-  boxQuartileMethod:'linear7',boxWhiskerMethod:'iqr15',boxWhiskerPercentile:5,statMethod:'anovaLsd',correlationMethod:'pearson',methodNoteVisible:true,methodNoteX:null,methodNoteY:null,methodNoteSize:10,methodNoteColor:'#5f6d75',
-  significanceEnabled:true,significanceDisplay:'brackets',significancePairMode:'significant',significanceLabelMode:'stars',significanceFontSize:11,significanceLineWidth:1,significanceColor:'#20262b',significanceOffset:10,significanceStep:18,
+  boxQuartileMethod:'linear7',boxWhiskerMethod:'iqr15',boxWhiskerPercentile:5,statMethod:'anovaLsd',correlationMethod:'pearson',methodNoteVisible:true,methodNoteX:null,methodNoteY:null,methodNoteSize:10,methodNoteColor:'#5f6d75',methodNoteWeight:400,
+  significanceEnabled:true,significanceDisplay:'brackets',significancePairMode:'significant',significanceLabelMode:'stars',significanceFontSize:11,significanceFontWeight:'auto',significanceLineWidth:1,significanceColor:'#20262b',significanceOffset:10,significanceStep:18,
   orientation:'vertical',donut:false,normalize:false,showRegression:true,showCorrelation:true,scatterFitBand:true,scatterBandOpacity:.18,
   heatmapPalette:'greenMagenta',heatmapShowValues:true,heatmapCellGap:1,heatmapLowColor:'#CE5FA5',heatmapMidColor:'#D9D4C1',heatmapHighColor:'#58B66D',heatmapDiagonalColor:'#236B51',heatmapValueSize:10,heatmapXLabelSize:11,heatmapYLabelSize:11,heatmapColorBar:true,heatmapColorBarOrientation:'horizontal',heatmapCluster:'none',heatmapShowDendrogram:false,heatmapGridStroke:'#ffffff',heatmapGridStrokeWidth:.8,
   radarGridWidth:1,radarPointSize:3,radarFill:false,radarShowMarkers:true,radarLevels:4,radarMin:'auto',radarMax:'auto',radarLabelOffset:30,radarShowTickLabels:true,radarTickDecimals:0,radarTickLabelSize:11,radarTickLabelPosition:'top',radarTickLabelOffset:10,radarTheme:'rose',radarGradientMode:'radial',radarGridColor:'#c8aebc',radarSpokeColor:'#9e8794',radarGridWidth:.9,radarSpokeWidth:1.15,radarBandMode:'theme-gradient',radarSmartHighlight:true,radarHighlightThreshold:0,radarHighlightStrength:.24,
-  stackedShowError:false,stackedShowValue:false,stackedValueSize:12,stackedValueDecimals:1,stackedErrorWidth:1,stackedErrorCapWidth:2.4,stackedErrorColor:'#263238',
+  stackedShowError:false,stackedShowValue:false,stackedValueSize:12,stackedValueWeight:600,stackedValueColorMode:'auto',stackedValueColor:'#ffffff',stackedValueDecimals:1,stackedErrorWidth:1,stackedErrorCapWidth:2.4,stackedErrorColor:'#263238',
+  radarLabelColor:'#000000',radarLabelWeight:400,radarTickLabelColor:'#20262b',radarTickLabelWeight:400,
+  heatmapValueWeight:400,heatmapValueColorMode:'auto',heatmapValueColor:'#222222',heatmapStarWeight:'auto',heatmapStarColorMode:'auto',heatmapStarColor:'#333333',heatmapStarNoteColor:'#666666',heatmapStarNoteWeight:400,heatmapColorBarTextColor:'#000000',heatmapColorBarTextWeight:400,heatmapGroupLabelSize:10,heatmapGroupLabelWeight:600,heatmapGroupLabelColorMode:'series',heatmapGroupLabelColor:'#333333',
   colorScheme:'foodchem'
 };
 
@@ -502,6 +504,10 @@ function normalizeTextSettings(){
   g.significanceEnabled=g.significanceEnabled!==false;g.significanceDisplay=g.significanceDisplay||'brackets';g.significancePairMode=g.significancePairMode||'significant';g.significanceLabelMode=g.significanceLabelMode||'stars';
   g.boxQuartileMethod=g.boxQuartileMethod||'linear7';g.boxWhiskerMethod=g.boxWhiskerMethod||'iqr15';g.boxWhiskerPercentile=Number(g.boxWhiskerPercentile)||5;g.statMethod=g.statMethod||'anovaLsd';g.correlationMethod=g.correlationMethod||'pearson';g.methodNoteVisible=g.methodNoteVisible!==false;g.methodNoteSize=g.methodNoteSize||10;g.methodNoteColor=g.methodNoteColor||'#5f6d75';
   g.radarFill=false;g.radarShowMarkers=g.radarShowMarkers!==false;g.radarLevels=Math.max(2,Number(g.radarLevels)||4);g.radarLabelOffset=Number(g.radarLabelOffset??30);g.radarShowTickLabels=g.radarShowTickLabels!==false;g.radarTickDecimals=Number.isFinite(Number(g.radarTickDecimals))?Number(g.radarTickDecimals):0;g.radarTickLabelSize=Number(g.radarTickLabelSize??11);g.radarTickLabelPosition=g.radarTickLabelPosition||'top';g.radarTickLabelOffset=Number(g.radarTickLabelOffset??10);g.radarTheme=g.radarTheme||'rose';g.radarGradientMode=g.radarGradientMode||'radial';g.radarGridColor=g.radarGridColor||'#c8aebc';g.radarSpokeColor=g.radarSpokeColor||'#9e8794';g.radarGridWidth=Number(g.radarGridWidth??.9);g.radarSpokeWidth=Number(g.radarSpokeWidth??1.15);g.radarBandMode='theme-gradient';g.radarSmartHighlight=g.radarSmartHighlight!==false;g.radarHighlightThreshold=0;g.radarHighlightStrength=Number(g.radarHighlightStrength??.24);
+  g.methodNoteWeight=Number(g.methodNoteWeight??g.globalFontWeight??400);g.pieLabelColor=g.pieLabelColor||'#ffffff';g.pieLabelWeight=Number(g.pieLabelWeight??600);g.significanceFontWeight=g.significanceFontWeight??'auto';
+  g.stackedValueWeight=Number(g.stackedValueWeight??600);g.stackedValueColorMode=g.stackedValueColorMode||'auto';g.stackedValueColor=g.stackedValueColor||'#ffffff';
+  g.radarLabelColor=g.radarLabelColor||'#000000';g.radarLabelWeight=Number(g.radarLabelWeight??g.xTickWeight??400);g.radarTickLabelColor=g.radarTickLabelColor||g.yTickColor||'#20262b';g.radarTickLabelWeight=Number(g.radarTickLabelWeight??g.yTickWeight??400);
+  g.heatmapValueWeight=Number(g.heatmapValueWeight??400);g.heatmapValueColorMode=g.heatmapValueColorMode||'auto';g.heatmapValueColor=g.heatmapValueColor||'#222222';g.heatmapStarWeight=g.heatmapStarWeight??'auto';g.heatmapStarColorMode=g.heatmapStarColorMode||'auto';g.heatmapStarColor=g.heatmapStarColor||'#333333';g.heatmapStarNoteColor=g.heatmapStarNoteColor||'#666666';g.heatmapStarNoteWeight=Number(g.heatmapStarNoteWeight??400);g.heatmapColorBarTextColor=g.heatmapColorBarTextColor||'#000000';g.heatmapColorBarTextWeight=Number(g.heatmapColorBarTextWeight??400);g.heatmapGroupLabelSize=Number(g.heatmapGroupLabelSize??10);g.heatmapGroupLabelWeight=Number(g.heatmapGroupLabelWeight??600);g.heatmapGroupLabelColorMode=g.heatmapGroupLabelColorMode||'series';g.heatmapGroupLabelColor=g.heatmapGroupLabelColor||'#333333';
 }
 
 // v1.9.74：版本号只保留左下角这一个角标，避免页脚再显示第二个版本号。
@@ -2396,13 +2402,14 @@ function renderGalleryStudioCanvas(){
 }
 function highlightGalleryObject(){
   $$('#chartStage [data-gobject]').forEach(el=>{
-    const hit=el.dataset.gobject===state.gallery.selected&&(state.gallery.selected!=='series'||Number(el.dataset.gseries||0)===state.gallery.selectedSeries);
+    const seriesIndex=el.dataset.gstatsSeries??el.dataset.gseries;
+    const hit=(el.dataset.gobject===state.gallery.selected||(state.gallery.selected==='series'&&el.dataset.gstatsSeries!=null))&&(state.gallery.selected!=='series'||Number(seriesIndex||0)===state.gallery.selectedSeries);
     el.classList.toggle('object-selected',hit);
   });
 }
 function bindGalleryStudioObjects(){
   $$('#chartStage [data-gobject]').forEach(el=>el.addEventListener('click',e=>{
-    e.stopPropagation();const id=el.dataset.gobject;state.gallery.selected=id;if(id.startsWith('annotation:'))state.gallery.selectedAnnotation=id.split(':')[1];if(id==='series'&&el.dataset.gseries!=null)state.gallery.selectedSeries=Number(el.dataset.gseries);
+    e.stopPropagation();const id=el.dataset.gobject;state.gallery.selected=el.dataset.gstatsSeries!=null?'series':id;if(id.startsWith('annotation:'))state.gallery.selectedAnnotation=id.split(':')[1];if(el.dataset.gstatsSeries!=null)state.gallery.selectedSeries=Number(el.dataset.gstatsSeries)||0;else if(id==='series'&&el.dataset.gseries!=null)state.gallery.selectedSeries=Number(el.dataset.gseries);
     renderGalleryStudioLayers();renderGalleryStudioProperties();highlightGalleryObject();
   }));
 }
@@ -2412,7 +2419,9 @@ function bindGalleryStudioDraggables(){
   $$('#chartStage [data-gdrag]').forEach(el=>el.addEventListener('pointerdown',e=>{
     if(e.target.closest('[data-annotation-handle]'))return;
     e.preventDefault();e.stopPropagation();const key=el.dataset.gdrag,start=svgPoint(svg,e),snap=galleryDragSnapshot(key,el);el.setPointerCapture(e.pointerId);
-    state.gallery.selected=key==='annotation'?`annotation:${el.dataset.gannotationId}`:key==='xTitle'?'axis-x':key==='yTitle'?'axis-y':key==='legendFrame'?'legend-frame':key==='methodNote'?'method-note':key;if(key==='annotation')state.gallery.selectedAnnotation=el.dataset.gannotationId;
+    if(el.dataset.gstatsSeries!=null){state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gstatsSeries)||0}
+    else state.gallery.selected=key==='annotation'?`annotation:${el.dataset.gannotationId}`:key==='xTitle'?'axis-x':key==='yTitle'?'axis-y':key==='legendFrame'?'legend-frame':key==='methodNote'?'method-note':key;
+    if(key==='annotation')state.gallery.selectedAnnotation=el.dataset.gannotationId;
     const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;if(key==='annotation')galleryApplyAnnotationDrag(el,snap,dx,dy);else galleryApplyDrag(key,snap.x+dx,snap.y+dy,el)};
     const up=()=>{el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);renderGalleryStudioCanvas();renderGalleryStudioLayers();renderGalleryStudioProperties()};
     el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);
@@ -2458,7 +2467,7 @@ function galleryBasePropertyHtml(id){
   if(id==='axis-x')return gallerySection('横坐标标题',[gCheck('xTitleVisible','显示横坐标标题'),gText('xTitle','标题文字'),gNumber('xTitleX','水平位置',0,1800,1),gNumber('xTitleY','垂直位置',0,1200,1),gRange('xTitleSize','标题字号',9,30,1),gSelect('xTitleWeight','标题字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('xTitleColor','标题颜色')])+gallerySection('X 轴与刻度',[gRange('axisWidth','坐标轴粗细',.5,5,.1),gColor('axisColor','坐标轴颜色'),gRange('xTickSize','X轴数字字号',8,28,1),gSelect('xTickWeight','X轴数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('xTickColor','X轴数字颜色'),gRange('tickLength','刻度线长度',0,18,1),gCheck('xTickAutoRotate','标签拥挤时自动倾斜'),gRange('xTickRotation','手动旋转角度',-90,90,5),gCheck('xTickStagger','关闭自动倾斜后交错换行'),gCheck('showXTicks','显示刻度线')])+galleryDragHint('横坐标标题');
   if(id==='axis-y')return gallerySection('纵坐标标题',[gCheck('yTitleVisible','显示纵坐标标题'),gText('yTitle','标题文字'),gNumber('yTitleX','水平位置',0,1800,1),gNumber('yTitleY','垂直位置',0,1200,1),gRange('yTitleSize','标题字号',9,30,1),gSelect('yTitleWeight','标题字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('yTitleColor','标题颜色')])+gallerySection('Y 轴与刻度',[gRange('axisWidth','坐标轴粗细',.5,5,.1),gColor('axisColor','坐标轴颜色'),gRange('yTickSize','Y轴数字字号',8,28,1),gSelect('yTickWeight','Y轴数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('yTickColor','Y轴数字颜色'),gRange('tickLength','刻度线长度',0,18,1),gCheck('showYTicks','显示刻度线')])+gallerySection('真实断轴',[gCheck('breakAxis','启用断轴'),gNumber('lowerMin','下段最小值',-100000000,100000000,.01),gNumber('lowerMax','下段最大值',-100000000,100000000,.01),gNumber('upperMin','上段最小值',-100000000,100000000,.01),gNumber('upperMax','上段最大值',-100000000,100000000,.01),gRange('breakGap','两条断裂线间距',6,28,1),gRange('lowerRatio','下段高度比例',.12,.42,.01)])+`<div class="hint">应满足：下段最小值 &lt; 下段最大值 &lt; 上段最小值 &lt; 上段最大值。启用后 Y 轴分为两段压缩显示，断裂线画在坐标轴两端。</div>`+galleryDragHint('纵坐标标题');
   if(id==='frame')return gallerySection('图片边框',[gSelect('frameMode','边框形式',[['lb','仅左、下轴'],['lbr','左、下、右三边'],['box','完整四边框'],['none','不显示边框']]),gRange('frameWidth','边框粗细',.5,6,.1),gColor('frameColor','边框颜色')]);
-  if(id==='legend'){if(state.gallery.type==='heatmap')return gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','数字字号',8,30,1),gOrientationButtons('heatmapColorBarOrientation','排列方向')])+galleryDragHint('色带图例');return gallerySection('图例内容',[gCheck('legend','显示图例'),gSelect('legendSymbol','图例符号',[['none','无（仅组名）'],['marker-line','点线（线 + 点）'],['auto','自动'],['line','线条'],['swatch','色块']]),gColor('legendColor','图例文字颜色'),gRange('legendSwatchRatio','色块宽高比',0.6,5,0.1),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','字号',8,36,1),gSelect('legendWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗']]),gOrientationButtons('legendOrientation','排列方向'),gRange('legendColumns','横向列数',1,6,1)])+galleryDragHint('图例内容');}
+  if(id==='legend'){if(state.gallery.type==='heatmap')return gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','数字字号',8,30,1),gOrientationButtons('heatmapColorBarOrientation','排列方向')])+galleryDragHint('色带图例');return gallerySection('图例内容',[gCheck('legend','显示图例'),gSelect('legendSymbol','图例符号',[['marker-line','点线（线 + 点）'],['auto','自动'],['line','线条'],['swatch','色块']]),gColor('legendColor','图例文字颜色'),gRange('legendSwatchRatio','色块宽高比',0.6,5,0.1),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),gRange('legendFontSize','字号',8,36,1),gSelect('legendWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗']]),gOrientationButtons('legendOrientation','排列方向'),gRange('legendColumns','横向列数',1,6,1)])+galleryDragHint('图例内容');}
   if(id==='legend-frame')return gallerySection('图例边框',[gSelect('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),gNumber('legendFrameX','水平位置',0,1800,1),gNumber('legendFrameY','垂直位置',0,1200,1),gCheck('legendFrameAutoSize','自动适应图例大小'),gNumber('legendFrameWidthBox','边框宽度',20,900,1),gNumber('legendFrameHeightBox','边框高度',20,600,1),gRange('legendFrameWidth','线条粗细',.5,5,.1),gColor('legendFrameColor','边框颜色'),gColor('legendFrameFill','底色'),gRange('legendFrameRadius','圆角',0,20,1)])+gallerySection('阴影',[gCheck('legendShadow','显示阴影'),gRange('legendShadowX','水平偏移',-10,14,1),gRange('legendShadowY','垂直偏移',-10,14,1),gRange('legendShadowBlur','模糊程度',0,12,.5),gRange('legendShadowOpacity','透明度',0,.7,.05)])+galleryDragHint('图例边框');
   if(id==='background')return gallerySection('背景',[gColor('background','整体背景颜色'),gCheck('plotBgVisible','显示绘图区底色'),gColor('plotBg','绘图区底色'),gCheck('gridEnabled','显示横网格线'),gCheck('gridVertical','显示纵网格线'),gColor('gridColor','网格线颜色'),gRange('gridWidth','网格线粗细',.3,3,.1)])+`<div class="hint">整体背景作用于整张图；绘图区底色与网格线只在 X/Y 轴围成的框内。</div>`;
   if(id==='palette')return gallerySection('全部系列配色',[galleryPaletteBlock()||'<div class="hint">当前图形没有逐系列配色；热图的色阶请在左侧「色阶与数值」里设置。</div>'])+galleryPaletteButtons();
@@ -2478,6 +2487,7 @@ function renderGalleryStudioProperties(){
   bindGalleryStudioPropertyInputs();bindCurrentAnnotationInputs();
 }
 function gallerySpecificPropertyHtml(type,id){
+  const s=state.gallery.settings;
   if(id==='histogram')return histPropertyHtml();
   if(id==='density')return gallerySection('核密度曲线',[gNumber('bandwidth','带宽（0=自动）',0,100,.01),gRange('lineWidth','曲线粗细',.5,6,.1),gRange('opacity','填充透明度',0,1,.05)]);
   if(['box-elements','violin-elements'].includes(id))return gallerySection('箱线 / 小提琴的统计口径',[
@@ -2504,8 +2514,8 @@ function gallerySpecificPropertyHtml(type,id){
   ])+`<div class="method-badge"><b>当前：</b>${esc(correlationMethodLabel())}；拟合线为普通最小二乘直线。论文方法部分可以照这一行写。</div>`;
   if(id==='bubble-size')return gallerySection('气泡大小',[gRange('pointSize','基础点大小',1,12,.5),gRange('opacity','透明度',.1,1,.05)]);
   if(id==='stack-mode')return gallerySection('堆叠方式',[gCheck('normalize','百分比堆叠'),gSelect('orientation','方向',[['vertical','纵向'],['horizontal','横向']])]);
-  if(id==='stacked-error')return gallerySection('误差棒与数值标注',[gCheck('stackedShowError','显示误差棒（读取 Error 列）'),gRange('stackedErrorWidth','误差棒粗细',.5,4,.1),gRange('stackedErrorCapWidth','误差棒端线宽',1,10,.5),gColor('stackedErrorColor','误差棒颜色'),gCheck('stackedShowValue','在每段内标注数值'),gRange('stackedValueSize','数值字号',8,24,1),gRange('stackedValueDecimals','数值小数位',0,4,1)])+`<div class="method-badge">误差棒按整柱合计（各段误差平方和开根）画在柱顶；数值标注在每段中心。</div>`;
-  if(id==='pie-label')return gallerySection('饼图标签',[gCheck('donut','圆环图'),gCheck('showCorrelation','显示百分比标签'),gRange('pieLabelSize','百分比字号',8,28,1)]);
+  if(id==='stacked-error')return gallerySection('误差棒与数值标注',[gCheck('stackedShowError','显示误差棒（读取 Error 列）'),gRange('stackedErrorWidth','误差棒粗细',.5,4,.1),gRange('stackedErrorCapWidth','误差棒端线宽',1,10,.5),gColor('stackedErrorColor','误差棒颜色'),gCheck('stackedShowValue','在每段内标注数值'),gRange('stackedValueSize','数值字号',8,24,1),gSelect('stackedValueWeight','数值字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('stackedValueColorMode','数值颜色',[['auto','自动黑白对比'],['custom','统一自定义']]),...(s.stackedValueColorMode==='custom'?[gColor('stackedValueColor','自定义数值颜色')]:[]),gRange('stackedValueDecimals','数值小数位',0,4,1)])+`<div class="method-badge">误差棒按整柱合计（各段误差平方和开根）画在柱顶；数值标注在每段中心。</div>`;
+  if(id==='pie-label')return gallerySection('饼图标签',[gCheck('donut','圆环图'),gCheck('showCorrelation','显示百分比标签'),gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色')]);
   if(id==='significance'){
     // v1.9.88: 原来「怎么标」（brackets/perbox/letters）+「括号上写什么」（星号/p 值）两个下拉
     // 让人以为重复。现在合并成一个「怎么标」，一次选定标记方式和内容。
@@ -2518,6 +2528,7 @@ function gallerySpecificPropertyHtml(type,id){
       sigStyleHtml,
       ...(state.gallery.settings.significanceDisplay==='brackets'?[gSelect('significancePairMode','标哪些比较',[['significant','只标有显著差异的'],['control','只和第一组比'],['all','所有两两组合都标']])]:[]),
       gRange('significanceFontSize','标记字号',8,26,1),
+      gSelect('significanceFontWeight','文字字重',[['auto','自动（括号 500 / 分组 600）'],[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
       gRange('significanceLineWidth','括号线宽',.5,4,.1),
       gColor('significanceColor','括号与文字颜色'),
       gRange('significanceOffset','标注距离（括号距数据顶 / 每箱标注距箱顶）',2,30,1),
@@ -2525,8 +2536,8 @@ function gallerySpecificPropertyHtml(type,id){
     ])+`<div class="stat-method-note"><b>当前：</b>${esc(statisticalMethodLabel())}。不同检验的假设和多重比较校正不同，p 值与标记可能因此变化。</div>`;
   }
   if(id==='heatmap-scale')return gallerySection('相关计算方法',[gSelect('correlationMethod','相关方法',[['pearson','Pearson 线性相关'],['spearman','Spearman 秩相关']]),gSelect('heatmapCluster','聚类排序',[['none','不聚类'],['rows','仅行聚类'],['cols','仅列聚类'],['both','行列都聚类']]),gCheck('heatmapShowDendrogram','显示聚类树')])+gallerySection('热图色阶',[gSelect('heatmapPalette','色阶方案',Object.entries(HEATMAP_PALETTES).map(([k,v])=>[k,v.name])),heatmapPalettePreview(),gHeatColor('heatmapLowColor','负相关 / 低值颜色'),gHeatColor('heatmapMidColor','零值 / 中间颜色'),gHeatColor('heatmapHighColor','正相关 / 高值颜色'),gHeatColor('heatmapDiagonalColor','对角线颜色'),gCheck('heatmapShowValues','显示数值'),gRange('heatmapValueSize','格内数字字号',7,24,1),gRange('heatmapXLabelSize','顶部标签字号',8,28,1),gRange('heatmapYLabelSize','左侧标签字号',8,28,1),gRange('heatmapCellGap','格子间距',0,6,.5),gColor('heatmapGridStroke','格子边线颜色'),gRange('heatmapGridStrokeWidth','格子边线粗细',0,3,.1)])+gallerySection('色带图例',[gCheck('heatmapColorBar','显示色带图例'),gOrientationButtons('heatmapColorBarOrientation','色带方向'),gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1)])+`<div class="method-badge"><b>当前矩阵：</b>${esc(correlationMethodLabel())}</div>`;
-  if(id==='method-note')return gallerySection('方法说明',[gCheck('methodNoteVisible','在图中显示方法说明'),gNumber('methodNoteX','水平位置',0,1800,1),gNumber('methodNoteY','垂直位置',0,1200,1),gRange('methodNoteSize','字号',7,20,1),gColor('methodNoteColor','颜色')])+`<div class="method-badge">${esc(galleryMethodNoteText())}</div>`+galleryDragHint('方法说明');
-  if(id==='radar-grid')return gallerySection('雷达坐标与网格',[`<div class="field"><button type="button" id="radarTransposeBtn" style="width:100%;padding:8px;border:1px solid #c9d0d4;border-radius:7px;background:#f7f9f8;cursor:pointer;font-size:13px">切换数据方向：组 ↔ 指标</button><div class="small-note" style="color:#8a969c;font-size:11px;margin-top:5px;line-height:1.5">自动识别方向不对时，点一下交换行列。</div></div>`,gCheck('normalize','按指标 0–1 归一化'),gText('radarMin','起始刻度（留空=自动）'),gText('radarMax','结束刻度（留空=自动）'),gRange('radarLevels','分段数',2,8,1),gCheck('radarShowTickLabels','显示同心刻度数值'),gRange('radarTickLabelSize','刻度数字字号',7,24,1),gRange('radarTickDecimals','刻度小数位',0,4,1),gSelect('radarTickLabelPosition','刻度数值位置',[['top','顶部轴旁'],['left','左侧'],['right','右侧']]),gRange('radarTickLabelOffset','刻度数值偏移',0,30,1),gRange('radarLabelSize','轴标签字号',8,28,1),gRange('radarLabelOffset','轴标签与网格距离',8,70,1),gRange('radarGridWidth','同心网格粗细',.4,3,.1),gRange('radarSpokeWidth','放射线粗细',.4,3,.1)])+gallerySection('自动论文背景',[gSelect('radarTheme','渐变色系',Object.entries(RADAR_THEMES).map(([k,v])=>[k,v.name])),gSelect('radarGradientMode','渐变方向',[['radial','中心 → 外圈'],['left-right','左 → 右'],['right-left','右 → 左'],['top-bottom','上 → 下'],['bottom-top','下 → 上'],['diag-down','左上 → 右下'],['diag-up','左下 → 右上']]),gCheck('radarSmartHighlight','显示整张雷达图渐变背景')])+gallerySection('系列呈现',[gCheck('radarShowMarkers','显示形状标记'),gRange('radarPointSize','节点大小',0,10,.5)])+`<div class="method-badge"><b>默认论文模式：</b>数据多边形不填充；所选色系可生成中心向外或单方向完整渐变背景，并自动匹配网格与放射线。</div>`;
+  if(id==='method-note')return gallerySection('方法说明',[gCheck('methodNoteVisible','在图中显示方法说明'),gNumber('methodNoteX','水平位置',0,1800,1),gNumber('methodNoteY','垂直位置',0,1200,1),gRange('methodNoteSize','字号',7,20,1),gSelect('methodNoteWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('methodNoteColor','颜色')])+`<div class="method-badge">${esc(galleryMethodNoteText())}</div>`+galleryDragHint('方法说明');
+  if(id==='radar-grid')return gallerySection('雷达坐标与网格',[`<div class="field"><button type="button" id="radarTransposeBtn" style="width:100%;padding:8px;border:1px solid #c9d0d4;border-radius:7px;background:#f7f9f8;cursor:pointer;font-size:13px">切换数据方向：组 ↔ 指标</button><div class="small-note" style="color:#8a969c;font-size:11px;margin-top:5px;line-height:1.5">自动识别方向不对时，点一下交换行列。</div></div>`,gCheck('normalize','按指标 0–1 归一化'),gText('radarMin','起始刻度（留空=自动）'),gText('radarMax','结束刻度（留空=自动）'),gRange('radarLevels','分段数',2,8,1),gCheck('radarShowTickLabels','显示同心刻度数值'),gRange('radarTickLabelSize','刻度数字字号',7,24,1),gSelect('radarTickLabelWeight','刻度数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('radarTickLabelColor','刻度数字颜色'),gRange('radarTickDecimals','刻度小数位',0,4,1),gSelect('radarTickLabelPosition','刻度数值位置',[['top','顶部轴旁'],['left','左侧'],['right','右侧']]),gRange('radarTickLabelOffset','刻度数值偏移',0,30,1),gRange('radarLabelSize','轴标签字号',8,28,1),gSelect('radarLabelWeight','轴标签字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('radarLabelColor','轴标签颜色'),gRange('radarLabelOffset','轴标签与网格距离',8,70,1),gRange('radarGridWidth','同心网格粗细',.4,3,.1),gRange('radarSpokeWidth','放射线粗细',.4,3,.1)])+gallerySection('自动论文背景',[gSelect('radarTheme','渐变色系',Object.entries(RADAR_THEMES).map(([k,v])=>[k,v.name])),gSelect('radarGradientMode','渐变方向',[['radial','中心 → 外圈'],['left-right','左 → 右'],['right-left','右 → 左'],['top-bottom','上 → 下'],['bottom-top','下 → 上'],['diag-down','左上 → 右下'],['diag-up','左下 → 右上']]),gCheck('radarSmartHighlight','显示整张雷达图渐变背景')])+gallerySection('系列呈现',[gCheck('radarShowMarkers','显示形状标记'),gRange('radarPointSize','节点大小',0,10,.5)])+`<div class="method-badge"><b>默认论文模式：</b>数据多边形不填充；所选色系可生成中心向外或单方向完整渐变背景，并自动匹配网格与放射线。</div>`;
   return gallerySeriesPropertyHtml(type,state.gallery.selectedSeries);
 }
 function gallerySeriesPropertyHtml(type,index=0){
@@ -2542,6 +2553,16 @@ function gallerySeriesPropertyHtml(type,index=0){
     html+=gallerySection('散点',markerFields);
   }else if(['kde','scatter','bubble','radar'].includes(type)){
     html+=gallerySection('线条与点',[gSeriesRange(index,'lineWidth','线宽',.5,7,.1),...markerFields]);
+  }
+  if(['scatter','bubble'].includes(type)&&state.gallery.settings.scatterFitMode!=='overall'){
+    const statsDefaultColor=state.gallery.settings.scatterStatsColorMode==='series'?style.color:(state.gallery.settings.scatterStatsColor||'#263238');
+    html+=gallerySection(`本组统计备注 · ${name}`,[
+      gSeriesColorKey(index,'statsColor','备注颜色（覆盖默认）',statsDefaultColor),
+      gSeriesRange(index,'statsSize','备注字号',8,28,1,state.gallery.settings.annotationSize),
+      gSeriesSelect(index,'statsWeight','备注字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']],state.gallery.settings.scatterStatsWeight||400),
+      gSeriesNumber(index,'statsX','备注 X（留空自动）',0,1800,1),
+      gSeriesNumber(index,'statsY','备注 Y（留空自动）',0,1200,1)
+    ])+`<div class="hint">这里的 r / ρ、R²、p 属于本组数据系列。可直接在图上拖动本组备注；其他组的位置和样式不受影响。</div>`;
   }
   if(['hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'borderWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
   html+=gallerySection('全部系列配色',[galleryPaletteBlock()]);return html;
@@ -2599,11 +2620,12 @@ function getGallerySeriesStyle(index){
   if(!state.gallery.seriesStyles[index]){const radarMarkers=['circle','square','triangle','diamond','pentagon','star','hexagon','triangleDown'];state.gallery.seriesStyles[index]={color:state.gallery.palette[index%state.gallery.palette.length],opacity:state.gallery.settings.opacity,lineWidth:state.gallery.settings.lineWidth,borderWidth:1.2,pointSize:state.gallery.settings.pointSize,markerShape:state.gallery.type==='radar'?radarMarkers[index%radarMarkers.length]:'circle',markerFill:state.gallery.type==='radar'?'white':'series',whiskerLineStyle:'solid',boxFill:'#ffffff',boxBorderColor:'#222222',boxBorderWidth:1.1}};
   return state.gallery.seriesStyles[index];
 }
-function gSeriesWrap(index,key,label,input){const v=getGallerySeriesStyle(index)[key];return `<div class="field"><label><span>${label}</span><output data-gseries-out="${index}:${key}">${esc(v)}</output></label>${input}</div>`}
+function gSeriesWrap(index,key,label,input,fallback){const v=getGallerySeriesStyle(index)[key]??fallback;return `<div class="field"><label><span>${label}</span><output data-gseries-out="${index}:${key}">${esc(v??'')}</output></label>${input}</div>`}
 function gSeriesColor(index,label){return gSeriesWrap(index,'color',label,`<input data-gseries-setting="${index}:color" type="color" value="${getGallerySeriesStyle(index).color}">`)}
-function gSeriesColorKey(index,key,label){const _st=getGallerySeriesStyle(index);return gSeriesWrap(index,key,label,`<input data-gseries-setting="${index}:${key}" type="color" value="${_st[key]||_st.color}">`)}
-function gSeriesRange(index,key,label,min,max,step){return gSeriesWrap(index,key,label,`<input data-gseries-setting="${index}:${key}" type="range" min="${min}" max="${max}" step="${step}" value="${getGallerySeriesStyle(index)[key]}">`)}
-function gSeriesSelect(index,key,label,opts){return gSeriesWrap(index,key,label,`<select data-gseries-setting="${index}:${key}">${opts.map(([v,n])=>`<option value="${v}" ${String(getGallerySeriesStyle(index)[key])===String(v)?'selected':''}>${n}</option>`).join('')}</select>`)}
+function gSeriesColorKey(index,key,label,fallback){const _st=getGallerySeriesStyle(index),v=_st[key]||fallback||_st.color;return gSeriesWrap(index,key,label,`<input data-gseries-setting="${index}:${key}" type="color" value="${v}">`,fallback||_st.color)}
+function gSeriesRange(index,key,label,min,max,step,fallback){const v=getGallerySeriesStyle(index)[key]??fallback;return gSeriesWrap(index,key,label,`<input data-gseries-setting="${index}:${key}" type="range" min="${min}" max="${max}" step="${step}" value="${v}">`,fallback)}
+function gSeriesNumber(index,key,label,min,max,step,fallback=''){const v=getGallerySeriesStyle(index)[key]??fallback;return gSeriesWrap(index,key,label,`<input data-gseries-setting="${index}:${key}" type="number" min="${min}" max="${max}" step="${step}" value="${v}">`,fallback)}
+function gSeriesSelect(index,key,label,opts,fallback){const current=getGallerySeriesStyle(index)[key]??fallback;return gSeriesWrap(index,key,label,`<select data-gseries-setting="${index}:${key}">${opts.map(([v,n])=>`<option value="${v}" ${String(current)===String(v)?'selected':''}>${n}</option>`).join('')}</select>`,fallback)}
 function galleryPaletteBlock(){
   const groups=galleryStudioSeriesNames();if(!groups.length)return'';
   // 光谱/热分析的曲线颜色由各自模块的 groupStyles 持有，这里要回读真实颜色
@@ -2759,7 +2781,7 @@ function bindGalleryStudioPropertyInputs(){
     analyzeGalleryData();renderGalleryStudioCanvas();syncGalleryQuickControls();
     $$(`[data-gsetting="${key}"]`).forEach(peer=>{if(peer!==el&&peer.type!=='checkbox')peer.value=state.gallery.settings[key]});
     $$(`[data-gout="${key}"]`).forEach(out=>out.textContent=state.gallery.settings[key]);
-    if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled','kdeHistColorMode'].includes(key))renderGalleryStudioProperties();
+    if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled','kdeHistColorMode','scatterFitMode','showRegression','scatterFitBand','scatterStatsColorMode','stackedValueColorMode','heatmapValueColorMode','heatmapStarColorMode','heatmapGroupLabelColorMode','heatmapShowGroupNames'].includes(key))renderGalleryStudioProperties();
   };
   $$('[data-gsetting]').forEach(el=>{el.addEventListener('input',()=>applySetting(el));el.addEventListener('change',()=>applySetting(el))});
   // v1.9.88: 合并后的「怎么标」下拉一次写入标记方式 + 标记内容两个键。
@@ -2773,7 +2795,14 @@ function bindGalleryStudioPropertyInputs(){
     const key=btn.dataset.gorientation,value=btn.dataset.orientationValue;state.gallery.settings[key]=value;if(key==='legendOrientation')state.gallery.settings.legendColumns=value==='vertical'?1:Math.max(2,Math.min(galleryStudioSeriesNames().length||3,3));renderGalleryStudioProperties();renderGalleryStudioCanvas();
   }));
   $$('[data-gseries-setting]').forEach(el=>{
-    const applySeriesSetting=()=>{const [idx,key]=el.dataset.gseriesSetting.split(':'),style=getGallerySeriesStyle(Number(idx));let v=el.value;if(el.type==='range')v=Number(v);style[key]=v;if(key==='color')state.gallery.palette[Number(idx)]=v;renderGalleryStudioCanvas();const out=$(`[data-gseries-out="${idx}:${key}"]`);if(out)out.textContent=v;};
+    const applySeriesSetting=()=>{
+      const [idx,key]=el.dataset.gseriesSetting.split(':'),style=getGallerySeriesStyle(Number(idx));
+      let v=el.value;const remove=el.type==='number'&&String(el.value).trim()==='';
+      if(el.type==='range'||(el.type==='number'&&!remove))v=Number(v);
+      if(remove)delete style[key];else style[key]=v;
+      if(key==='color')state.gallery.palette[Number(idx)]=v;
+      renderGalleryStudioCanvas();const out=$(`[data-gseries-out="${idx}:${key}"]`);if(out)out.textContent=v;
+    };
     el.addEventListener('input',applySeriesSetting);el.addEventListener('change',applySeriesSetting);
   });
   $$('[data-gpalette]').forEach(el=>el.addEventListener('input',()=>{const i=Number(el.dataset.gpalette);state.gallery.palette[i]=el.value;getGallerySeriesStyle(i).color=el.value;renderGalleryStudioCanvas()}));
@@ -3731,14 +3760,13 @@ function legendLayout(gs,colors){
   let content='';
   gs.forEach((g,i)=>{
     const col=horizontal?i%cols:0,row=horizontal?Math.floor(i/cols):i,ox=colX[col],oy=row*rowH+rowH*.52,c=colors[i%colors.length],st=getSeriesStyle(i);
-    const _sym=s.legendSymbol||'auto';
-    // 自动：柱状/3D 柱用色块，折线/曲线/瀑布图用线条（可强制切换；点线则线 + 点都画；无符号则只写组名）
-    const _none=_sym==='none';
-    const _useSwatch=!_none&&(_sym==='swatch'||(_sym==='auto'&&(state.chart.type==='bar'||state.chart.type==='bar3d')));
+    if(!['auto','marker-line','line','swatch'].includes(s.legendSymbol))s.legendSymbol='marker-line';
+    const _sym=s.legendSymbol;
+    // 自动：柱状/3D 柱用色块，折线/曲线/瀑布图用线条。
+    const _useSwatch=_sym==='swatch'||(_sym==='auto'&&(state.chart.type==='bar'||state.chart.type==='bar3d'));
     const _swR=clamp(Number(s.legendSwatchRatio)||1.6,.6,5),_swH=Math.min(symbolW/_swR,Math.max(12,font*.82)),_swW=_swH*_swR;
     const _lFill=s.legendColor||'#263238';
-    if(_none){content+=`<text data-object="legend" x="${ox}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}" fill="${c}">${esc(g)}</text>`;}
-    else if(_useSwatch)content+=`<rect data-object="legend" x="${ox+(symbolW-_swW)/2}" y="${oy-_swH/2}" width="${_swW}" height="${_swH}" fill="${c}" stroke="${darken(c,.25)}" stroke-width=".6"/><text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}" fill="${_lFill}">${esc(g)}</text>`;
+    if(_useSwatch)content+=`<rect data-object="legend" x="${ox+(symbolW-_swW)/2}" y="${oy-_swH/2}" width="${_swW}" height="${_swH}" fill="${c}" stroke="${darken(c,.25)}" stroke-width=".6"/><text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.18}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}" fill="${_lFill}">${esc(g)}</text>`;
     else{
       const _showMk=_sym==='marker-line'||seriesMarkersVisible()||(state.chart.type==='waterfall'&&s.wfShowMarkers&&st.showMarker!==false);
       content+=`<line data-object="legend" x1="${ox}" x2="${ox+symbolW}" y1="${oy}" y2="${oy}" stroke="${c}" stroke-width="${st.lineWidth}"/>${_showMk?markerLegend(ox+symbolW/2,oy,c,i):''}<text data-object="legend" x="${ox+symbolW+textGap}" y="${oy+font*.12}" dominant-baseline="middle" font-size="${font}" font-weight="${s.legendWeight||s.globalFontWeight||400}" fill="${_lFill}">${esc(g)}</text>`;
@@ -4104,7 +4132,7 @@ function renderProperties(){
   ])+`<div class="hint">每条系列的颜色、线宽、标记形状和填充均独立保存。曲线图固定采用平滑连接，且不绘制误差棒和显著性字母。</div>`+(_t==='bar'?seriesSubGroupBlock():'')+paletteBlock();}
   else if(id==='error'){name='误差棒';const et=getSettingValue('errorType');const isCustom=et==='custom',isPoint=et==='custom-point';const ef=[selectField('errorType','误差棒类型',[['sd','Mean ± SD'],['se','Mean ± SEM'],['ci','Mean ± 95% CI'],['custom','自定义固定值'],['custom-point','逐点自定义（在线表格）']])];if(isCustom)ef.push(numberField('errorCustomValue','单侧误差长度',0,null,.0001));ef.push(rangeField('errorWidth','线条粗细',.5,4,.1),rangeField('errorCap','端帽宽度',2,28,1),selectField('errorColorMode','颜色',[['series','跟随系列颜色'],['black','统一黑色']]));html=fieldGroup(ef)+(isCustom?'<div class="hint">每根柱子的误差棒上下各延伸你填写的长度，单位与 Y 轴一致。</div>':'')+(isPoint?customPointErrorTable()+'<div class="hint">在每个数据点一行的表格里填单侧误差长度，留空按 0 处理；各点误差相互独立。</div>':'');}
   else if(id==='legend'){name='图例内容';
-    html=fieldGroup([checkField('legendVisible','显示图例'),selectField('legendSymbol','图例符号',[['none','无（仅组名）'],['marker-line','点线（线 + 点）'],['auto','自动'],['line','线条'],['swatch','色块']]),colorField('legendColor','图例文字颜色'),rangeField('legendSwatchRatio','色块宽高比',.6,5,.1),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。「自动」表示柱状图用色块、折线/曲线/瀑布图用线条；「无（仅组名）」会把组名直接按系列颜色显示。色块宽高比控制色块的宽/高，1 为正方形，默认 1.6。</div>`;}
+    html=fieldGroup([checkField('legendVisible','显示图例'),selectField('legendSymbol','图例符号',[['auto','自动'],['line','线条'],['swatch','色块']]),colorField('legendColor','图例文字颜色'),rangeField('legendSwatchRatio','色块宽高比',.6,5,.1),numberLegendField('x','水平位置'),numberLegendField('y','垂直位置'),rangeField('legendSize','字号',8,48,1),orientationButtonField('legendOrientation','排列方向'),rangeField('legendColumns','横向图例列数',1,6,1)])+`<div class="hint">图例内容可以直接拖动。「自动」表示柱状图用色块、折线/曲线/瀑布图用线条。色块宽高比控制色块的宽/高，1 为正方形，默认 1.6。</div>`;}
   else if(id==='legend-frame'){name='图例边框';html=fieldGroup([
     selectField('legendFrameStyle','边框样式',[['none','无边框'],['solid','实线'],['dashed','虚线'],['dotted','点线'],['double','双线']]),
     numberLegendFrameField('x','水平位置'),numberLegendFrameField('y','垂直位置'),checkLegendFrameField('autoSize','自动适应图例大小'),numberLegendFrameField('width','边框宽度'),numberLegendFrameField('height','边框高度'),
@@ -5211,7 +5239,7 @@ function galleryMethodNoteText(){
   return '';
 }
 function galleryMethodNoteSvg(W,H,interactive=false){
-  const s=state.gallery.settings,text=galleryMethodNoteText();if(!s.methodNoteVisible||!text)return'';const x=s.methodNoteX??(W-24),y=s.methodNoteY??(H-10),cls=interactive?'chart-object method-note draggable':'method-note';return `<text data-gobject="method-note" data-gdrag="methodNote" class="${cls}" x="${x}" y="${y}" text-anchor="end" font-size="${s.methodNoteSize}" fill="${s.methodNoteColor}">${esc(text)}</text>`;
+  const s=state.gallery.settings,text=galleryMethodNoteText();if(!s.methodNoteVisible||!text)return'';const x=s.methodNoteX??(W-24),y=s.methodNoteY??(H-10),cls=interactive?'chart-object method-note draggable':'method-note';return `<text data-gobject="method-note" data-gdrag="methodNote" class="${cls}" x="${x}" y="${y}" text-anchor="end" font-size="${s.methodNoteSize}" font-weight="${s.methodNoteWeight||400}" fill="${s.methodNoteColor}">${esc(text)}</text>`;
 }
 function renderGalleryChart(){
   const stage=$('#galleryStage'),s=state.gallery.settings;if(!state.gallery.rows.length){stage.innerHTML='<div class="gallery-empty"><b>等待数据</b><span>下载匹配模板，填写并导入后即可绘图。</span></div>';$('#galleryChartMeta').textContent='';return}
@@ -5349,8 +5377,8 @@ function galleryLegend(groups){
   const isRadar=state.gallery.type==='radar';
   const swRatio=clamp(Number(s.legendSwatchRatio)||1.6,.6,5),swH=Math.min(l.symbol/swRatio,Math.max(10,l.font*.9)),swW=swH*swRatio;
   const content=l.positions.map(({x,y,item,index})=>{
-    const symMode=s.legendSymbol||'auto',isNone=symMode==='none',useLine=!isNone&&(symMode==='marker-line'||legendUsesLineSymbol()),st=getGallerySeriesStyle(index),symbol=isNone?'':isRadar?`<line x1="${x}" y1="${y+10}" x2="${x+l.symbol}" y2="${y+10}" stroke="${item.color}" stroke-width="${Math.max(1.4,st.lineWidth)}"/>${state.gallery.settings.radarShowMarkers?markerShapeSvg(st.markerShape,x+l.symbol/2,y+10,Math.max(2.4,state.gallery.settings.radarPointSize||st.pointSize),`fill="${st.markerFill==='series'?item.color:'white'}" stroke="${item.color}" stroke-width="1.4"`):''}`:(useLine?`<line x1="${x}" y1="${y+l.font*.55}" x2="${x+l.symbol}" y2="${y+l.font*.55}" stroke="${item.color}" stroke-width="${Math.max(1.4,Number(st.lineWidth)||2)}"/>${symMode==='marker-line'?markerShapeSvg(st.markerShape,x+l.symbol/2,y+l.font*.55,Math.max(2.8,Math.min(6,Number(st.pointSize)||4)),`fill="${st.markerFill==='series'?item.color:'#ffffff'}" stroke="${item.color}" stroke-width="1.2"`):''}`:`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" fill="${item.color}"/>`);
-    const textX=isNone?x:x+l.symbol+8,textFill=isNone?item.color:(s.legendColor||'#263238');
+    const symMode=s.legendSymbol||'auto',useLine=symMode==='marker-line'||legendUsesLineSymbol(),st=getGallerySeriesStyle(index),symbol=isRadar?(symMode==='swatch'?`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" fill="${item.color}"/>`:`<line x1="${x}" y1="${y+10}" x2="${x+l.symbol}" y2="${y+10}" stroke="${item.color}" stroke-width="${Math.max(1.4,st.lineWidth)}"/>${(symMode==='marker-line'||(symMode==='auto'&&state.gallery.settings.radarShowMarkers))?markerShapeSvg(st.markerShape,x+l.symbol/2,y+10,Math.max(2.4,state.gallery.settings.radarPointSize||st.pointSize),`fill="${st.markerFill==='series'?item.color:'white'}" stroke="${item.color}" stroke-width="1.4"`):''}`):(useLine?`<line x1="${x}" y1="${y+l.font*.55}" x2="${x+l.symbol}" y2="${y+l.font*.55}" stroke="${item.color}" stroke-width="${Math.max(1.4,Number(st.lineWidth)||2)}"/>${symMode==='marker-line'?markerShapeSvg(st.markerShape,x+l.symbol/2,y+l.font*.55,Math.max(2.8,Math.min(6,Number(st.pointSize)||4)),`fill="${st.markerFill==='series'?item.color:'#ffffff'}" stroke="${item.color}" stroke-width="1.2"`):''}`:`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" fill="${item.color}"/>`);
+    const textX=x+l.symbol+8,textFill=s.legendColor||'#263238';
     return `<g data-gobject="series" data-gseries="${index}" class="chart-object">${symbol}<text x="${textX}" y="${y+l.font}" font-size="${l.font}" font-weight="${s.legendWeight}" fill="${textFill}">${esc(item.name)}</text></g>`
   }).join('');
   return `${frame}<g data-gobject="legend" data-gdrag="legend" class="chart-object draggable" transform="translate(${lx} ${ly})">${content}</g>`;
@@ -5454,14 +5482,14 @@ function significanceStepFactor(){
 function significanceBracketsSvg(groups,pairs,xAt,yMap,dataMax,range){
   const s=state.gallery.settings;if(!pairs.length)return'';let out='<g data-gobject="significance" class="chart-object">';
   const step=significanceStepFactor(),cap=Math.max(5,s.significanceLineWidth*5);
-  pairs.forEach(pair=>{const x1=xAt(pair.i),x2=xAt(pair.j),value=dataMax+range*(.08+pair.level*step)+s.significanceOffset*range/220,y=yMap(value),label=significanceLabel(pair);out+=`<path d="M${x1},${y+cap} V${y} H${x2} V${y+cap}" fill="none" stroke="${s.significanceColor}" stroke-width="${s.significanceLineWidth}"/><text x="${(x1+x2)/2}" y="${y-4}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="500" fill="${s.significanceColor}">${esc(label)}</text>`});
+  pairs.forEach(pair=>{const x1=xAt(pair.i),x2=xAt(pair.j),value=dataMax+range*(.08+pair.level*step)+s.significanceOffset*range/220,y=yMap(value),label=significanceLabel(pair);out+=`<path d="M${x1},${y+cap} V${y} H${x2} V${y+cap}" fill="none" stroke="${s.significanceColor}" stroke-width="${s.significanceLineWidth}"/><text x="${(x1+x2)/2}" y="${y-4}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="${s.significanceFontWeight==='auto'?500:(s.significanceFontWeight||500)}" fill="${s.significanceColor}">${esc(label)}</text>`});
   return out+'</g>';
 }
 function significanceLettersSvg(groups,xAt,yMap,dataMax,range){
   const s=state.gallery.settings,a=state.gallery.analysis;if(!s.significanceEnabled||s.significanceDisplay!=='letters'||!a?.letters)return'';
   // v1.9.90: 字母组也贴各自箱顶，不再统一吊在图表最上方。
   const gap=6+(Number(s.significanceOffset)||10),valsOf=g=>state.gallery.rows.filter(r=>r.Group===g).map(r=>r.Value);
-  let out='<g data-gobject="significance" class="chart-object">';groups.forEach((g,i)=>{const label=a.letters[g]||'';if(!label)return;const y=yMap(boxStats(valsOf(g)).high)-gap;out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(label)}</text>`});return out+'</g>';
+  let out='<g data-gobject="significance" class="chart-object">';groups.forEach((g,i)=>{const label=a.letters[g]||'';if(!label)return;const y=yMap(boxStats(valsOf(g)).high)-gap;out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="${s.significanceFontWeight==='auto'?600:(s.significanceFontWeight||600)}" fill="${s.significanceColor}">${esc(label)}</text>`});return out+'</g>';
 }
 // v1.9.90: 须线虚实线样式。厚度随线宽缩放，端帽仍是实线，与论文常见画法一致。
 function whiskerDashArray(style,lw){
@@ -5485,10 +5513,10 @@ function significancePerBoxSvg(groups,xAt,yMap,dataMax,range){
   let out='<g data-gobject="significance" class="chart-object">';
   groups.forEach((g,i)=>{
     const y=yMap(boxStats(valsOf(g)).high)-gap;
-    if(i===0){out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">ref</text>`;return}
+    if(i===0){out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="${s.significanceFontWeight==='auto'?600:(s.significanceFontWeight||600)}" fill="${s.significanceColor}">ref</text>`;return}
     const rec=pairs.find(r=>(r.a===ref&&r.b===g)||(r.a===g&&r.b===ref));
     if(!rec)return;
-    out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="600" fill="${s.significanceColor}">${esc(significanceLabel(rec))}</text>`;
+    out+=`<text x="${xAt(i)}" y="${y}" text-anchor="middle" font-size="${s.significanceFontSize}" font-weight="${s.significanceFontWeight==='auto'?600:(s.significanceFontWeight||600)}" fill="${s.significanceColor}">${esc(significanceLabel(rec))}</text>`;
   });
   return out+'</g>';
 }
@@ -5580,7 +5608,7 @@ function galleryScatter(W,H,bubble){
 function galleryStacked(W,H){
   const s=state.gallery.settings,p=galleryPlotBox(W,H),cats=[...new Set(state.gallery.rows.map(r=>r.Category))],comps=[...new Set(state.gallery.rows.map(r=>r.Component))],totals=Object.fromEntries(cats.map(c=>[c,state.gallery.rows.filter(r=>r.Category===c).reduce((a,b)=>a+b.Value,0)])),max=s.normalize?100:Math.max(...Object.values(totals)),yMap=scaleLinear(0,max,p.t+p.h,p.t),xStep=p.w/cats.length;let out=commonAxes(W,H,p,cats,makeTicks(0,max,null,6),(v,i)=>p.l+(i+.5)*xStep,yMap)+galleryLegend(comps);
   comps.forEach((comp,j)=>{const st=getGallerySeriesStyle(j);let body='';cats.forEach((cat,i)=>{const previous=comps.slice(0,j).reduce((sum,c)=>{const r=state.gallery.rows.find(x=>x.Category===cat&&x.Component===c);const v=r?r.Value:0;return sum+(s.normalize?(totals[cat]?v/totals[cat]*100:0):v)},0),row=state.gallery.rows.find(r=>r.Category===cat&&r.Component===comp),value=row?row.Value:0,v=s.normalize?(totals[cat]?value/totals[cat]*100:0):value,y1=yMap(previous+v),y0=yMap(previous),w=Math.min(78,xStep*.68),x=p.l+(i+.5)*xStep-w/2;body+=`<rect x="${x}" y="${y1}" width="${w}" height="${Math.max(0,y0-y1)}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;
-    if(s.stackedShowValue&&(y0-y1)>=9){const lum=hexLuminance(st.color),val=s.normalize?v:value;body+=`<text x="${x+w/2}" y="${(y0+y1)/2+Number(s.stackedValueSize||12)/3.2}" text-anchor="middle" font-size="${s.stackedValueSize||12}" font-weight="600" fill="${lum>.55?'#111111':'#ffffff'}">${formatNumber(val,s.stackedValueDecimals??1)}</text>`}
+    if(s.stackedShowValue&&(y0-y1)>=9){const lum=hexLuminance(st.color),val=s.normalize?v:value;body+=`<text x="${x+w/2}" y="${(y0+y1)/2+Number(s.stackedValueSize||12)/3.2}" text-anchor="middle" font-size="${s.stackedValueSize||12}" font-weight="${s.stackedValueWeight||600}" fill="${s.stackedValueColorMode==='custom'?(s.stackedValueColor||'#ffffff'):(lum>.55?'#111111':'#ffffff')}">${formatNumber(val,s.stackedValueDecimals??1)}</text>`}
   });out+=`<g data-gobject="series" data-gseries="${j}" class="chart-object">${body}</g>`});
   if(s.stackedShowError){let eb='';cats.forEach((cat,i)=>{const x=p.l+(i+.5)*xStep,catRows=state.gallery.rows.filter(r=>r.Category===cat);
     const totalErr=(()=>{const te=Number(catRows.find(r=>r.totalError!=null)?.totalError)||0;if(te)return te;const segErr=comps.map(c=>{const r=catRows.find(x=>x.Component===c),e=Math.abs(Number(r?.Error)||0);return s.normalize?(totals[cat]?e/totals[cat]*100:0):e}).filter(Number.isFinite);return Math.sqrt(segErr.reduce((a,b)=>a+b*b,0))})();
@@ -5591,7 +5619,7 @@ function galleryStacked(W,H){
 function hexLuminance(hex){const h=hexRgb(hex).map(v=>v/255);return .2126*h[0]+.7152*h[1]+.0722*h[2]}
 function galleryPie(W,H){
   const s=state.gallery.settings,first=state.gallery.rows[0].Category,rows=state.gallery.rows.filter(r=>r.Category===first),total=rows.reduce((a,b)=>a+b.Value,0),cx=W*.42,cy=H*.54,R=Math.min(W,H)*.3,r0=s.donut?R*.52:0;let a=-Math.PI/2,out='';
-  rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0,a2=a+da,p1=[cx+R*Math.cos(a),cy+R*Math.sin(a)],p2=[cx+R*Math.cos(a2),cy+R*Math.sin(a2)],q1=[cx+r0*Math.cos(a2),cy+r0*Math.sin(a2)],q2=[cx+r0*Math.cos(a),cy+r0*Math.sin(a)],large=da>Math.PI?1:0,d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;let body=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="white" stroke-width="${Math.max(1,st.lineWidth)}"/>`;const mid=a+da/2,tx=cx+R*.72*Math.cos(mid),ty=cy+R*.72*Math.sin(mid);if(s.showCorrelation&&da>.12)body+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="white" font-weight="600">${formatNumber(r.Value/total*100,1)}%</text>`;out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;a=a2});out+=galleryLegend(rows.map(r=>r.Component));return out;
+  rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0,a2=a+da,p1=[cx+R*Math.cos(a),cy+R*Math.sin(a)],p2=[cx+R*Math.cos(a2),cy+R*Math.sin(a2)],q1=[cx+r0*Math.cos(a2),cy+r0*Math.sin(a2)],q2=[cx+r0*Math.cos(a),cy+r0*Math.sin(a)],large=da>Math.PI?1:0,d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;let body=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="white" stroke-width="${Math.max(1,st.lineWidth)}"/>`;const mid=a+da/2,tx=cx+R*.72*Math.cos(mid),ty=cy+R*.72*Math.sin(mid);if(s.showCorrelation&&da>.12)body+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`;out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;a=a2});out+=galleryLegend(rows.map(r=>r.Component));return out;
 }
 function hexRgb(hex){const h=String(hex||'#000000').replace('#','');if(!/^[0-9a-f]{6}$/i.test(h))return[0,0,0];const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
 function rgbHex(rgb){return'#'+rgb.map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('')}
@@ -5666,12 +5694,12 @@ function galleryRadar(W,H){
       const rv=rawMin+tickStep*k;let tx=cx+tickOffset,ty=cy-R*k/levelCount+4,anchor='start';
       if(s.radarTickLabelPosition==='left'){tx=cx-R*k/levelCount-tickOffset;ty=cy+4;anchor='end'}
       else if(s.radarTickLabelPosition==='right'){tx=cx+R*k/levelCount+tickOffset;ty=cy+4;anchor='start'}
-      out+=`<text x="${tx}" y="${ty}" text-anchor="${anchor}" font-size="${tickSize}" fill="${s.yTickColor}">${formatNumber(rv,s.radarTickDecimals)}</text>`;
+      out+=`<text x="${tx}" y="${ty}" text-anchor="${anchor}" font-size="${tickSize}" font-weight="${s.radarTickLabelWeight||400}" fill="${s.radarTickLabelColor||s.yTickColor}">${formatNumber(rv,s.radarTickDecimals)}</text>`;
     }
   }
-  if(s.radarShowTickLabels){let tx=cx+tickOffset,ty=cy+4,anchor='start';if(s.radarTickLabelPosition==='left'){tx=cx-tickOffset;anchor='end'}else if(s.radarTickLabelPosition==='right'){tx=cx+tickOffset;anchor='start'}out+=`<text x="${tx}" y="${ty}" text-anchor="${anchor}" font-size="${tickSize}" fill="${s.yTickColor}">${formatNumber(rawMin,s.radarTickDecimals)}</text>`;}
+  if(s.radarShowTickLabels){let tx=cx+tickOffset,ty=cy+4,anchor='start';if(s.radarTickLabelPosition==='left'){tx=cx-tickOffset;anchor='end'}else if(s.radarTickLabelPosition==='right'){tx=cx+tickOffset;anchor='start'}out+=`<text x="${tx}" y="${ty}" text-anchor="${anchor}" font-size="${tickSize}" font-weight="${s.radarTickLabelWeight||400}" fill="${s.radarTickLabelColor||s.yTickColor}">${formatNumber(rawMin,s.radarTickDecimals)}</text>`;}
   // Spokes use a separate, slightly stronger width for paper-style readability.
-  inds.forEach((ind,i)=>{const a=-Math.PI/2+i*2*Math.PI/n,x=cx+R*Math.cos(a),y=cy+R*Math.sin(a),lx=cx+(R+labelOffset)*Math.cos(a),ly=cy+(R+labelOffset)*Math.sin(a);const anchor=Math.cos(a)>0.28?'start':Math.cos(a)<-0.28?'end':'middle';out+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${s.radarSpokeColor}" stroke-width="${s.radarSpokeWidth||s.radarGridWidth}"/><text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="${s.radarLabelSize}" font-weight="${s.xTickWeight}">${esc(ind)}</text>`});out+='</g>';
+  inds.forEach((ind,i)=>{const a=-Math.PI/2+i*2*Math.PI/n,x=cx+R*Math.cos(a),y=cy+R*Math.sin(a),lx=cx+(R+labelOffset)*Math.cos(a),ly=cy+(R+labelOffset)*Math.sin(a);const anchor=Math.cos(a)>0.28?'start':Math.cos(a)<-0.28?'end':'middle';out+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${s.radarSpokeColor}" stroke-width="${s.radarSpokeWidth||s.radarGridWidth}"/><text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="${s.radarLabelSize}" font-weight="${s.radarLabelWeight||400}" fill="${s.radarLabelColor||'#000000'}">${esc(ind)}</text>`});out+='</g>';
   groups.forEach((g,gi)=>{const st=getGallerySeriesStyle(gi),pts=inds.map((ind,i)=>{const row=rows.find(r=>r.Group===g&&r.Indicator===ind),v=row?row.Value:rawMin;let z;if(s.normalize){const mn=perInd[ind].min,mx=perInd[ind].max;z=(v-mn)/(mx-mn||1)}else z=(v-rawMin)/(rawMax-rawMin||1);z=clamp(z,0,1);const a=-Math.PI/2+i*2*Math.PI/n;return[cx+R*z*Math.cos(a),cy+R*z*Math.sin(a)]});let body=`<polygon points="${pts.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;if(s.radarShowMarkers)pts.forEach(q=>body+=markerShapeSvg(st.markerShape,q[0],q[1],s.radarPointSize||st.pointSize,`fill="${st.markerFill==='series'?st.color:'white'}" stroke="${st.color}" stroke-width="1.2"`));out+=`<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`});out+=galleryLegend(groups);return out;
 }
 

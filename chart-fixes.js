@@ -48,9 +48,12 @@
     if (!Number.isFinite(Number(s.scatterStatsX))) s.scatterStatsX = 120;
     if (!Number.isFinite(Number(s.scatterStatsY))) s.scatterStatsY = 90;
     if (!['neutral', 'series'].includes(s.scatterStatsColorMode)) s.scatterStatsColorMode = 'neutral';
+    if (!Number.isFinite(Number(s.scatterStatsWeight))) s.scatterStatsWeight = Number(s.globalFontWeight) || 400;
     if (typeof s.scatterStatsFrame !== 'boolean') s.scatterStatsFrame = false;
     if (typeof s.scatterStatsColor !== 'string' || !s.scatterStatsColor.trim()) s.scatterStatsColor = '#263238';
     if (typeof s.legendColor !== 'string' || !s.legendColor.trim()) s.legendColor = '#263238';
+    // 图例符号沿用原有四档：自动 / 点线 / 线条 / 色块；旧版“仅组名”状态回退到点线。
+    if (!['auto', 'marker-line', 'line', 'swatch'].includes(s.legendSymbol)) s.legendSymbol = 'marker-line';
     if (!['r-r2', 'r-r2-p', 'r2-p', 'equation-r2', 'equation-r2-p'].includes(s.scatterStatsContent)) s.scatterStatsContent = 'r-r2';
     if (!Number.isFinite(Number(s.histFacetGap))) s.histFacetGap = 14;
     if (!['compact', 'standard', 'relaxed', 'manual'].includes(s.histXRangePreset)) s.histXRangePreset = 'standard';
@@ -538,18 +541,23 @@
       row.forEach(item => {
         const st = getGallerySeriesStyle(item.gi);
         const markerY = baseline - fontSize * 0.78;
-        // v1.9.77：图例符号跟随「图例符号」设置。直方图的自动值仍是色块，
-        // 但强制选「线条」时改成与折线一致的线段，不再永远画方块。
-        if (String(s.legendSymbol || 'auto') === 'line') {
-          const cy = markerY + marker / 2;
-          items += `<line x1="${x}" y1="${cy}" x2="${x + marker}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.4, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`;
+        // 直方图图例和全局图例共用四档符号；默认色块，也支持点线 / 线条。
+        const sym = String(s.legendSymbol || 'auto');
+        const cy = markerY + marker / 2;
+        if (sym === 'marker-line' || sym === 'line') {
+          const lineW = Math.max(1.4, num(st.lineWidth, s.lineWidth));
+          items += `<line x1="${x}" y1="${cy}" x2="${x + marker}" y2="${cy}" stroke="${st.color}" stroke-width="${lineW}" stroke-linecap="round"/>`;
+          if (sym === 'marker-line') {
+            const mColor = st.markerColor || st.color;
+            const fill = st.markerFill === 'white' ? '#ffffff' : mColor;
+            items += markerShapeSvg(st.markerShape, x + marker / 2, cy, Math.max(2.8, Math.min(6, num(st.pointSize, s.pointSize) || 4)), `fill="${fill}" stroke="${mColor}" stroke-width="1.1"`);
+          }
         } else {
-          // v1.9.78：色块宽高比可调，默认 1.6（不再是又扁又长的横条）。
           const ratio = clampLocal(num(s.legendSwatchRatio, 1.6), 0.6, 5);
           const swH = Math.min(marker / ratio, marker * 0.92), swW = swH * ratio;
           items += `<rect x="${x + (marker - swW) / 2}" y="${markerY + (marker - swH) / 2}" width="${swW}" height="${swH}" fill="${st.color}"/>`;
         }
-        items += `<text x="${x + marker + markerGap}" y="${baseline}" font-size="${fontSize}" font-weight="${num(s.legendWeight, 400)}" fill="${s.axisColor || '#20262b'}">${esc(item.g)}</text>`;
+        items += `<text x="${x + marker + markerGap}" y="${baseline}" font-size="${fontSize}" font-weight="${num(s.legendWeight, 400)}" fill="${s.legendColor || '#263238'}">${esc(item.g)}</text>`;
         x += item.w;
       });
     });
@@ -671,12 +679,9 @@
               // v1.9.94：点线符号——短线穿过数据点，常见于论文图例（左线右点样式）。
               ? `<line x1="${x}" y1="${cy}" x2="${x + markerBox}" y2="${cy}" stroke="${st.color}" stroke-width="${Math.max(1.3, num(st.lineWidth, s.lineWidth))}" stroke-linecap="round"/>`
                 + markerShapeSvg(st.markerShape, x + markerBox / 2, cy, radius * 0.85, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`)
-              : sym === 'none'
-                // v1.9.96：仅文字——不画任何符号，直接显示组名。
-                ? ''
-                : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
-        const textX = sym === 'none' ? x : x + markerBox + 7;
-        const textFill = sym === 'none' ? st.color : (s.legendColor || '#263238');
+              : markerShapeSvg(st.markerShape, x + radius, cy, radius, `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.1"`);
+        const textX = x + markerBox + 7;
+        const textFill = s.legendColor || '#263238';
         itemsSvg += `<g data-gobject="series" data-gseries="${i}" class="chart-object">${glyph}<text x="${textX}" y="${cy + font * 0.35}" font-size="${font}" font-weight="${num(s.legendWeight, 400)}" fill="${textFill}">${esc(groups[i])}</text></g>`;
         x += itemWidths[i] + gap;
       }
@@ -764,29 +769,40 @@
   }
   function scatterStatsSvg(rows, groups, models, p, xMap, yMap, s, overall = false) {
     if (!s.showCorrelation || !models.length) return '';
-    const font = Math.max(8, num(s.annotationSize, 12));
-    const lineH = Math.max(18, font * 1.55);
-    const markerR = Math.max(2.8, font * 0.25);
     const symbol = s.correlationMethod === 'spearman' ? 'ρ' : 'r';
-    const labels = models.map((m, i) => {
-      const name = overall ? 'Overall' : String(m.Group ?? groups[i] ?? `Group ${i + 1}`);
-      return `${name}: ${scatterStatsText(m, symbol, s.scatterStatsContent)}`;
+    // 按组拟合时，每条回归线对应一个独立统计对象。颜色、字号、字重和位置
+    // 都优先读取本组 seriesStyles，未设置时才使用全局默认值。
+    const entries = models.map((model, i) => {
+      const name = overall ? 'Overall' : String(model.Group ?? groups[i] ?? `Group ${i + 1}`);
+      const gi = overall ? -1 : Math.max(0, groups.indexOf(name));
+      const st = overall ? { color: '#333333', markerShape: 'circle', markerFill: 'white', opacity: 1 } : getGallerySeriesStyle(gi);
+      const font = clampLocal(num(st.statsSize ?? s.annotationSize, 12), 8, 28);
+      const weight = num(st.statsWeight ?? s.scatterStatsWeight ?? s.globalFontWeight, 400);
+      const lineH = Math.max(18, font * 1.55), boxH = lineH + 12;
+      const label = `${name}: ${scatterStatsText(model, symbol, s.scatterStatsContent)}`;
+      const boxW = Math.min(p.w * 0.58, Math.max(170, label.length * font * 0.58 + 42));
+      const color = st.statsColor || (s.scatterStatsColorMode === 'series' ? st.color : (s.scatterStatsColor || '#263238'));
+      return { model, name, gi, st, font, weight, lineH, boxH, boxW, label, color };
     });
-    const widest = Math.max(...labels.map(v => v.length), 12);
-    const boxW = Math.min(p.w * 0.58, Math.max(170, widest * font * 0.58 + 42));
-    const boxH = labels.length * lineH + 12;
-    const pos = scatterStatsPosition(rows, p, xMap, yMap, boxW, boxH, s);
-    let content = '';
-    labels.forEach((label, i) => {
-      const st = overall ? { color: '#333333', markerShape: 'circle', markerFill: 'white', opacity: 1 } : getGallerySeriesStyle(groups.indexOf(String(models[i].Group ?? groups[i])) >= 0 ? groups.indexOf(String(models[i].Group ?? groups[i])) : i);
-      const cy = 7 + i * lineH + lineH / 2;
-      const fill = st.markerFill === 'white' ? 'white' : st.color;
-      const marker = markerShapeSvg(st.markerShape || 'circle', 10, cy, markerR, `fill="${fill}" fill-opacity="${st.opacity ?? 1}" stroke="${st.color}" stroke-width="1"`);
-      const color = s.scatterStatsColorMode === 'series' ? st.color : (s.scatterStatsColor || '#263238');
-      content += `${marker}<text x="${20 + markerR}" y="${cy + font * 0.34}" font-size="${font}" font-weight="${num(s.globalFontWeight, 400)}" fill="${color}">${esc(label)}</text>`;
-    });
-    const frame = s.scatterStatsFrame ? `<rect x="0" y="0" width="${boxW}" height="${boxH}" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#c9d0d4" stroke-width="0.8"/>` : '';
-    return `<g data-gobject="regression" data-gdrag="regression" data-gdrag-x="${pos.x}" data-gdrag-y="${pos.y}" class="chart-object draggable" transform="translate(${pos.x} ${pos.y})">${frame}${content}</g>`;
+    const framed = !!s.scatterStatsFrame;
+    const totalH = entries.reduce((sum, e) => sum + (framed ? e.boxH : e.lineH), 0) + (framed ? 0 : 12);
+    const maxW = Math.max(...entries.map(e => e.boxW));
+    const base = scatterStatsPosition(rows, p, xMap, yMap, maxW, totalH, s);
+    let offset = 0;
+    return entries.map(e => {
+      const hasX = !overall && e.st.statsX !== null && e.st.statsX !== '' && Number.isFinite(Number(e.st.statsX));
+      const hasY = !overall && e.st.statsY !== null && e.st.statsY !== '' && Number.isFinite(Number(e.st.statsY));
+      const x = hasX ? Number(e.st.statsX) : base.x;
+      const y = hasY ? Number(e.st.statsY) : base.y + offset;
+      // 已经单独拖走的组不再占用自动堆叠高度，其余组保持紧凑排列。
+      if (!hasY) offset += framed ? e.boxH : e.lineH;
+      const cy = 7 + e.lineH / 2, markerR = Math.max(2.8, e.font * 0.25);
+      const fill = e.st.markerFill === 'white' ? 'white' : e.st.color;
+      const marker = markerShapeSvg(e.st.markerShape || 'circle', 10, cy, markerR, `fill="${fill}" fill-opacity="${e.st.opacity ?? 1}" stroke="${e.st.color}" stroke-width="1"`);
+      const frame = framed ? `<rect x="0" y="0" width="${e.boxW}" height="${e.boxH}" rx="3" fill="#ffffff" fill-opacity="0.9" stroke="#c9d0d4" stroke-width="0.8"/>` : '';
+      const seriesAttr = overall ? '' : ` data-gstats-series="${e.gi}"`;
+      return `<g data-gobject="${overall ? 'regression' : 'series-stats'}" data-gdrag="regression"${seriesAttr} data-gdrag-x="${x}" data-gdrag-y="${y}" class="chart-object draggable" transform="translate(${x} ${y})">${frame}${marker}<text x="${20 + markerR}" y="${cy + e.font * 0.34}" font-size="${e.font}" font-weight="${e.weight}" fill="${e.color}">${esc(e.label)}</text></g>`;
+    }).join('');
   }
   gallerySeriesPropertyHtml = function patchedGallerySeriesPropertyHtml(type, index = 0) {
     if (type !== 'kde') return originalGallerySeriesPropertyHtml(type, index);
@@ -924,8 +940,9 @@
           ['equation-r2', '回归方程 + R²'],
           ['equation-r2-p', '回归方程 + R² + p']
         ]),
-        gRange('annotationSize', '统计文字字号', 8, 28, 1),
-        gSelect('scatterStatsPosition', '位置', [
+        gRange('annotationSize', '默认统计字号', 8, 28, 1),
+        gSelect('scatterStatsWeight', '默认统计字重', [[300, '细体'], [400, '常规'], [500, '中等'], [600, '半粗'], [700, '粗体']]),
+        gSelect('scatterStatsPosition', '默认位置', [
           ['auto', '自动避让数据（推荐）'],
           ['top-left', '左上角'],
           ['top-right', '右上角'],
@@ -935,13 +952,13 @@
         ]),
         gNumber('scatterStatsX', '手动 X', 0, 1800, 1),
         gNumber('scatterStatsY', '手动 Y', 0, 1200, 1),
-        gSelect('scatterStatsColorMode', '文字颜色', [
+        gSelect('scatterStatsColorMode', '默认文字颜色', [
           ['neutral', '统一颜色（可自定义）'],
-          ['series', '跟随系列颜色']
+          ['series', '跟随各组系列颜色']
         ]),
-        ...(s.scatterStatsColorMode !== 'series' ? [gColor('scatterStatsColor', '统计文字颜色')] : []),
+        ...(s.scatterStatsColorMode !== 'series' ? [gColor('scatterStatsColor', '默认统计文字颜色')] : []),
         gCheck('scatterStatsFrame', '显示白底边框')
-      ]) + `<div class="method-badge"><b>当前方法：</b>${esc(correlationMethodLabel())}；${s.scatterFitMode === 'group' ? '每个 Group 独立进行普通最小二乘线性回归' : '全部样本合并进行普通最小二乘线性回归'}。统计标注可以直接在图中拖动。</div>` + galleryDragHint('统计标注');
+      ]) + `<div class="method-badge"><b>当前方法：</b>${esc(correlationMethodLabel())}；${s.scatterFitMode === 'group' ? '每个 Group 独立进行普通最小二乘线性回归。每组的 r / ρ、R²、p 备注可在“数据系列”中单独改色、改字号、改字重和位置' : '全部样本合并进行普通最小二乘线性回归'}。</div>` + galleryDragHint('当前组的统计备注');
     }
     return originalGallerySpecificPropertyHtml(type, id);
   };
@@ -1191,9 +1208,7 @@
       // setting can force a filled color block here too.
       const symMode = String(s.legendSymbol || 'auto');
       const lColor = s.legendColor || '#263238';
-      if (symMode === 'none') {
-        content += `<text x="${x}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="${st.color}">${esc(g)}</text>`;
-      } else if (symMode === 'swatch') {
+      if (symMode === 'swatch') {
         const swRatio = clampLocal(num(s.legendSwatchRatio, 1.6), 0.6, 5);
         let swW = Math.min(symbol, font * 2.2), swH = swW / swRatio;
         if (swH > font * 1.15) { swH = font * 1.15; swW = swH * swRatio; }
@@ -1201,6 +1216,10 @@
         content += `<text x="${x + symbol + 9}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="${lColor}">${esc(g)}</text>`;
       } else {
         content += `<line x1="${x}" y1="${cy}" x2="${x + symbol}" y2="${cy}" stroke="${st.color}" stroke-width="${lineW}" stroke-opacity="${clampLocal(num(s.kdeLineOpacity, 1), 0.2, 1)}" ${dash ? `stroke-dasharray="${dash}"` : ''} stroke-linecap="round"/>`;
+        if (symMode === 'marker-line') {
+          const mColor = st.markerColor || st.color, fill = st.markerFill === 'white' ? '#ffffff' : mColor;
+          content += markerShapeSvg(st.markerShape, x + symbol / 2, cy, Math.max(2.8, font * 0.28), `fill="${fill}" stroke="${mColor}" stroke-width="1.1"`);
+        }
         content += `<text x="${x + symbol + 9}" y="${y + font}" font-size="${font}" font-weight="${s.legendWeight}" fill="${lColor}">${esc(g)}</text>`;
       }
     });
@@ -1595,9 +1614,16 @@
   galleryApplyDrag = function patchedGalleryApplyDrag(key, x, y, el) {
     if (key === 'regression' && el?.dataset?.gdrag === 'regression') {
       const s = ensureFixSettings();
-      s.scatterStatsPosition = 'manual';
-      s.scatterStatsX = x;
-      s.scatterStatsY = y;
+      if (el.dataset.gstatsSeries != null) {
+        // 只写当前数据系列的位置，绝不带动其他组。
+        const st = getGallerySeriesStyle(Number(el.dataset.gstatsSeries) || 0);
+        st.statsX = x;
+        st.statsY = y;
+      } else {
+        s.scatterStatsPosition = 'manual';
+        s.scatterStatsX = x;
+        s.scatterStatsY = y;
+      }
       el.dataset.gdragX = x;
       el.dataset.gdragY = y;
       el.setAttribute('transform', `translate(${x} ${y})`);
@@ -1778,6 +1804,20 @@
     s.heatmapColorBarStep=Number.isFinite(Number(s.heatmapColorBarStep))?Math.max(.05,Number(s.heatmapColorBarStep)):0.2;
     s.heatmapStarNote=s.heatmapStarNote!==false;
     s.heatmapStarNoteSize=Number.isFinite(Number(s.heatmapStarNoteSize))?Number(s.heatmapStarNoteSize):Math.max(8,Number(s.heatmapValueSize)-1);
+    if(!['auto','custom'].includes(s.heatmapValueColorMode))s.heatmapValueColorMode='auto';
+    s.heatmapValueColor=s.heatmapValueColor||'#222222';
+    s.heatmapValueWeight=Number.isFinite(Number(s.heatmapValueWeight))?Number(s.heatmapValueWeight):400;
+    if(!['auto','custom'].includes(s.heatmapStarColorMode))s.heatmapStarColorMode='auto';
+    s.heatmapStarColor=s.heatmapStarColor||'#333333';
+    if(s.heatmapStarWeight==null)s.heatmapStarWeight='auto';
+    s.heatmapStarNoteColor=s.heatmapStarNoteColor||'#666666';
+    s.heatmapStarNoteWeight=Number.isFinite(Number(s.heatmapStarNoteWeight))?Number(s.heatmapStarNoteWeight):400;
+    s.heatmapColorBarTextColor=s.heatmapColorBarTextColor||'#000000';
+    s.heatmapColorBarTextWeight=Number.isFinite(Number(s.heatmapColorBarTextWeight))?Number(s.heatmapColorBarTextWeight):400;
+    s.heatmapGroupLabelSize=Number.isFinite(Number(s.heatmapGroupLabelSize))?Number(s.heatmapGroupLabelSize):10;
+    s.heatmapGroupLabelWeight=Number.isFinite(Number(s.heatmapGroupLabelWeight))?Number(s.heatmapGroupLabelWeight):600;
+    if(!['series','custom'].includes(s.heatmapGroupLabelColorMode))s.heatmapGroupLabelColorMode='series';
+    s.heatmapGroupLabelColor=s.heatmapGroupLabelColor||'#333333';
     s.heatmapScaleMode=['auto','p15','p20','p25','p30','manual'].includes(s.heatmapScaleMode)?s.heatmapScaleMode:'auto';
     s.heatmapScaleMin=Number.isFinite(Number(s.heatmapScaleMin))?Number(s.heatmapScaleMin):-2;
     s.heatmapScaleCenter=Number.isFinite(Number(s.heatmapScaleCenter))?Number(s.heatmapScaleCenter):0;
@@ -1858,6 +1898,9 @@
             gCheck('heatmapShowStars','显示显著性星号（* ≤0.05 ** ≤0.01 *** ≤0.001）'),
             gSelect('heatmapStarPosition','星号位置',[['below','圆形下方（论文常用）'],['center','圆内居中'],['inside','数值旁']]),
             gRange('heatmapStarSize','星号大小',6,20,.5),
+            gSelect('heatmapStarWeight','星号字重',[['auto','自动（下方 600 / 其他 400）'],[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+            gSelect('heatmapStarColorMode','星号颜色',[['auto','自动（跟随图形或深灰）'],['custom','统一自定义']]),
+            ...(s.heatmapStarColorMode==='custom'?[gColor('heatmapStarColor','自定义星号颜色')]:[]),
             gCheck('heatmapLowerCircleNumber','下三角圆形内显示数字'),
             gCheck('heatmapUpperNumberStar','上三角数字旁显示星号')
           ])
@@ -1891,6 +1934,11 @@
       const cellControls=gallerySection('矩阵与标签',[
         gSelect('heatmapValueMode','格内数值',[['auto','自动：小矩阵显示'],['always','始终显示'],['never','隐藏']]),
         gRange('heatmapValueSize','格内数字字号',6,24,1),
+        gSelect('heatmapValueWeight','格内数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+        gSelect('heatmapValueColorMode','格内数字颜色',[['auto','自动对比 / 跟随色阶'],['custom','统一自定义']]),
+        ...(s.heatmapValueColorMode==='custom'?[gColor('heatmapValueColor','自定义数字颜色')]:[]),
+        ...(s.heatmapMode==='correlation'?[gRange('heatmapStarNoteSize','星号说明字号',6,20,1),gSelect('heatmapStarNoteWeight','星号说明字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('heatmapStarNoteColor','星号说明颜色')]:[]),
+        ...(s.heatmapMode==='clustered'&&s.heatmapShowGroupNames?[gRange('heatmapGroupLabelSize','注释条组名字号上限',6,20,1),gSelect('heatmapGroupLabelWeight','注释条组名字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('heatmapGroupLabelColorMode','注释条组名颜色',[['series','跟随分组颜色'],['custom','统一自定义']]),...(s.heatmapGroupLabelColorMode==='custom'?[gColor('heatmapGroupLabelColor','自定义组名颜色')]:[])]:[]),
         gCheck('heatmapAutoColLabelFit','列标签自动缩小'),
         gRange('heatmapXLabelSize','列标签字号',6,26,.5),
         gSelect('heatmapColumnLabelAngle','列标签角度',[[0,'0°'],[30,'30°'],[45,'45°（推荐）'],[60,'60°'],[90,'90°']]),
@@ -1916,6 +1964,8 @@
         gCheck('heatmapColorBar','显示色带'),
         gNumber('legendX','水平位置',0,1800,1),gNumber('legendY','垂直位置',0,1200,1),
         gRange('legendFontSize','数字字号',7,30,1),
+        gSelect('heatmapColorBarTextWeight','数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+        gColor('heatmapColorBarTextColor','数字颜色'),
         gOrientationButtons('heatmapColorBarOrientation','排列方向'),
         gRange('heatmapColorBarLength','色带长度',70,600,5),
         gRange('heatmapColorBarThickness','色带厚度',7,30,1),
@@ -2111,10 +2161,10 @@
     const s=ensureHeatmapSciSettings();if(!s.heatmapColorBar)return'';const m=model||heatmapModel(),x=s.legendX??W-58,y=s.legendY??54,horizontal=s.heatmapColorBarOrientation!=='vertical',steps=120,len=s.heatmapColorBarLength,th=s.heatmapColorBarThickness,fs=Math.max(8,Number(s.legendFontSize)-1),step=Math.max(.05,Number(s.heatmapColorBarStep)||.2);let out=`<g data-gobject="legend" data-gdrag="legend" class="chart-object draggable" transform="translate(${x} ${y})">`;
     if(horizontal){
       for(let i=0;i<steps;i++){const t=i/(steps-1),v=m.min+(m.max-m.min)*t;out+=`<rect x="${i*len/steps}" y="0" width="${len/steps+.5}" height="${th}" fill="${heatColorScaled(v,m.min,m.center,m.max)}"/>`}
-      let ticks='';for(let v=m.min;v<=m.max+1e-9;v+=step){const t=clamp((v-m.min)/(m.max-m.min||1),0,1),lb=(+v.toFixed(3)).toString();ticks+=`<text x="${t*len}" y="${th+fs+3}" text-anchor="${t<.02?'start':t>.98?'end':'middle'}" font-size="${fs}">${lb}</text>`}out+=`<rect width="${len}" height="${th}" fill="none" stroke="#50585c" stroke-width=".65"/>${ticks}`;
+      let ticks='';for(let v=m.min;v<=m.max+1e-9;v+=step){const t=clamp((v-m.min)/(m.max-m.min||1),0,1),lb=(+v.toFixed(3)).toString();ticks+=`<text x="${t*len}" y="${th+fs+3}" text-anchor="${t<.02?'start':t>.98?'end':'middle'}" font-size="${fs}" font-weight="${s.heatmapColorBarTextWeight}" fill="${s.heatmapColorBarTextColor}">${lb}</text>`}out+=`<rect width="${len}" height="${th}" fill="none" stroke="#50585c" stroke-width=".65"/>${ticks}`;
     }else{
       for(let i=0;i<steps;i++){const t=i/(steps-1),v=m.max-(m.max-m.min)*t;out+=`<rect x="0" y="${i*len/steps}" width="${th}" height="${len/steps+.5}" fill="${heatColorScaled(v,m.min,m.center,m.max)}"/>`}
-      let ticks='';for(let v=m.min;v<=m.max+1e-9;v+=step){const t=clamp((v-m.min)/(m.max-m.min||1),0,1),lb=(+v.toFixed(3)).toString();ticks+=`<text x="${th+7}" y="${(1-t)*len+fs*.35}" font-size="${fs}">${lb}</text>`}out+=`<rect width="${th}" height="${len}" fill="none" stroke="#50585c" stroke-width=".65"/>${ticks}`;
+      let ticks='';for(let v=m.min;v<=m.max+1e-9;v+=step){const t=clamp((v-m.min)/(m.max-m.min||1),0,1),lb=(+v.toFixed(3)).toString();ticks+=`<text x="${th+7}" y="${(1-t)*len+fs*.35}" font-size="${fs}" font-weight="${s.heatmapColorBarTextWeight}" fill="${s.heatmapColorBarTextColor}">${lb}</text>`}out+=`<rect width="${th}" height="${len}" fill="none" stroke="#50585c" stroke-width=".65"/>${ticks}`;
     }
     return out+'</g>';
   };
@@ -2144,14 +2194,14 @@
       const unique=[...new Set(m.colGroups)],gmap=new Map(unique.map((g,i)=>[g,GROUP_COLORS[i%GROUP_COLORS.length]]));
       const barY=y0-annotationH-1;
       m.colGroups.forEach((g,j)=>{body+=`<rect x="${x0+j*cellW}" y="${barY}" width="${cellW+.15}" height="${annotationH}" fill="${gmap.get(g)}"/>`});
-      if(s.heatmapShowGroupNames&&!showColDen){groupRuns(m.colGroups).forEach(run=>{const center=x0+(run.start+run.end+1)*cellW/2,w=(run.end-run.start+1)*cellW,fs=Math.min(10,Math.max(6.5,w/(String(run.group).length*.62+1)));body+=`<text x="${center}" y="${barY-4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="${gmap.get(run.group)}">${esc(run.group)}</text>`})}
+      if(s.heatmapShowGroupNames&&!showColDen){groupRuns(m.colGroups).forEach(run=>{const center=x0+(run.start+run.end+1)*cellW/2,w=(run.end-run.start+1)*cellW,fs=Math.min(Number(s.heatmapGroupLabelSize),Math.max(6.5,w/(String(run.group).length*.62+1))),fill=s.heatmapGroupLabelColorMode==='custom'?s.heatmapGroupLabelColor:gmap.get(run.group);body+=`<text x="${center}" y="${barY-4}" text-anchor="middle" font-size="${fs}" font-weight="${s.heatmapGroupLabelWeight}" fill="${fill}">${esc(run.group)}</text>`})}
     }
     if(showColDen){const treeBase=y0-annotationH-5;body+=`<g data-gobject="heatmap-scale" class="chart-object">${dendrogramSvg(m.colTree,cols,xCenters,treeBase,Math.max(10,colDen),'top',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`}
     if(showRowDen)body+=`<g data-gobject="heatmap-scale" class="chart-object">${dendrogramSvg(m.rowTree,rows,yCenters,x0-6,Math.max(20,rowDen-8),'left',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
     rows.forEach((v,i)=>{
       const y=yCenters[i]+yLabelSize*.34,labelX=s.heatmapRowLabelSide==='right'?x0+heatW+8:x0-8,anchor=s.heatmapRowLabelSide==='right'?'start':'end';
       body+=`<text x="${labelX}" y="${y}" text-anchor="${anchor}" font-size="${yLabelSize}" font-weight="${s.yTickWeight}" fill="${s.yTickColor}">${esc(v)}</text>`;
-      cols.forEach((w,j)=>{const value=m.matrix[i]?.[j],x=x0+j*cellW,yc=y0+i*cellH,gap=Math.min(Number(s.heatmapCellGap)||0,Math.min(cellW,cellH)*.16),color=heatColorScaled(value,m.min,m.center,m.max);body+=`<rect x="${x+gap/2}" y="${yc+gap/2}" width="${Math.max(0,cellW-gap)}" height="${Math.max(0,cellH-gap)}" fill="${color}" stroke="${s.heatmapGridStroke}" stroke-width="${s.heatmapGridStrokeWidth}" shape-rendering="crispEdges"/>`;const showValue=s.heatmapValueMode==='always'||(s.heatmapValueMode==='auto'&&rows.length<=12&&cols.length<=12);if(showValue){const rgb=hexRgb(color),lum=.299*rgb[0]+.587*rgb[1]+.114*rgb[2];body+=`<text x="${x+cellW/2}" y="${yc+cellH/2+Number(s.heatmapValueSize)*.34}" text-anchor="middle" font-size="${s.heatmapValueSize}" fill="${lum<145?'white':'#222'}">${formatNumber(value,2)}</text>`}}
+      cols.forEach((w,j)=>{const value=m.matrix[i]?.[j],x=x0+j*cellW,yc=y0+i*cellH,gap=Math.min(Number(s.heatmapCellGap)||0,Math.min(cellW,cellH)*.16),color=heatColorScaled(value,m.min,m.center,m.max);body+=`<rect x="${x+gap/2}" y="${yc+gap/2}" width="${Math.max(0,cellW-gap)}" height="${Math.max(0,cellH-gap)}" fill="${color}" stroke="${s.heatmapGridStroke}" stroke-width="${s.heatmapGridStrokeWidth}" shape-rendering="crispEdges"/>`;const showValue=s.heatmapValueMode==='always'||(s.heatmapValueMode==='auto'&&rows.length<=12&&cols.length<=12);if(showValue){const rgb=hexRgb(color),lum=.299*rgb[0]+.587*rgb[1]+.114*rgb[2],fill=s.heatmapValueColorMode==='custom'?s.heatmapValueColor:(lum<145?'white':'#222');body+=`<text x="${x+cellW/2}" y="${yc+cellH/2+Number(s.heatmapValueSize)*.34}" text-anchor="middle" font-size="${s.heatmapValueSize}" font-weight="${s.heatmapValueWeight}" fill="${fill}">${formatNumber(value,2)}</text>`}}
       );
     });
     // Publication layout: sample labels sit below the matrix, not on top of
@@ -2187,13 +2237,14 @@
         const showNum=showValue&&!((lowerCircleCell&&!s.heatmapLowerCircleNumber)||(style==='mixed'&&j<i));
         const starFs=Number(s.heatmapStarSize)||Number(s.heatmapValueSize);
         const starBelow=s.heatmapStarPosition==='below'&&starText;
-        if(showNum){const rgb=hexRgb(color),lum=.299*rgb[0]+.587*rgb[1]+.114*rgb[2],numFs=Number(s.heatmapValueSize),nt=formatNumber(value,2),nx=x+cellW/2,ny=yc+cellH/2+numFs*.34,nfill=showShape&&style!=='number'?(lum<145?'white':'#222'):color;if(starText&&!starBelow){const numW=nt.length*numFs*.62,starX=nx+numW/2+numFs*.4;body+=`<text x="${nx}" y="${ny}" text-anchor="middle" font-size="${numFs}" fill="${nfill}">${nt}</text><text x="${starX}" y="${ny-numFs*.34+starFs*.46}" text-anchor="middle" font-size="${starFs}" fill="${style==='number'?color:'#333'}">${starText}</text>`}else{body+=`<text x="${nx}" y="${ny}" text-anchor="middle" font-size="${numFs}" fill="${nfill}">${nt}</text>`}}
-        else if(starText&&s.heatmapStarPosition!=='below')body+=`<text x="${x+cellW/2}" y="${yc+cellH/2+starFs*.46}" text-anchor="middle" font-size="${starFs}" fill="${style==='number'?color:'#222'}">${starText}</text>`
-        if(starBelow)body+=`<text x="${x+cellW/2}" y="${yc+cellH/2+starFs*1.6}" text-anchor="middle" font-size="${starFs}" font-weight="600" fill="#333">${starText}</text>`;
+        const starWeight=s.heatmapStarWeight==='auto'?(starBelow?600:400):s.heatmapStarWeight;
+        if(showNum){const rgb=hexRgb(color),lum=.299*rgb[0]+.587*rgb[1]+.114*rgb[2],numFs=Number(s.heatmapValueSize),nt=formatNumber(value,2),nx=x+cellW/2,ny=yc+cellH/2+numFs*.34,nfill=s.heatmapValueColorMode==='custom'?s.heatmapValueColor:(showShape&&style!=='number'?(lum<145?'white':'#222'):color);if(starText&&!starBelow){const numW=nt.length*numFs*.62,starX=nx+numW/2+numFs*.4,starFill=s.heatmapStarColorMode==='custom'?s.heatmapStarColor:(style==='number'?color:'#333');body+=`<text x="${nx}" y="${ny}" text-anchor="middle" font-size="${numFs}" font-weight="${s.heatmapValueWeight}" fill="${nfill}">${nt}</text><text x="${starX}" y="${ny-numFs*.34+starFs*.46}" text-anchor="middle" font-size="${starFs}" font-weight="${starWeight}" fill="${starFill}">${starText}</text>`}else{body+=`<text x="${nx}" y="${ny}" text-anchor="middle" font-size="${numFs}" font-weight="${s.heatmapValueWeight}" fill="${nfill}">${nt}</text>`}}
+        else if(starText&&s.heatmapStarPosition!=='below'){const starFill=s.heatmapStarColorMode==='custom'?s.heatmapStarColor:(style==='number'?color:'#222');body+=`<text x="${x+cellW/2}" y="${yc+cellH/2+starFs*.46}" text-anchor="middle" font-size="${starFs}" font-weight="${starWeight}" fill="${starFill}">${starText}</text>`}
+        if(starBelow)body+=`<text x="${x+cellW/2}" y="${yc+cellH/2+starFs*1.6}" text-anchor="middle" font-size="${starFs}" font-weight="${starWeight}" fill="${s.heatmapStarColorMode==='custom'?s.heatmapStarColor:'#333'}">${starText}</text>`;
       }
       );
     });
-    if(s.heatmapShowStars&&s.heatmapStarNote!==false){const noteFs=Number(s.heatmapStarNoteSize)||Math.max(8,Number(s.heatmapValueSize)-1),noteY=colLabelsBottom?y0+side+18+Number(s.heatmapXLabelSize)*1.35+noteFs:y0+side+14;body+=`<text x="${x0}" y="${noteY}" font-size="${noteFs}" fill="#666">* p≤0.05, ** p≤0.01, *** p≤0.001</text>`}
+    if(s.heatmapShowStars&&s.heatmapStarNote!==false){const noteFs=Number(s.heatmapStarNoteSize)||Math.max(8,Number(s.heatmapValueSize)-1),noteY=colLabelsBottom?y0+side+18+Number(s.heatmapXLabelSize)*1.35+noteFs:y0+side+14;body+=`<text x="${x0}" y="${noteY}" font-size="${noteFs}" font-weight="${s.heatmapStarNoteWeight}" fill="${s.heatmapStarNoteColor}">* p≤0.05, ** p≤0.01, *** p≤0.001</text>`}
     return `<g data-gobject="heatmap-scale" class="chart-object">${body}</g>${heatmapColorBar(W,H,m)}`;
   }
   galleryHeatmap=function patchedPublicationHeatmap(W,H){
