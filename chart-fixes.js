@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /*
  * FoodLab Studio v0.10.9 — histogram + scatter + KDE + SCI heatmap redesign
  *
@@ -907,7 +907,7 @@
         + extra.join('')
         + '<div class="method-badge"><b>怎么选：</b>组数少（2–4 组）用“多条曲线叠在一起”，并且不填充最清楚；想看每组原始分布用“直方图 + 曲线”；组数多（5 组以上）用“山脊图”，避免多条填充曲线互相遮挡。论文写法：Kernel density estimation；带宽自动时写 bandwidth selected by Silverman\'s rule，手动时写 bandwidth = 数值。</div>';
     }
-    if (id === 'regression' && ['scatter', 'bubble'].includes(type)) {
+    if (id === 'regression' && type === 'scatter') {
       return gallerySection('关系分析方法', [
         gSelect('correlationMethod', '相关方法', [
           ['pearson', 'Pearson 线性相关'],
@@ -1454,6 +1454,12 @@
   function galleryXyScatterCore(W, H, mode) {
     const bubble = mode === 'bubble';
     const s = ensureFixSettings();
+    // 气泡散点图天生没有拟合线和相关系数，强制关闭
+    if (bubble) {
+      s.showRegression = false;
+      s.showCorrelation = false;
+      s.scatterFitBand = false;
+    }
     const p = galleryPlotBox(W, H);
     const rows = state.gallery.rows.filter(r => Number.isFinite(r.X) && Number.isFinite(r.Y));
     if (!rows.length) return '';
@@ -1885,75 +1891,90 @@
     const opts=[['__all__','全部样本']];groups.forEach(g=>opts.push([g,g]));return opts;
   }
   gallerySpecificPropertyHtml=function patchedHeatmapPropertyHtml(type,id){
-    if(type==='heatmap'&&id==='heatmap-scale'){
+    if(type==='heatmap'){
       const s=ensureHeatmapSciSettings();
-      // v0.24.5: 显示模式下拉已删除——热图类型在数据导入处选择
-      const statControls=s.heatmapMode==='correlation'
-        ? gallerySection('相关矩阵',[
-            gSelect('correlationMethod','相关方法',[['pearson','Pearson'],['spearman','Spearman']]),
-            gSelect('heatmapCorrelationGroup','样本范围',heatmapCorrelationGroupOptions()),
-            gSelect('heatmapTriangle','矩阵显示',[['full','完整矩阵'],['lower','仅下三角'],['upper','仅上三角']])
-          ])+gallerySection('图形样式（Corrplot）',[
-            gSelect('heatmapCellStyle','格子画法',s.heatmapMode==='correlation'?[['circle','圆形（论文常用）'],['lowerCircle','下三角圆形 + 上三角数字'],['mixed','上三角圆形 + 下三角数字'],['number','纯数字']]:[['square','方形色块'],['circle','圆形'],['mixed','上三角圆形 + 下三角数字'],['number','纯数字']]),
-            gCheck('heatmapShowStars','显示显著性星号（* ≤0.05 ** ≤0.01 *** ≤0.001）'),
-            gSelect('heatmapStarPosition','星号位置',[['below','圆形下方（论文常用）'],['center','圆内居中'],['inside','数值旁']]),
-            gRange('heatmapStarSize','星号大小',6,20,.5),
-            gSelect('heatmapStarWeight','星号字重',[['auto','自动（下方 600 / 其他 400）'],[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
-            gSelect('heatmapStarColorMode','星号颜色',[['auto','自动（跟随图形或深灰）'],['custom','统一自定义']]),
-            ...(s.heatmapStarColorMode==='custom'?[gColor('heatmapStarColor','自定义星号颜色')]:[]),
-            gCheck('heatmapLowerCircleNumber','下三角圆形内显示数字'),
-            gCheck('heatmapUpperNumberStar','上三角数字旁显示星号')
-          ])
-        : gallerySection('数据标准化',[
-            gSelect('heatmapStandardize','标准化',[['rowZ','Row Z-score（推荐）'],['none','不标准化'],['columnZ','Column Z-score'],['rowMinMax','Row 0–1']])
-          ]);
-      // v0.24.2: 相关性热图（Corrplot）面板精简——只保留聚类排序；聚类热图保留完整层次聚类。
-      const clusterControls=s.heatmapMode==='correlation'
-        ? gallerySection('聚类排序',[
-            gSelect('heatmapCluster','排序方式',[['none','不聚类（按输入顺序）'],['rows','仅行聚类'],['cols','仅列聚类'],['both','行 + 列聚类']])
-          ])
-        : gallerySection('层次聚类',[
-            gSelect('heatmapCluster','聚类对象',[['none','不聚类'],['rows','仅行 / Feature 聚类（推荐）'],['cols','仅列 / Sample 聚类'],['both','行 + 列聚类']]),
-            gSelect('heatmapDistance','距离',[['euclidean','Euclidean（聚类热图推荐）'],['correlation','Correlation distance'],['manhattan','Manhattan']]),
-            gSelect('heatmapLinkage','Linkage',[['ward','Ward（推荐；使用 Euclidean）'],['average','Average'],['complete','Complete'],['single','Single']]),
-            gCheck('heatmapShowDendrogram','显示聚类树'),
-            gRange('heatmapRowDendrogramSize','行聚类树宽度',45,180,2),
-            gRange('heatmapColDendrogramSize','列聚类树高度',20,100,2),
-            gRange('heatmapDendrogramLineWidth','树线粗细',.35,2,.05),
-            gColor('heatmapDendrogramColor','树线颜色')
-          ]);
-      const paletteControls=gallerySection('SCI 色阶',[
-        gSelect('heatmapPalette','色阶方案',Object.entries(SCI_HEATMAP_PALETTES).map(([k,v])=>[k,v.name])),
-        heatmapPalettePreview(),
-        gHeatColor('heatmapLowColor','低值颜色'),gHeatColor('heatmapMidColor','中间颜色'),gHeatColor('heatmapHighColor','高值颜色')
-      ]);
-      const scaleControls=s.heatmapMode==='clustered'?gallerySection('色阶范围',[
-        gSelect('heatmapScaleMode','色彩饱和范围',[['auto','自动'],['p15','±1.5（高对比）'],['p20','±2.0（常用）'],['p25','±2.5（更柔和）'],['p30','±3.0（低饱和）'],['manual','手动']]),
-        gNumber('heatmapScaleMin','最小值',-20,20,.1),gNumber('heatmapScaleCenter','中心值',-20,20,.1),gNumber('heatmapScaleMax','最大值',-20,20,.1)
-      ]):'';
-      const cellControls=gallerySection('矩阵与标签',[
-        gSelect('heatmapValueMode','格内数值',[['auto','自动：小矩阵显示'],['always','始终显示'],['never','隐藏']]),
-        gRange('heatmapValueSize','格内数字字号',6,24,1),
-        gSelect('heatmapValueWeight','格内数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
-        gSelect('heatmapValueColorMode','格内数字颜色',[['auto','自动对比 / 跟随色阶'],['custom','统一自定义']]),
-        ...(s.heatmapValueColorMode==='custom'?[gColor('heatmapValueColor','自定义数字颜色')]:[]),
-        ...(s.heatmapMode==='correlation'?[gRange('heatmapStarNoteSize','星号说明字号',6,20,1),gSelect('heatmapStarNoteWeight','星号说明字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('heatmapStarNoteColor','星号说明颜色')]:[]),
-        ...(s.heatmapMode==='clustered'&&s.heatmapShowGroupNames?[gRange('heatmapGroupLabelSize','注释条组名字号上限',6,20,1),gSelect('heatmapGroupLabelWeight','注释条组名字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('heatmapGroupLabelColorMode','注释条组名颜色',[['series','跟随分组颜色'],['custom','统一自定义']]),...(s.heatmapGroupLabelColorMode==='custom'?[gColor('heatmapGroupLabelColor','自定义组名颜色')]:[])]:[]),
-        gCheck('heatmapAutoColLabelFit','列标签自动缩小'),
-        gRange('heatmapXLabelSize','列标签字号',6,26,.5),
-        gSelect('heatmapColumnLabelAngle','列标签角度',[[0,'0°'],[30,'30°'],[45,'45°（推荐）'],[60,'60°'],[90,'90°']]),
-        gCheck('heatmapAutoRowLabelFit','行标签自动缩小'),
-        gSelect('heatmapColumnLabelSide','列标签位置',[['bottom','底部（论文常用）'],['top','顶部']]),
-        gRange('heatmapYLabelSize','行标签字号',5,22,.5),
-        gCheck('heatmapShowGrid','显示单元格网格'),
-        gSelect('heatmapRowLabelSide','行标签位置',[['right','右侧（组学常用）'],['left','左侧']]),
-        (s.heatmapMode==='clustered'?gCheck('heatmapShowGroupAnnotation','显示样本分组注释条'):''),
-        (s.heatmapMode==='clustered'?gCheck('heatmapShowGroupNames','在注释条上显示组名'):''),
-        gRange('heatmapCellGap','格子间距',0,2,.1),
-        gColor('heatmapGridStroke','格子边线颜色'),gRange('heatmapGridStrokeWidth','格子边线粗细',0,1.5,.05)
-      ]);
-      const note=`<div class="method-badge"><b>推荐：</b>${s.heatmapMode==='clustered'?'Feature × Sample 数据默认使用 Row Z-score、仅 Feature 聚类、Euclidean + Ward，并保留原始样本顺序；这更接近常见代谢组/挥发性化合物论文热图。':'相关系数固定以 0 为中点；对称矩阵如需聚类，行列使用同一叶序。'} 树状图由真实聚类 merge 结果生成并与单元格中心对齐；行树和列树尺寸独立控制。大矩阵建议使用细灰黑树线、隐藏注释条组名，并按需要调节色彩饱和范围。</div>`;
-      return statControls+clusterControls+paletteControls+scaleControls+cellControls+note;
+      // v1.9.106：热图属性面板按图层 id 拆成 5 个独立面板
+      if(id==='heatmap-algorithm'){
+        const statControls=s.heatmapMode==='correlation'
+          ? gallerySection('相关矩阵',[
+              gSelect('correlationMethod','相关方法',[['pearson','Pearson'],['spearman','Spearman']]),
+              gSelect('heatmapCorrelationGroup','样本范围',heatmapCorrelationGroupOptions()),
+              gSelect('heatmapTriangle','矩阵显示',[['full','完整矩阵'],['lower','仅下三角'],['upper','仅上三角']])
+            ])+gallerySection('图形样式（Corrplot）',[
+              gSelect('heatmapCellStyle','格子画法',s.heatmapMode==='correlation'?[['circle','圆形（论文常用）'],['lowerCircle','下三角圆形 + 上三角数字'],['mixed','上三角圆形 + 下三角数字'],['number','纯数字']]:[['square','方形色块'],['circle','圆形'],['mixed','上三角圆形 + 下三角数字'],['number','纯数字']]),
+              gCheck('heatmapShowStars','显示显著性星号（* ≤0.05 ** ≤0.01 *** ≤0.001）'),
+              gSelect('heatmapStarPosition','星号位置',[['below','圆形下方（论文常用）'],['center','圆内居中'],['inside','数值旁']]),
+              gRange('heatmapStarSize','星号大小',6,20,.5),
+              gSelect('heatmapStarWeight','星号字重',[['auto','自动（下方 600 / 其他 400）'],[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+              gSelect('heatmapStarColorMode','星号颜色',[['auto','自动（跟随图形或深灰）'],['custom','统一自定义']]),
+              ...(s.heatmapStarColorMode==='custom'?[gColor('heatmapStarColor','自定义星号颜色')]:[]),
+              gCheck('heatmapLowerCircleNumber','下三角圆形内显示数字'),
+              gCheck('heatmapUpperNumberStar','上三角数字旁显示星号')
+            ])
+          : gallerySection('数据标准化',[
+              gSelect('heatmapStandardize','标准化',[['rowZ','Row Z-score（推荐）'],['none','不标准化'],['columnZ','Column Z-score'],['rowMinMax','Row 0–1']])
+            ]);
+        const clusterControls=s.heatmapMode==='correlation'
+          ? gallerySection('聚类排序',[
+              gSelect('heatmapCluster','排序方式',[['none','不聚类（按输入顺序）'],['rows','仅行聚类'],['cols','仅列聚类'],['both','行 + 列聚类']])
+            ])
+          : gallerySection('层次聚类',[
+              gSelect('heatmapCluster','聚类对象',[['none','不聚类'],['rows','仅行 / Feature 聚类（推荐）'],['cols','仅列 / Sample 聚类'],['both','行 + 列聚类']]),
+              gSelect('heatmapDistance','距离',[['euclidean','Euclidean（聚类热图推荐）'],['correlation','Correlation distance'],['manhattan','Manhattan']]),
+              gSelect('heatmapLinkage','Linkage',[['ward','Ward（推荐；使用 Euclidean）'],['average','Average'],['complete','Complete'],['single','Single']]),
+              gCheck('heatmapShowDendrogram','显示聚类树'),
+              gRange('heatmapRowDendrogramSize','行聚类树宽度',45,180,2),
+              gRange('heatmapColDendrogramSize','列聚类树高度',20,100,2),
+              gRange('heatmapDendrogramLineWidth','树线粗细',.35,2,.05),
+              gColor('heatmapDendrogramColor','树线颜色')
+            ]);
+        const note=`<div class="method-badge"><b>推荐：</b>${s.heatmapMode==='clustered'?'Feature × Sample 数据默认使用 Row Z-score、仅 Feature 聚类、Euclidean + Ward，并保留原始样本顺序；这更接近常见代谢组/挥发性化合物论文热图。':'相关系数固定以 0 为中点；对称矩阵如需聚类，行列使用同一叶序。'} 树状图由真实聚类 merge 结果生成并与单元格中心对齐；行树和列树尺寸独立控制。大矩阵建议使用细灰黑树线、隐藏注释条组名，并按需要调节色彩饱和范围。</div>`;
+        return statControls+clusterControls+note;
+      }
+      if(id==='heatmap-colors'){
+        const paletteControls=gallerySection('SCI 色阶',[
+          gSelect('heatmapPalette','色阶方案',Object.entries(SCI_HEATMAP_PALETTES).map(([k,v])=>[k,v.name])),
+          heatmapPalettePreview(),
+          gHeatColor('heatmapLowColor','低值颜色'),gHeatColor('heatmapMidColor','中间颜色'),gHeatColor('heatmapHighColor','高值颜色')
+        ]);
+        const scaleControls=s.heatmapMode==='clustered'?gallerySection('色阶范围',[
+          gSelect('heatmapScaleMode','色彩饱和范围',[['auto','自动'],['p15','±1.5（高对比）'],['p20','±2.0（常用）'],['p25','±2.5（更柔和）'],['p30','±3.0（低饱和）'],['manual','手动']]),
+          gNumber('heatmapScaleMin','最小值',-20,20,.1),gNumber('heatmapScaleCenter','中心值',-20,20,.1),gNumber('heatmapScaleMax','最大值',-20,20,.1)
+        ]):'';
+        return paletteControls+scaleControls;
+      }
+      if(id==='heatmap-cells'){
+        return gallerySection('格内数值',[
+          gSelect('heatmapValueMode','显示方式',[['auto','自动：小矩阵显示'],['always','始终显示'],['never','隐藏']]),
+          gRange('heatmapValueSize','格内数字字号',6,24,1),
+          gSelect('heatmapValueWeight','格内数字字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+          gSelect('heatmapValueColorMode','数字颜色',[['auto','自动对比 / 跟随色阶'],['custom','统一自定义']]),
+          ...(s.heatmapValueColorMode==='custom'?[gColor('heatmapValueColor','自定义数字颜色')]:[])
+        ])+gallerySection('格子与边线',[
+          gCheck('heatmapShowGrid','显示单元格网格'),
+          gRange('heatmapCellGap','格子间距',0,2,.1),
+          gColor('heatmapGridStroke','格子边线颜色'),
+          gRange('heatmapGridStrokeWidth','格子边线粗细',0,1.5,.05)
+        ]);
+      }
+      if(id==='heatmap-labels'){
+        return gallerySection('列标签（顶部/底部）',[
+          gCheck('heatmapAutoColLabelFit','列标签自动缩小'),
+          gRange('heatmapXLabelSize','列标签字号',6,26,.5),
+          gSelect('heatmapColumnLabelAngle','列标签角度',[[0,'0°'],[30,'30°'],[45,'45°（推荐）'],[60,'60°'],[90,'90°']]),
+          gSelect('heatmapColumnLabelSide','列标签位置',[['bottom','底部（论文常用）'],['top','顶部']])
+        ])+gallerySection('行标签（左/右）',[
+          gCheck('heatmapAutoRowLabelFit','行标签自动缩小'),
+          gRange('heatmapYLabelSize','行标签字号',5,22,.5),
+          gSelect('heatmapRowLabelSide','行标签位置',[['right','右侧（组学常用）'],['left','左侧']])
+        ])+gallerySection('注释条（聚类热图）',[
+          ...(s.heatmapMode==='clustered'?[
+            gCheck('heatmapShowGroupAnnotation','显示样本分组注释条'),
+            gCheck('heatmapShowGroupNames','在注释条上显示组名'),
+            ...(s.heatmapMode==='clustered'&&s.heatmapShowGroupNames?[gRange('heatmapGroupLabelSize','组名字号上限',6,20,1),gSelect('heatmapGroupLabelWeight','组名字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('heatmapGroupLabelColorMode','组名颜色',[['series','跟随分组颜色'],['custom','统一自定义']]),...(s.heatmapGroupLabelColorMode==='custom'?[gColor('heatmapGroupLabelColor','自定义组名颜色')]:[])]:[])
+          ]:[gCheck('heatmapStarNote','显示底部星号说明（Corrplot 专用）',s.heatmapMode==='correlation')])
+        ]);
+      }
     }
     return previousSpecificPropertyHtml(type,id);
   };
@@ -2196,8 +2217,8 @@
       m.colGroups.forEach((g,j)=>{body+=`<rect x="${x0+j*cellW}" y="${barY}" width="${cellW+.15}" height="${annotationH}" fill="${gmap.get(g)}"/>`});
       if(s.heatmapShowGroupNames&&!showColDen){groupRuns(m.colGroups).forEach(run=>{const center=x0+(run.start+run.end+1)*cellW/2,w=(run.end-run.start+1)*cellW,fs=Math.min(Number(s.heatmapGroupLabelSize),Math.max(6.5,w/(String(run.group).length*.62+1))),fill=s.heatmapGroupLabelColorMode==='custom'?s.heatmapGroupLabelColor:gmap.get(run.group);body+=`<text x="${center}" y="${barY-4}" text-anchor="middle" font-size="${fs}" font-weight="${s.heatmapGroupLabelWeight}" fill="${fill}">${esc(run.group)}</text>`})}
     }
-    if(showColDen){const treeBase=y0-annotationH-5;body+=`<g data-gobject="heatmap-scale" class="chart-object">${dendrogramSvg(m.colTree,cols,xCenters,treeBase,Math.max(10,colDen),'top',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`}
-    if(showRowDen)body+=`<g data-gobject="heatmap-scale" class="chart-object">${dendrogramSvg(m.rowTree,rows,yCenters,x0-6,Math.max(20,rowDen-8),'left',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
+    if(showColDen){const treeBase=y0-annotationH-5;body+=`<g data-gobject="heatmap-algorithm" class="chart-object">${dendrogramSvg(m.colTree,cols,xCenters,treeBase,Math.max(10,colDen),'top',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`}
+    if(showRowDen)body+=`<g data-gobject="heatmap-algorithm" class="chart-object">${dendrogramSvg(m.rowTree,rows,yCenters,x0-6,Math.max(20,rowDen-8),'left',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
     rows.forEach((v,i)=>{
       const y=yCenters[i]+yLabelSize*.34,labelX=s.heatmapRowLabelSide==='right'?x0+heatW+8:x0-8,anchor=s.heatmapRowLabelSide==='right'?'start':'end';
       body+=`<text x="${labelX}" y="${y}" text-anchor="${anchor}" font-size="${yLabelSize}" font-weight="${s.yTickWeight}" fill="${s.yTickColor}">${esc(v)}</text>`;
@@ -2209,7 +2230,7 @@
     // the previous version.
     const labelY=y0+heatH+14,angle=-Math.abs(Number(s.heatmapColumnLabelAngle)||0);
     cols.forEach((v,j)=>{const x=xCenters[j];body+=`<text x="${x}" y="${labelY}" text-anchor="end" font-size="${xLabelSize}" font-weight="${s.xTickWeight}" fill="${s.xTickColor}" transform="rotate(${angle} ${x} ${labelY})">${esc(v)}</text>`});
-    return `<g data-gobject="heatmap-scale" class="chart-object">${body}</g>${heatmapColorBar(W,H,m)}`;
+    return `<g data-gobject="heatmap-cells" class="chart-object">${body}</g>${heatmapColorBar(W,H,m)}`;
   }
   function correlationHeatmapSvg(W,H,s,m){
     const rows=m.rowLabels,cols=m.colLabels,showDen=s.heatmapShowDendrogram&&s.heatmapCluster!=='none',rowDen=showDen&&(s.heatmapCluster==='rows'||s.heatmapCluster==='both')?Number(s.heatmapRowDendrogramSize):0,colDen=showDen&&(s.heatmapCluster==='cols'||s.heatmapCluster==='both')?Number(s.heatmapColDendrogramSize):0;
@@ -2217,8 +2238,8 @@
     const rightLabelSpace=s.heatmapRowLabelSide==='right'?Math.min(200,Math.max(80,Math.max(...rows.map(x=>String(x).length))*Number(s.heatmapYLabelSize)*.55)):20;
         const rawX0=42+leftLabelSpace+rowDen,baseY0=48+colDen+54,maxW=Math.max(100,W-rawX0-rightLabelSpace-95),maxH=Math.max(100,H-baseY0-80),side=Math.min(maxW,maxH),x0=Math.max(rawX0,Math.min((W-70-side)/2,W-70-side)),y0=Math.max(baseY0,(H-80-side)/2),cellW=side/cols.length,cellH=side/rows.length;
     const xCenters=cols.map((_,j)=>x0+(j+.5)*cellW),yCenters=rows.map((_,i)=>y0+(i+.5)*cellH);let body='';
-    if(showDen&&m.colTree&&(s.heatmapCluster==='cols'||s.heatmapCluster==='both'))body+=`<g data-gobject="heatmap-scale" class="chart-object">${dendrogramSvg(m.colTree,cols,xCenters,y0-7,colDen-9,'top',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
-    if(showDen&&m.rowTree&&(s.heatmapCluster==='rows'||s.heatmapCluster==='both'))body+=`<g data-gobject="heatmap-scale" class="chart-object">${dendrogramSvg(m.rowTree,rows,yCenters,x0-6,rowDen-9,'left',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
+    if(showDen&&m.colTree&&(s.heatmapCluster==='cols'||s.heatmapCluster==='both'))body+=`<g data-gobject="heatmap-algorithm" class="chart-object">${dendrogramSvg(m.colTree,cols,xCenters,y0-7,colDen-9,'top',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
+    if(showDen&&m.rowTree&&(s.heatmapCluster==='rows'||s.heatmapCluster==='both'))body+=`<g data-gobject="heatmap-algorithm" class="chart-object">${dendrogramSvg(m.rowTree,rows,yCenters,x0-6,rowDen-9,'left',s.heatmapDendrogramColor,s.heatmapDendrogramLineWidth)}</g>`;
     if(s.heatmapShowGrid){const gw=Math.min(.6,Number(s.heatmapGridStrokeWidth)||.3),gcol=s.heatmapGridStroke;for(let j=0;j<=cols.length;j++){const gx=x0+j*cellW;body+=`<line x1="${gx}" y1="${y0}" x2="${gx}" y2="${y0+side}" stroke="${gcol}" stroke-width="${gw}"/>`}for(let i=0;i<=rows.length;i++){const gy=y0+i*cellH;body+=`<line x1="${x0}" y1="${gy}" x2="${x0+side}" y2="${gy}" stroke="${gcol}" stroke-width="${gw}"/>`}}
     const colLabelsBottom=s.heatmapColumnLabelSide==='bottom';cols.forEach((v,j)=>{const x=xCenters[j],y=colLabelsBottom?y0+side+16:y0-10;body+=`<text x="${x}" y="${y}" text-anchor="${colLabelsBottom?'end':'start'}" font-size="${s.heatmapXLabelSize}" font-weight="${s.xTickWeight}" fill="${s.xTickColor}" transform="rotate(${-Math.abs(Number(s.heatmapColumnLabelAngle)||0)} ${x} ${y})">${esc(v)}</text>`});
     rows.forEach((v,i)=>{const y=yCenters[i]+Number(s.heatmapYLabelSize)*.34,labelX=s.heatmapRowLabelSide==='right'?x0+side+8:x0-8,anchor=s.heatmapRowLabelSide==='right'?'start':'end';body+=`<text x="${labelX}" y="${y}" text-anchor="${anchor}" font-size="${s.heatmapYLabelSize}" font-weight="${s.yTickWeight}" fill="${s.yTickColor}">${esc(v)}</text>`;
@@ -2244,8 +2265,14 @@
       }
       );
     });
-    if(s.heatmapShowStars&&s.heatmapStarNote!==false){const noteFs=Number(s.heatmapStarNoteSize)||Math.max(8,Number(s.heatmapValueSize)-1),noteY=colLabelsBottom?y0+side+18+Number(s.heatmapXLabelSize)*1.35+noteFs:y0+side+14;body+=`<text x="${x0}" y="${noteY}" font-size="${noteFs}" font-weight="${s.heatmapStarNoteWeight}" fill="${s.heatmapStarNoteColor}">* p≤0.05, ** p≤0.01, *** p≤0.001</text>`}
-    return `<g data-gobject="heatmap-scale" class="chart-object">${body}</g>${heatmapColorBar(W,H,m)}`;
+    if(s.heatmapShowStars&&s.heatmapStarNote!==false){
+      const noteFs=Number(s.heatmapStarNoteSize)||Math.max(8,Number(s.heatmapValueSize)-1);
+      // v1.9.105：p 值星号说明可拖动；有 heatmapStarNoteX/Y 用自定义位置，否则自动放在热图下方
+      const noteX=s.heatmapStarNoteX!=null?Number(s.heatmapStarNoteX):x0;
+      const noteY=s.heatmapStarNoteY!=null?Number(s.heatmapStarNoteY):(colLabelsBottom?y0+side+18+Number(s.heatmapXLabelSize)*1.35+noteFs:y0+side+14);
+      body+=`<text x="${noteX}" y="${noteY}" font-size="${noteFs}" font-weight="${s.heatmapStarNoteWeight}" fill="${s.heatmapStarNoteColor}" data-gobject="heatmap-star-note" data-gdrag="heatmapStarNote" class="chart-object draggable" style="cursor:grab">* p≤0.05, ** p≤0.01, *** p≤0.001</text>`;
+    }
+    return `<g data-gobject="heatmap-cells" class="chart-object">${body}</g>${heatmapColorBar(W,H,m)}`;
   }
   galleryHeatmap=function patchedPublicationHeatmap(W,H){
     const s=ensureHeatmapSciSettings(),m=heatmapModel();if(!m.rowLabels.length||!m.colLabels.length)return'';

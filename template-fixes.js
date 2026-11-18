@@ -853,7 +853,7 @@
       box = document.createElement('div');
       box.id = 'heatmapTemplateChooser';
       box.style.cssText = 'margin-top:12px;padding:10px 12px;border:1px solid #d8e1de;border-radius:8px;background:#f8fbfa;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
-      box.innerHTML = '<b style="font-size:13px">热图数据类型</b><select id="heatmapTemplateModeSelect" style="min-width:240px;padding:7px 9px;border:1px solid #c8d2ce;border-radius:6px;background:#fff"><option value="correlation">相关性热图：样本 × 多变量</option><option value="corrplot">相关性热图：圆形气泡（Corrplot）</option><option value="clustered">聚类热图：Feature × Sample</option></select><small style="flex-basis:100%;color:#687783">圆形气泡 = 相关性热图 + 圆形 + 显著性星号，选中后可在图形属性面板继续微调。聚类热图不要整理成 SampleID/Group 长表。</small>';
+      box.innerHTML = '<b style="font-size:13px">热图数据类型</b><select id="heatmapTemplateModeSelect" style="min-width:340px;max-width:480px;padding:7px 9px;border:1px solid #c8d2ce;border-radius:6px;background:#fff"><option value="correlation">相关性热图：样本 × 多变量（Pearson / Spearman 相关矩阵）</option><option value="corrplot">相关性热图：圆形气泡 Corrplot（带显著性星号）</option><option value="clustered">聚类热图：Feature × Sample（可双侧树状图）</option></select><small style="flex-basis:100%;color:#687783">相关性热图 = 样本 × 多变量；Corrplot = 圆形 + 显著性星号；聚类热图 = Feature × Sample 宽矩阵。</small>';
       const first = card.querySelector('div');
       if (first && first.nextSibling) card.insertBefore(box, first.nextSibling); else card.appendChild(box);
       const select = box.querySelector('#heatmapTemplateModeSelect');
