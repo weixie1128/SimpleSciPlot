@@ -1,6 +1,6 @@
 'use strict';
 /*
- * FoodLab Studio — boot guard (introduced in v0.15.4, current build v0.19.0)
+ * SimpleSciPlot Studio — boot guard (introduced in v0.15.4, current build v0.19.0)
  *
  * This file MUST be loaded BEFORE app.js. It exists to protect the single
  * point of failure at the top of app.js:
@@ -89,7 +89,7 @@
         (document.body || document.documentElement).appendChild(box);
       }
       const line = document.createElement('div');
-      line.innerHTML = `<b>FoodLab Studio 运行出错</b>  ${escapeHtml(message)}${detail ? `<br><span style="opacity:.85">${escapeHtml(detail)}</span>` : ''}<br><span style="opacity:.75">请先按 Ctrl+F5 强制刷新；若仍出现，把这段文字反馈给开发者。</span>`;
+      line.innerHTML = `<b>SimpleSciPlot Studio 运行出错</b>  ${escapeHtml(message)}${detail ? `<br><span style="opacity:.85">${escapeHtml(detail)}</span>` : ''}<br><span style="opacity:.75">请先按 Ctrl+F5 强制刷新；若仍出现，把这段文字反馈给开发者。</span>`;
       box.appendChild(line);
     } catch (_err) { /* never let the reporter itself throw */ }
   }

@@ -1,6 +1,6 @@
-﻿'use strict';
+'use strict';
 /*
- * FoodLab Studio v0.10.9 — histogram + scatter + KDE + SCI heatmap redesign
+ * SimpleSciPlot Studio v0.10.9 — histogram + scatter + KDE + SCI heatmap redesign
  *
  * Histogram principles in this patch:
  * - X is always a true continuous linear numeric axis.
@@ -1693,7 +1693,7 @@
 })();
 
 
-/* ===== FoodLab Studio v0.10.8 — publication heatmap renderer ===== */
+/* ===== SimpleSciPlot Studio v0.10.8 — publication heatmap renderer ===== */
 (() => {
   const previousSpecificPropertyHtml = gallerySpecificPropertyHtml;
   const previousBasePropertyHtml = galleryBasePropertyHtml;
@@ -2273,7 +2273,7 @@
 
 /* ===== Integrated v0.10.9 heatmap display fix ===== */
 /*
- * FoodLab Studio v0.10.9 — integrated heatmap dendrogram/label layout fix
+ * SimpleSciPlot Studio v0.10.9 — integrated heatmap dendrogram/label layout fix
  * Scope: heatmap display only. No clustering/statistics/import/other-chart logic changed.
  */
 (() => {
@@ -2500,7 +2500,7 @@
       const serializer = new XMLSerializer();
       return [...root.childNodes].map(node => serializer.serializeToString(node)).join('');
     } catch (err) {
-      console.warn('[FoodLab heatmap layout patch] SVG post-process failed:', err);
+      console.warn('[SimpleSciPlot heatmap layout patch] SVG post-process failed:', err);
       return fragment;
     }
   }
@@ -2551,7 +2551,7 @@
       }, true);
     }
 
-    console.info(`[FoodLab Studio ${VERSION}] integrated heatmap layout fix loaded`);
+    console.info(`[SimpleSciPlot Studio ${VERSION}] integrated heatmap layout fix loaded`);
   }
 
   if (typeof setTimeout === 'function') setTimeout(installHeatmapV0109, 0);

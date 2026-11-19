@@ -1,10 +1,10 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $MyInvocation.MyCommand.Path))
 $port = 8787
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
 $listener.Start()
 $url = "http://127.0.0.1:$port/"
-Write-Host "肉制品新鲜度实验助手已启动：$url"
+Write-Host "SimpleSciPlot已启动：$url"
 Write-Host "关闭本窗口即可停止程序。"
 Start-Process $url
 $contentTypes = @{

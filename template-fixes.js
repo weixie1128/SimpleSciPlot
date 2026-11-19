@@ -1,7 +1,7 @@
 'use strict';
 
 /*
- * FoodLab Studio v0.10.8 — human-friendly templates + heatmap data semantics
+ * SimpleSciPlot Studio v0.10.8 — human-friendly templates + heatmap data semantics
  *
  * Goals:
  * 1) Keep the existing app.js intact.
@@ -318,7 +318,7 @@
   }
 
   function safeFileName(s) {
-    return String(s || 'foodlab').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_');
+    return String(s || 'SimpleSciPlot').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_');
   }
 
   function downloadBlob(name, blob) {
@@ -363,11 +363,11 @@
     const meta = state.workflow.chartType === 'heatmap' ? heatmapSchemaMeta() : (FRIENDLY_SCHEMA_META[state.workflow.chartType] || {});
     const heatmapExtra = state.workflow.chartType === 'heatmap'
       ? (heatmapMode() === 'clustered'
-          ? 'Only enter raw values. Do not calculate Z-score manually; FoodLab can perform Row Z-score / Column Z-score / 0–1 scaling and hierarchical clustering.'
+          ? 'Only enter raw values. Do not calculate Z-score manually; SimpleSciPlot can perform Row Z-score / Column Z-score / 0–1 scaling and hierarchical clustering.'
           : 'Group is optional. A/B/C/D are placeholders only. Delete the Group column if grouping is unnecessary; SampleID is not required.')
       : 'A/B/C/D are neutral placeholder group names; replace them with your real group names.';
     const guide = XLSX.utils.aoa_to_sheet([
-      ['FoodLab Studio Friendly Template'],
+      ['SimpleSciPlot Studio Friendly Template'],
       ['Chart', workflowChartLabel(state.workflow.chartType)],
       ['Layout', meta.name || 'Friendly wide table'],
       ['How to fill', meta.description || 'Fill the table directly.'],
