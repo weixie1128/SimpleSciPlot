@@ -51,12 +51,6 @@
       description: '每个 Group 使用一对列：A X/A Y、B X/B Y……；A、B、C、D 只是占位组名，用户可自行修改。无需 SampleID，也无需单独 Group 列。兼容旧长表。',
       planSchema: '分组 XY 宽表'
     },
-    bubble: {
-      kind: 'bubble',
-      name: '分组 XY+Size 宽表（推荐）',
-      description: '每个 Group 使用三列：A X/A Y/A Size、B X/B Y/B Size……；A、B、C、D 只是占位组名。无需 SampleID，也无需重复 Group 列。兼容旧长表。',
-      planSchema: '分组 XY+Size 宽表'
-    },
     stacked: {
       kind: 'composition',
       name: '组成宽表（推荐）',
@@ -195,21 +189,7 @@
       };
     }
 
-    if (type === 'bubble') {
-      const headers = ['序号'];
-      groups.slice(0, 4).forEach(g => headers.push(`${g} X`, `${g} Y`, `${g} Size`));
-      return {
-        headers,
-        rows: [
-          [1, 1.00, 1.96, 12, 4.60, 5.04, 18, 5.70, 5.48, 16],
-          [2, 1.45, 2.48, 13, 5.05, 5.02, 20, 6.15, 5.96, 17],
-          [3, 1.90, 3.00, 14, 5.50, 5.54, 22, 6.60, 6.44, 18],
-          [4, 2.35, 2.98, 15, 5.95, 6.06, 24, 7.05, 6.92, 19],
-          [5, 2.80, 3.50, 16, 6.40, 6.04, 26, 7.50, 7.40, 20],
-          [6, 3.25, 4.02, 17, 6.85, 6.56, 28, 7.95, 7.88, 22]
-        ]
-      };
-    }
+    // bubble template removed (v1.9.108)
 
     if (['stacked', 'pie'].includes(type)) {
       return {
@@ -420,7 +400,7 @@
     if (['hist', 'kde', 'box', 'violin'].includes(type)) {
       return headers.includes('group') && headers.includes('value');
     }
-    if (['scatter', 'bubble'].includes(type)) {
+    if (type === 'scatter') {
       return headers.includes('group') && headers.includes('x') && headers.includes('y');
     }
     if (['stacked', 'pie'].includes(type)) {
@@ -696,7 +676,6 @@
     let normalized = [];
     if (['hist', 'kde', 'box', 'violin'].includes(type)) normalized = parseWideUnivariate(matrix);
     else if (type === 'scatter') normalized = parseWideXY(matrix, false);
-    else if (type === 'bubble') normalized = parseWideXY(matrix, true);
     else if (['stacked', 'pie'].includes(type)) normalized = parseWideComposition(matrix);
     else if (type === 'radar') normalized = parseWideRadar(matrix);
     else if (type === 'heatmap') {

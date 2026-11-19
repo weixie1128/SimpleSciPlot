@@ -974,7 +974,7 @@
       const bw = s.kdeBandwidthMode === 'manual' ? `手动 ${Number(s.bandwidth) || '—'}` : `自动 × ${Number(s.kdeBandwidthScale).toFixed(2)}`;
       return `${mode}；带宽：${bw}`;
     }
-    if (['scatter', 'bubble'].includes(type)) {
+    if (type === 'scatter') {
       return `相关：${correlationMethodLabel(s.correlationMethod)}；拟合：${s.scatterFitMode === 'group' ? '按组分别' : '全部样本整体'}普通最小二乘线性回归`;
     }
     return originalGalleryMethodNoteText();
@@ -1449,17 +1449,9 @@
 
   // v1.9.93: 散点板块拆成共享内核 + 两个薄适配器。
   // 内核只负责轴/裁剪/图例/绘制流程，mode 决定点大小是否随 Size 变化。
-  // 回归散点与气泡散点各自有独立入口，后续火山散点也复用这个内核，
-  // 三者互不嵌套 if，改动一个不会碰到另一个。
+  // 回归散点图专用入口（bubble 已删除，不再需要 mode 分支）
   function galleryXyScatterCore(W, H, mode) {
-    const bubble = mode === 'bubble';
     const s = ensureFixSettings();
-    // 气泡散点图天生没有拟合线和相关系数，强制关闭
-    if (bubble) {
-      s.showRegression = false;
-      s.showCorrelation = false;
-      s.scatterFitBand = false;
-    }
     const p = galleryPlotBox(W, H);
     const rows = state.gallery.rows.filter(r => Number.isFinite(r.X) && Number.isFinite(r.Y));
     if (!rows.length) return '';
@@ -1538,9 +1530,7 @@
       const st = getGallerySeriesStyle(gi);
       const groupRows = rows.filter(r => String(r.Group || 'All') === g);
       const body = groupRows.map(r => {
-        const radius = bubble && Number.isFinite(r.Size)
-          ? st.pointSize + (r.Size - smin) / (smax - smin || 1) * Math.max(5, st.pointSize * 2)
-          : st.pointSize;
+        const radius = st.pointSize;
         const mColor = st.markerColor || st.color;
         const fill = st.markerFill === 'white' ? 'white' : mColor;
         const attrs = `fill="${fill}" fill-opacity="${st.opacity}" stroke="${mColor}" stroke-width="1.05"`;
@@ -1599,10 +1589,9 @@
 
   // 两个独立入口：回归散点 / 气泡散点。外观与拆分前逐像素一致。
   const galleryRegressionScatter = (W, H) => galleryXyScatterCore(W, H, 'regression');
-  const galleryBubbleScatter = (W, H) => galleryXyScatterCore(W, H, 'bubble');
-  try { globalThis.__foodlabScatterCore = galleryXyScatterCore; } catch (_err) {}
+    try { globalThis.__foodlabScatterCore = galleryXyScatterCore; } catch (_err) {}
   galleryScatter = function patchedGalleryScatter(W, H, bubble) {
-    return bubble ? galleryBubbleScatter(W, H) : galleryRegressionScatter(W, H);
+    return galleryRegressionScatter(W, H);
   };
 
   galleryDragSnapshot = function patchedGalleryDragSnapshot(key, el = null) {
@@ -2409,8 +2398,8 @@
   }
 
   const NUM = '[-+]?(?:\\d*\\.?\\d+)(?:[eE][-+]?\\d+)?';
-  const TOP_RE = new RegExp(`^\\s*M\\s*(${NUM})[ ,]+(${NUM})\\s*V\\s*(${NUM})\\s*H\\s*(${NUM})\\s*V\\s*(${NUM})\\s*$`);
-  const LEFT_RE = new RegExp(`^\\s*M\\s*(${NUM})[ ,]+(${NUM})\\s*H\\s*(${NUM})\\s*V\\s*(${NUM})\\s*H\\s*(${NUM})\\s*$`);
+  const TOP_RE = new RegExp(`^\\s*M\\s*(${NUM})[ ]+(${NUM})\\s*V\\s*(${NUM})\\s*H\\s*(${NUM})\\s*V\\s*(${NUM})\\s*$`);
+  const LEFT_RE = new RegExp(`^\\s*M\\s*(${NUM})[ ]+(${NUM})\\s*H\\s*(${NUM})\\s*V\\s*(${NUM})\\s*H\\s*(${NUM})\\s*$`);
 
   function fmt(n) {
     const x = Math.abs(n) < 1e-9 ? 0 : n;
@@ -2444,7 +2433,7 @@
     const extent = base - root;
     if (!(extent > 0.001)) return;
 
-    const mergeLevels = parsed.map(([, v]) => isTop ? v[2] : v[2]);
+    const mergeLevels = parsed.map(([ v]) => isTop ? v[2] : v[2]);
     const mapDistance = buildMergeLevelMapper(mergeLevels, base, extent, mode, isTop ? 'top' : 'left');
     const mapAxis = value => {
       const d = (base - value) / extent;
