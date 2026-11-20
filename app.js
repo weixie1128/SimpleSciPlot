@@ -2555,6 +2555,7 @@ function bindGalleryStudioDraggables(){
     if(e.target.closest('[data-annotation-handle]'))return;
     e.preventDefault();e.stopPropagation();const key=el.dataset.gdrag,start=svgPoint(svg,e),snap=galleryDragSnapshot(key,el);el.setPointerCapture(e.pointerId);
     if(el.dataset.gstatsSeries!=null){state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gstatsSeries)||0}
+    else if(key==='pieLabel'){state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gseries)||0}
     else state.gallery.selected=key==='annotation'?`annotation:${el.dataset.gannotationId}`:key==='xTitle'?'axis-x':key==='yTitle'?'axis-y':key==='legendFrame'?'legend-frame':key==='methodNote'?'method-note':key==='heatmapStarNote'?'heatmap-star-note':key;
     if(key==='annotation')state.gallery.selectedAnnotation=el.dataset.gannotationId;
     const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;if(key==='annotation')galleryApplyAnnotationDrag(el,snap,dx,dy);else galleryApplyDrag(key,snap.x+dx,snap.y+dy,el)};
@@ -2574,6 +2575,7 @@ function galleryDragSnapshot(key,el=null){
   if(key==='legendFrame')return galleryTransformXY(el,s.legendFrameX??108,s.legendFrameY??50);
   if(key==='methodNote')return{x:s.methodNoteX??s.width-24,y:s.methodNoteY??s.height-10};
   if(key==='heatmapStarNote')return{x:s.heatmapStarNoteX!=null?s.heatmapStarNoteX:(el?Number(el.getAttribute('x'))||0:0),y:s.heatmapStarNoteY!=null?s.heatmapStarNoteY:(el?Number(el.getAttribute('y'))||0:0)};
+  if(key==='pieLabel')return{x:el?Number(el.getAttribute('x'))||0:0,y:el?Number(el.getAttribute('y'))||0:0};
   if(key==='xTitle')return{x:s.xTitleX??s.width/2,y:s.xTitleY??s.height-24};return{x:s.yTitleX??28,y:s.yTitleY??s.height/2};
 }
 function galleryApplyAnnotationDrag(el,snap,dx,dy){
@@ -2592,6 +2594,7 @@ function galleryApplyDrag(key,x,y,el){
   else if(key==='legendFrame'){s.legendFrameX=x;s.legendFrameY=y;el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='methodNote'){s.methodNoteX=x;s.methodNoteY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='heatmapStarNote'){s.heatmapStarNoteX=x;s.heatmapStarNoteY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
+  else if(key==='pieLabel'){const st=getGallerySeriesStyle(Number(el.dataset.gseries)||0);st.pieLabelX=x;st.pieLabelY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='xTitle'){s.xTitleX=x;s.xTitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else{s.yTitleX=x;s.yTitleY=y;el.setAttribute('transform',`translate(${x} ${y}) rotate(-90)`)}
 }
@@ -2651,15 +2654,21 @@ function gallerySpecificPropertyHtml(type,id){
   ])+`<div class="method-badge"><b>当前：</b>${esc(correlationMethodLabel())}；拟合线为普通最小二乘直线。论文方法部分可以照这一行写。</div>`;
   if(id==='stack-mode')return gallerySection('堆叠方式',[gCheck('normalize','百分比堆叠'),gSelect('orientation','方向',[['vertical','纵向'],['horizontal','横向']])]);
   if(id==='stacked-error')return gallerySection('误差棒与数值标注',[gCheck('stackedShowError','显示误差棒（读取 Error 列）'),gRange('stackedErrorWidth','误差棒粗细',.5,4,.1),gRange('stackedErrorCapWidth','误差棒端线宽',1,10,.5),gColor('stackedErrorColor','误差棒颜色'),gCheck('stackedShowValue','在每段内标注数值'),gRange('stackedValueSize','数值字号',8,24,1),gSelect('stackedValueWeight','数值字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('stackedValueColorMode','数值颜色',[['auto','自动黑白对比'],['custom','统一自定义']]),...(s.stackedValueColorMode==='custom'?[gColor('stackedValueColor','自定义数值颜色')]:[]),gRange('stackedValueDecimals','数值小数位',0,4,1)])+`<div class="method-badge">误差棒按整柱合计（各段误差平方和开根）画在柱顶；数值标注在每段中心。</div>`;
-  if(id==='pie-label')return gallerySection('饼图标签',[
-    gSelect('pieLabelMode','标签方式',[['inside','扇区内百分比'],['outside','外部引线标签'],['none','不显示标签']]),
-    gCheck('donut','圆环图'),gCheck('pie3d','3D 立体饼图'),
-    gRange('pie3dDepth','立体厚度',0,80,1),gRange('pie3dTilt','立体倾斜（越小越扁）',.25,.8,.01),
-    gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色'),
-    gCheck('pieOutsideShowName','外部标签显示类别名'),gCheck('pieOutsideShowPercent','外部标签显示百分比'),
-    gRange('pieOutsideSize','外部标签字号',8,24,1),gColor('pieOutsideColor','外部标签颜色'),
-    gColor('pieLeaderColor','引线颜色'),gRange('pieLeaderWidth','引线粗细',.5,3,.1),gRange('pieLeaderLength','引线水平长度',0,60,1)
-  ]);
+  if(id==='pie-label'){
+    const mode=s.pieLabelMode||'inside';
+    const outsidePanel=mode==='outside'?[
+      gCheck('pieOutsideShowName','外部标签显示类别名'),gCheck('pieOutsideShowPercent','外部标签显示百分比'),
+      gRange('pieOutsideSize','外部标签字号',8,24,1),gColor('pieOutsideColor','外部标签颜色'),
+      gColor('pieLeaderColor','引线颜色'),gRange('pieLeaderWidth','引线粗细',.5,3,.1),gRange('pieLeaderLength','引线水平长度',0,60,1)
+    ]:[];
+    return gallerySection('饼图标签',[
+      gSelect('pieLabelMode','标签方式',[['inside','扇区内百分比（可拖动）'],['outside','外部引线标签'],['none','不显示标签']]),
+      gCheck('donut','圆环图'),gCheck('pie3d','3D 立体饼图'),
+      gRange('pie3dDepth','立体厚度',0,80,1),gRange('pie3dTilt','立体倾斜（越小越扁）',.25,.8,.01),
+      gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色'),
+      ...outsidePanel
+    ])+(mode==='outside'?'':`<div class="hint">要显示圆环外的引线标签，请先把「标签方式」改为「外部引线标签」；扇区内百分比可直接在图上拖动。</div>`);
+  }
   if(id==='significance'){
     // v1.9.88: 原来「怎么标」（brackets/perbox/letters）+「括号上写什么」（星号/p 值）两个下拉
     // 让人以为重复。现在合并成一个「怎么标」，一次选定标记方式和内容。
@@ -2938,7 +2947,7 @@ function bindGalleryStudioPropertyInputs(){
     analyzeGalleryData();renderGalleryStudioCanvas();syncGalleryQuickControls();
     $$(`[data-gsetting="${key}"]`).forEach(peer=>{if(peer!==el&&peer.type!=='checkbox')peer.value=state.gallery.settings[key]});
     $$(`[data-gout="${key}"]`).forEach(out=>out.textContent=state.gallery.settings[key]);
-    if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled','kdeHistColorMode','scatterFitMode','showRegression','scatterFitBand','scatterStatsColorMode','stackedValueColorMode','heatmapValueColorMode','heatmapStarColorMode','heatmapGroupLabelColorMode','heatmapShowGroupNames'].includes(key))renderGalleryStudioProperties();
+    if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled','kdeHistColorMode','scatterFitMode','showRegression','scatterFitBand','scatterStatsColorMode','stackedValueColorMode','heatmapValueColorMode','heatmapStarColorMode','heatmapGroupLabelColorMode','heatmapShowGroupNames','pieLabelMode'].includes(key))renderGalleryStudioProperties();
   };
   $$('[data-gsetting]').forEach(el=>{el.addEventListener('input',()=>applySetting(el));el.addEventListener('change',()=>applySetting(el))});
   // v1.9.88: 合并后的「怎么标」下拉一次写入标记方式 + 标记内容两个键。
@@ -5782,6 +5791,7 @@ function galleryStacked(W,H){
   return out;
 }
 function hexLuminance(hex){const h=hexRgb(hex).map(v=>v/255);return .2126*h[0]+.7152*h[1]+.0722*h[2]}
+let galleryPieClipSeq=0;
 function galleryPie(W,H){
   const s=state.gallery.settings,rows=state.gallery.rows.filter(r=>r.Category===state.gallery.rows[0].Category),total=rows.reduce((a,b)=>a+b.Value,0);
   const R=Math.min(W,H)*.3,r0=s.donut?R*.52:0,mode=s.pieLabelMode||'inside';
@@ -5789,7 +5799,8 @@ function galleryPie(W,H){
   const cx=W*.42,cy=s.pie3d?H*.54-depth*.35:H*.54;
   const slices=[];let a=-Math.PI/2;
   rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0;slices.push({i,r,st,a1:a,a2:a+da,da,large:da>Math.PI?1:0});a+=da});
-  let walls='',faces='',lead='';const labels=[];
+  let walls='',wallsInner='',faces='',lead='';const labels=[];
+  const clipId='galleryPieClip'+(++galleryPieClipSeq);
   slices.forEach(sl=>{
     const {i,r,st,a1,a2,da,large}=sl,mid=a1+da/2,c1=Math.cos(a1),s1=Math.sin(a1),c2=Math.cos(a2),s2=Math.sin(a2);
     const bw=Math.max(0,Number(st.lineWidth)||0),edge=bw>0?`stroke="${st.borderColor||st.color}" stroke-width="${bw}"`:'stroke="none"';
@@ -5797,8 +5808,11 @@ function galleryPie(W,H){
     if(depth>0){
       const t1=[cx+R*c1,cy+ry*s1],t2=[cx+R*c2,cy+ry*s2],b1=[t1[0],t1[1]+depth],b2=[t2[0],t2[1]+depth];
       d=r0?`M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${cx+r0*c2},${cy+iry*s2} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1} Z`:`M${cx},${cy} L${t1} A${R},${ry} 0 ${large} 1 ${t2} Z`;
-      walls+=`<path d="M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${b2} A${R},${ry} 0 ${large} 0 ${b1} Z" fill="${blendHex(st.color,'#000000',.24)}" fill-opacity="${st.opacity}" stroke="none"/>`;
-      if(r0)walls+=`<path d="M${cx+r0*c1},${cy+iry*s1} A${r0},${iry} 0 ${large} 1 ${cx+r0*c2},${cy+iry*s2} L${cx+r0*c2},${cy+iry*s2+depth} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1+depth} Z" fill="${blendHex(st.color,'#000000',.36)}" fill-opacity="${st.opacity}" stroke="none"/>`;
+      // 只保留前半圈（y>cy）的外侧壁：后半圈的侧壁在透视上应该被顶面挡住，
+      // 之前整圈都画出来，会露出一圈“底盘”，看着不像立体图。
+      walls+=`<path d="M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${b2} A${R},${ry} 0 ${large} 0 ${b1} Z" fill="${blendHex(st.color,'#000000',.26)}" fill-opacity="${st.opacity}" stroke="none"/>`;
+      // 圆环的内侧壁：透过中间的洞只能看到远侧（y<cy）的内壁。
+      if(r0)wallsInner+=`<path d="M${cx+r0*c1},${cy+iry*s1} A${r0},${iry} 0 ${large} 1 ${cx+r0*c2},${cy+iry*s2} L${cx+r0*c2},${cy+iry*s2+depth} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1+depth} Z" fill="${blendHex(st.color,'#000000',.4)}" fill-opacity="${st.opacity}" stroke="none"/>`;
     }else{
       const p1=[cx+R*c1,cy+R*s1],p2=[cx+R*c2,cy+R*s2],q1=[cx+r0*c2,cy+r0*s2],q2=[cx+r0*c1,cy+r0*s1];
       d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;
@@ -5806,7 +5820,12 @@ function galleryPie(W,H){
     // 旧版默认 stroke 为白色，等于给每个扇区加了白边，会和用户自己设置的边框冲突。
     // 现在只有用户把「边框粗细」调到 0 以上才描边，颜色默认跟随扇区色。
     let face=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" ${edge}/>`;
-    if(mode==='inside'&&da>.12){const tx=cx+R*.72*Math.cos(mid),ty=cy+R*tilt*.72*Math.sin(mid);face+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`}
+    if(mode==='inside'&&da>.12){
+      // 标签放在扇区中间偏内（实心饼 0.6R，圆环取环带中线），并支持直接拖动。
+      const lr=r0?(r0+R)/2:R*.6;
+      const tx=st.pieLabelX!=null?Number(st.pieLabelX):cx+lr*Math.cos(mid),ty=st.pieLabelY!=null?Number(st.pieLabelY):cy+lr*tilt*Math.sin(mid);
+      face+=`<text data-gdrag="pieLabel" data-gseries="${i}" class="chart-object" x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`;
+    }
     faces+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${face}</g>`;
     if(mode==='outside'&&da>.06){
       const parts=[];if(s.pieOutsideShowName!==false)parts.push(esc(String(r.Component||'')));if(s.pieOutsideShowPercent&&total)parts.push(formatNumber(r.Value/total*100,1)+'%');
@@ -5826,7 +5845,8 @@ function galleryPie(W,H){
       lead+=`<text x="${lx+(p.right?5:-5)}" y="${p.ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text>`;
     });
   }
-  return `<g class="chart-object">${walls}</g>${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
+  const defs=depth>0?`<defs><clipPath id="${clipId}a"><rect x="0" y="${cy}" width="${W}" height="${Math.max(0,H-cy)+depth+40}"/></clipPath><clipPath id="${clipId}b"><rect x="0" y="0" width="${W}" height="${Math.max(0,cy)}"/></clipPath></defs>`:'';
+  return `${defs}${depth>0?`<g clip-path="url(#${clipId}a)">${walls}</g><g clip-path="url(#${clipId}b)">${wallsInner}</g>`:''}${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
 }
 function hexRgb(hex){const h=String(hex||'#000000').replace('#','');if(!/^[0-9a-f]{6}$/i.test(h))return[0,0,0];const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
 function rgbHex(rgb){return'#'+rgb.map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('')}
