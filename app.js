@@ -2705,7 +2705,10 @@ function gallerySeriesPropertyHtml(type,index=0){
       gSeriesNumber(index,'statsY','备注 Y（留空自动）',0,1200,1)
     ])+`<div class="hint">这里的 r / ρ、R²、p 属于本组数据系列。可直接在图上拖动本组备注；其他组的位置和样式不受影响。</div>`;
   }
-  if(['hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'borderWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
+  // v1.9.112：直方图/堆叠柱状图/饼图的描边实际读的是 series.lineWidth，
+  // 旧面板把“边框粗细”写进了 borderWidth，所以拖动滑块毫无反应（只有箱线图认 borderWidth）。
+  // 这里改为写 lineWidth，默认值仍是 0（无描边），不改动已有项目的外观。
+  if(['hist','stacked','pie'].includes(type))html+=gallerySection('填充与边框',[gSeriesRange(index,'lineWidth','边框粗细',0,5,.1),gSeriesColorKey(index,'borderColor','边框颜色')]);
   html+=gallerySection('全部系列配色',[galleryPaletteBlock()]);return html;
 }
 function histPropertyHtml(){
@@ -5760,7 +5763,7 @@ function galleryStacked(W,H){
 function hexLuminance(hex){const h=hexRgb(hex).map(v=>v/255);return .2126*h[0]+.7152*h[1]+.0722*h[2]}
 function galleryPie(W,H){
   const s=state.gallery.settings,first=state.gallery.rows[0].Category,rows=state.gallery.rows.filter(r=>r.Category===first),total=rows.reduce((a,b)=>a+b.Value,0),cx=W*.42,cy=H*.54,R=Math.min(W,H)*.3,r0=s.donut?R*.52:0;let a=-Math.PI/2,out='';
-  rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0,a2=a+da,p1=[cx+R*Math.cos(a),cy+R*Math.sin(a)],p2=[cx+R*Math.cos(a2),cy+R*Math.sin(a2)],q1=[cx+r0*Math.cos(a2),cy+r0*Math.sin(a2)],q2=[cx+r0*Math.cos(a),cy+r0*Math.sin(a)],large=da>Math.PI?1:0,d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;let body=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="white" stroke-width="${Math.max(1,st.lineWidth)}"/>`;const mid=a+da/2,tx=cx+R*.72*Math.cos(mid),ty=cy+R*.72*Math.sin(mid);if(s.showCorrelation&&da>.12)body+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`;out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;a=a2});out+=galleryLegend(rows.map(r=>r.Component));return out;
+  rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0,a2=a+da,p1=[cx+R*Math.cos(a),cy+R*Math.sin(a)],p2=[cx+R*Math.cos(a2),cy+R*Math.sin(a2)],q1=[cx+r0*Math.cos(a2),cy+r0*Math.sin(a2)],q2=[cx+r0*Math.cos(a),cy+r0*Math.sin(a)],large=da>Math.PI?1:0,d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;let body=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.borderColor||'white'}" stroke-width="${Math.max(0,Number(st.lineWidth)||0)}"/>`;const mid=a+da/2,tx=cx+R*.72*Math.cos(mid),ty=cy+R*.72*Math.sin(mid);if(s.showCorrelation&&da>.12)body+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`;out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;a=a2});out+=galleryLegend(rows.map(r=>r.Component));return out;
 }
 function hexRgb(hex){const h=String(hex||'#000000').replace('#','');if(!/^[0-9a-f]{6}$/i.test(h))return[0,0,0];const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
 function rgbHex(rgb){return'#'+rgb.map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('')}
