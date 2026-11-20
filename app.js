@@ -636,6 +636,11 @@ function normalizeTextSettings(){
   g.boxQuartileMethod=g.boxQuartileMethod||'linear7';g.boxWhiskerMethod=g.boxWhiskerMethod||'iqr15';g.boxWhiskerPercentile=Number(g.boxWhiskerPercentile)||5;g.statMethod=g.statMethod||'anovaLsd';g.correlationMethod=g.correlationMethod||'pearson';g.methodNoteVisible=g.methodNoteVisible!==false;g.methodNoteSize=g.methodNoteSize||10;g.methodNoteColor=g.methodNoteColor||'#5f6d75';
   g.radarFill=false;g.radarShowMarkers=g.radarShowMarkers!==false;g.radarLevels=Math.max(2,Number(g.radarLevels)||4);g.radarLabelOffset=Number(g.radarLabelOffset??30);g.radarShowTickLabels=g.radarShowTickLabels!==false;g.radarTickDecimals=Number.isFinite(Number(g.radarTickDecimals))?Number(g.radarTickDecimals):0;g.radarTickLabelSize=Number(g.radarTickLabelSize??11);g.radarTickLabelPosition=g.radarTickLabelPosition||'top';g.radarTickLabelOffset=Number(g.radarTickLabelOffset??10);g.radarTheme=g.radarTheme||'rose';g.radarGradientMode=g.radarGradientMode||'radial';g.radarGridColor=g.radarGridColor||'#c8aebc';g.radarSpokeColor=g.radarSpokeColor||'#9e8794';g.radarGridWidth=Number(g.radarGridWidth??.9);g.radarSpokeWidth=Number(g.radarSpokeWidth??1.15);g.radarBandMode='theme-gradient';g.radarSmartHighlight=g.radarSmartHighlight!==false;g.radarHighlightThreshold=0;g.radarHighlightStrength=Number(g.radarHighlightStrength??.24);
   g.methodNoteWeight=Number(g.methodNoteWeight??g.globalFontWeight??400);g.pieLabelColor=g.pieLabelColor||'#ffffff';g.pieLabelWeight=Number(g.pieLabelWeight??600);g.significanceFontWeight=g.significanceFontWeight??'auto';
+  // v1.9.114：饼图标签支持「扇区内 / 外部引线 / 不显示」，并新增 3D 立体饼图。
+  if(!['inside','outside','none'].includes(g.pieLabelMode))g.pieLabelMode=g.showCorrelation===false?'none':'inside';
+  g.pieOutsideShowName=g.pieOutsideShowName!==false;g.pieOutsideShowPercent=g.pieOutsideShowPercent===true;g.pieOutsideSize=Number(g.pieOutsideSize)||12;g.pieOutsideColor=g.pieOutsideColor||'#20262b';g.pieOutsideWeight=Number(g.pieOutsideWeight??400);
+  g.pieLeaderColor=g.pieLeaderColor||'#9aa5ab';g.pieLeaderWidth=Number(g.pieLeaderWidth??1);g.pieLeaderLength=Number(g.pieLeaderLength??18);
+  g.pie3d=g.pie3d===true;g.pie3dDepth=Number(g.pie3dDepth??28);g.pie3dTilt=Number(g.pie3dTilt??.55);
   g.stackedValueWeight=Number(g.stackedValueWeight??600);g.stackedValueColorMode=g.stackedValueColorMode||'auto';g.stackedValueColor=g.stackedValueColor||'#ffffff';
   g.radarLabelColor=g.radarLabelColor||'#000000';g.radarLabelWeight=Number(g.radarLabelWeight??g.xTickWeight??400);g.radarTickLabelColor=g.radarTickLabelColor||g.yTickColor||'#20262b';g.radarTickLabelWeight=Number(g.radarTickLabelWeight??g.yTickWeight??400);
   g.heatmapValueWeight=Number(g.heatmapValueWeight??400);g.heatmapValueColorMode=g.heatmapValueColorMode||'auto';g.heatmapValueColor=g.heatmapValueColor||'#222222';g.heatmapStarWeight=g.heatmapStarWeight??'auto';g.heatmapStarColorMode=g.heatmapStarColorMode||'auto';g.heatmapStarColor=g.heatmapStarColor||'#333333';g.heatmapStarNoteColor=g.heatmapStarNoteColor||'#666666';g.heatmapStarNoteWeight=Number(g.heatmapStarNoteWeight??400);g.heatmapColorBarTextColor=g.heatmapColorBarTextColor||'#000000';g.heatmapColorBarTextWeight=Number(g.heatmapColorBarTextWeight??400);g.heatmapGroupLabelSize=Number(g.heatmapGroupLabelSize??10);g.heatmapGroupLabelWeight=Number(g.heatmapGroupLabelWeight??600);g.heatmapGroupLabelColorMode=g.heatmapGroupLabelColorMode||'series';g.heatmapGroupLabelColor=g.heatmapGroupLabelColor||'#333333';
@@ -2646,7 +2651,15 @@ function gallerySpecificPropertyHtml(type,id){
   ])+`<div class="method-badge"><b>当前：</b>${esc(correlationMethodLabel())}；拟合线为普通最小二乘直线。论文方法部分可以照这一行写。</div>`;
   if(id==='stack-mode')return gallerySection('堆叠方式',[gCheck('normalize','百分比堆叠'),gSelect('orientation','方向',[['vertical','纵向'],['horizontal','横向']])]);
   if(id==='stacked-error')return gallerySection('误差棒与数值标注',[gCheck('stackedShowError','显示误差棒（读取 Error 列）'),gRange('stackedErrorWidth','误差棒粗细',.5,4,.1),gRange('stackedErrorCapWidth','误差棒端线宽',1,10,.5),gColor('stackedErrorColor','误差棒颜色'),gCheck('stackedShowValue','在每段内标注数值'),gRange('stackedValueSize','数值字号',8,24,1),gSelect('stackedValueWeight','数值字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('stackedValueColorMode','数值颜色',[['auto','自动黑白对比'],['custom','统一自定义']]),...(s.stackedValueColorMode==='custom'?[gColor('stackedValueColor','自定义数值颜色')]:[]),gRange('stackedValueDecimals','数值小数位',0,4,1)])+`<div class="method-badge">误差棒按整柱合计（各段误差平方和开根）画在柱顶；数值标注在每段中心。</div>`;
-  if(id==='pie-label')return gallerySection('饼图标签',[gCheck('donut','圆环图'),gCheck('showCorrelation','显示百分比标签'),gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色')]);
+  if(id==='pie-label')return gallerySection('饼图标签',[
+    gSelect('pieLabelMode','标签方式',[['inside','扇区内百分比'],['outside','外部引线标签'],['none','不显示标签']]),
+    gCheck('donut','圆环图'),gCheck('pie3d','3D 立体饼图'),
+    gRange('pie3dDepth','立体厚度',0,80,1),gRange('pie3dTilt','立体倾斜（越小越扁）',.25,.8,.01),
+    gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色'),
+    gCheck('pieOutsideShowName','外部标签显示类别名'),gCheck('pieOutsideShowPercent','外部标签显示百分比'),
+    gRange('pieOutsideSize','外部标签字号',8,24,1),gColor('pieOutsideColor','外部标签颜色'),
+    gColor('pieLeaderColor','引线颜色'),gRange('pieLeaderWidth','引线粗细',.5,3,.1),gRange('pieLeaderLength','引线水平长度',0,60,1)
+  ]);
   if(id==='significance'){
     // v1.9.88: 原来「怎么标」（brackets/perbox/letters）+「括号上写什么」（星号/p 值）两个下拉
     // 让人以为重复。现在合并成一个「怎么标」，一次选定标记方式和内容。
@@ -5062,7 +5075,10 @@ function resetGallerySettings(){
   s.normalize=false;s.donut=false;s.orientation='vertical';s.showRegression=true;s.showCorrelation=true;s.heatmapShowValues=true;
   // v1.9.113：切换图形时图例符号回到“自动”。旧默认值会把“点线”存进项目，
   // 之后反复导入数据都沿用点线，柱状/饼图图例看起来就是错的。
-  s.legendSymbol='auto';if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
+  s.legendSymbol='auto';
+  // 饼图默认不加描边：旧版渲染把未设置的边框画成白色分隔线，会和用户自己设置的边框冲突。
+  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;}
+  if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
 function galleryTemplateRows(type=state.gallery.type){
@@ -5767,8 +5783,50 @@ function galleryStacked(W,H){
 }
 function hexLuminance(hex){const h=hexRgb(hex).map(v=>v/255);return .2126*h[0]+.7152*h[1]+.0722*h[2]}
 function galleryPie(W,H){
-  const s=state.gallery.settings,first=state.gallery.rows[0].Category,rows=state.gallery.rows.filter(r=>r.Category===first),total=rows.reduce((a,b)=>a+b.Value,0),cx=W*.42,cy=H*.54,R=Math.min(W,H)*.3,r0=s.donut?R*.52:0;let a=-Math.PI/2,out='';
-  rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0,a2=a+da,p1=[cx+R*Math.cos(a),cy+R*Math.sin(a)],p2=[cx+R*Math.cos(a2),cy+R*Math.sin(a2)],q1=[cx+r0*Math.cos(a2),cy+r0*Math.sin(a2)],q2=[cx+r0*Math.cos(a),cy+r0*Math.sin(a)],large=da>Math.PI?1:0,d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;let body=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" stroke="${st.borderColor||'white'}" stroke-width="${Math.max(0,Number(st.lineWidth)||0)}"/>`;const mid=a+da/2,tx=cx+R*.72*Math.cos(mid),ty=cy+R*.72*Math.sin(mid);if(s.showCorrelation&&da>.12)body+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`;out+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${body}</g>`;a=a2});out+=galleryLegend(rows.map(r=>r.Component));return out;
+  const s=state.gallery.settings,rows=state.gallery.rows.filter(r=>r.Category===state.gallery.rows[0].Category),total=rows.reduce((a,b)=>a+b.Value,0);
+  const R=Math.min(W,H)*.3,r0=s.donut?R*.52:0,mode=s.pieLabelMode||'inside';
+  const depth=s.pie3d?Math.max(0,Number(s.pie3dDepth)||0):0,tilt=clamp(Number(s.pie3dTilt)||.55,.25,.8),ry=R*tilt,iry=r0*tilt;
+  const cx=W*.42,cy=s.pie3d?H*.54-depth*.35:H*.54;
+  const slices=[];let a=-Math.PI/2;
+  rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0;slices.push({i,r,st,a1:a,a2:a+da,da,large:da>Math.PI?1:0});a+=da});
+  let walls='',faces='',lead='';const labels=[];
+  slices.forEach(sl=>{
+    const {i,r,st,a1,a2,da,large}=sl,mid=a1+da/2,c1=Math.cos(a1),s1=Math.sin(a1),c2=Math.cos(a2),s2=Math.sin(a2);
+    const bw=Math.max(0,Number(st.lineWidth)||0),edge=bw>0?`stroke="${st.borderColor||st.color}" stroke-width="${bw}"`:'stroke="none"';
+    let d;
+    if(depth>0){
+      const t1=[cx+R*c1,cy+ry*s1],t2=[cx+R*c2,cy+ry*s2],b1=[t1[0],t1[1]+depth],b2=[t2[0],t2[1]+depth];
+      d=r0?`M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${cx+r0*c2},${cy+iry*s2} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1} Z`:`M${cx},${cy} L${t1} A${R},${ry} 0 ${large} 1 ${t2} Z`;
+      walls+=`<path d="M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${b2} A${R},${ry} 0 ${large} 0 ${b1} Z" fill="${blendHex(st.color,'#000000',.24)}" fill-opacity="${st.opacity}" stroke="none"/>`;
+      if(r0)walls+=`<path d="M${cx+r0*c1},${cy+iry*s1} A${r0},${iry} 0 ${large} 1 ${cx+r0*c2},${cy+iry*s2} L${cx+r0*c2},${cy+iry*s2+depth} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1+depth} Z" fill="${blendHex(st.color,'#000000',.36)}" fill-opacity="${st.opacity}" stroke="none"/>`;
+    }else{
+      const p1=[cx+R*c1,cy+R*s1],p2=[cx+R*c2,cy+R*s2],q1=[cx+r0*c2,cy+r0*s2],q2=[cx+r0*c1,cy+r0*s1];
+      d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;
+    }
+    // 旧版默认 stroke 为白色，等于给每个扇区加了白边，会和用户自己设置的边框冲突。
+    // 现在只有用户把「边框粗细」调到 0 以上才描边，颜色默认跟随扇区色。
+    let face=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" ${edge}/>`;
+    if(mode==='inside'&&da>.12){const tx=cx+R*.72*Math.cos(mid),ty=cy+R*tilt*.72*Math.sin(mid);face+=`<text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`}
+    faces+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${face}</g>`;
+    if(mode==='outside'&&da>.06){
+      const parts=[];if(s.pieOutsideShowName!==false)parts.push(esc(String(r.Component||'')));if(s.pieOutsideShowPercent&&total)parts.push(formatNumber(r.Value/total*100,1)+'%');
+      if(parts.length)labels.push({mid,text:parts.join(' ')});
+    }
+  });
+  if(labels.length){
+    const size=Number(s.pieOutsideSize)||12,gap=size+4,color=s.pieOutsideColor||'#20262b',weight=Number(s.pieOutsideWeight??400),len=Number(s.pieLeaderLength??18);
+    const items=labels.map(L=>{const right=Math.cos(L.mid)>=0,ey=cy+(R+12)*tilt*Math.sin(L.mid);return{right,sx:cx+R*Math.cos(L.mid),sy:cy+ry*Math.sin(L.mid),ex:cx+(R+12)*Math.cos(L.mid),ey,ly:ey,text:L.text}});
+    ['right','left'].forEach(side=>{
+      const arr=items.filter(p=>p.right===(side==='right')).sort((p,q)=>p.ly-q.ly),bottom=H-28;
+      arr.forEach((p,k)=>{p.ly=Math.max(28,p.ly);if(k&&p.ly-arr[k-1].ly<gap)p.ly=arr[k-1].ly+gap});
+      for(let k=arr.length-1;k>=0;k--){if(arr[k].ly>bottom)arr[k].ly=bottom;if(k<arr.length-1&&arr[k+1].ly-arr[k].ly<gap)arr[k].ly=arr[k+1].ly-gap}
+    });
+    items.forEach(p=>{const lx=p.right?cx+R+12+len:cx-R-12-len;
+      lead+=`<path d="M${p.sx},${p.sy} L${p.ex},${p.ey} L${lx},${p.ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/>`;
+      lead+=`<text x="${lx+(p.right?5:-5)}" y="${p.ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text>`;
+    });
+  }
+  return `<g class="chart-object">${walls}</g>${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
 }
 function hexRgb(hex){const h=String(hex||'#000000').replace('#','');if(!/^[0-9a-f]{6}$/i.test(h))return[0,0,0];const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
 function rgbHex(rgb){return'#'+rgb.map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('')}
