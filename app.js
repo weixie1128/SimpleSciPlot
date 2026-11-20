@@ -641,6 +641,7 @@ function normalizeTextSettings(){
   g.pieOutsideShowName=g.pieOutsideShowName!==false;g.pieOutsideShowPercent=g.pieOutsideShowPercent===true;g.pieOutsideSize=Number(g.pieOutsideSize)||12;g.pieOutsideColor=g.pieOutsideColor||'#20262b';g.pieOutsideWeight=Number(g.pieOutsideWeight??400);
   g.pieLeaderColor=g.pieLeaderColor||'#9aa5ab';g.pieLeaderWidth=Number(g.pieLeaderWidth??1);g.pieLeaderLength=Number(g.pieLeaderLength??18);
   g.pie3d=g.pie3d===true;g.pie3dDepth=Number(g.pie3dDepth??28);g.pie3dTilt=Number(g.pie3dTilt??.55);
+  g.pieBorderWidth=Number(g.pieBorderWidth??0); // v1.9.117：全局一键改所有扇区边框粗细
   // 饼图标签拖动偏移单独存放，避免换配色/模板时 seriesStyles 被清空导致标签弹回原位。
   if(!state.gallery.pieLabelPos||typeof state.gallery.pieLabelPos!=='object')state.gallery.pieLabelPos={};
   if(!state.gallery.pieOutLabelPos||typeof state.gallery.pieOutLabelPos!=='object')state.gallery.pieOutLabelPos={};
@@ -2579,7 +2580,15 @@ function galleryDragSnapshot(key,el=null){
   if(key==='methodNote')return{x:s.methodNoteX??s.width-24,y:s.methodNoteY??s.height-10};
   if(key==='heatmapStarNote')return{x:s.heatmapStarNoteX!=null?s.heatmapStarNoteX:(el?Number(el.getAttribute('x'))||0:0),y:s.heatmapStarNoteY!=null?s.heatmapStarNoteY:(el?Number(el.getAttribute('y'))||0:0)};
   if(key==='pieLabel'){const p=(state.gallery.pieLabelPos||{})[el?.dataset.gseries];return{x:Number(p&&p.dx)||0,y:Number(p&&p.dy)||0}}
-  if(key==='pieOutLabel'){const p=(state.gallery.pieOutLabelPos||{})[el?.dataset.gseries];return{x:Number(p&&p.dx)||0,y:Number(p&&p.dy)||0}}
+  // 外部引线标签存绝对画布坐标 (lx, ly)，渲染时引线根据固定的圆弧起点 + 用户标签位置重算，
+  // 段1（含圆弧起点）保持不动，段2伸缩——这才是常识。
+  if(key==='pieOutLabel'){
+    const p=(state.gallery.pieOutLabelPos||{})[el?.dataset.gseries];
+    if(p&&p.lx!=null)return{x:Number(p.lx)||0,y:Number(p.ly)||0};
+    // 没设置过时，从当前 DOM 里读出 text 的 x/y 作为起点
+    const tx=el?.querySelector?.('text');
+    return{x:tx?Number(tx.getAttribute('x'))||0:0,y:tx?Number(tx.getAttribute('y'))||0:0};
+  }
   if(key==='xTitle')return{x:s.xTitleX??s.width/2,y:s.xTitleY??s.height-24};return{x:s.yTitleX??28,y:s.yTitleY??s.height/2};
 }
 function galleryApplyAnnotationDrag(el,snap,dx,dy){
@@ -2599,7 +2608,12 @@ function galleryApplyDrag(key,x,y,el){
   else if(key==='methodNote'){s.methodNoteX=x;s.methodNoteY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='heatmapStarNote'){s.heatmapStarNoteX=x;s.heatmapStarNoteY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='pieLabel'){state.gallery.pieLabelPos=state.gallery.pieLabelPos||{};state.gallery.pieLabelPos[el.dataset.gseries]={dx:x,dy:y};el.setAttribute('transform',`translate(${x} ${y})`)}
-  else if(key==='pieOutLabel'){state.gallery.pieOutLabelPos=state.gallery.pieOutLabelPos||{};state.gallery.pieOutLabelPos[el.dataset.gseries]={dx:x,dy:y};el.setAttribute('transform',`translate(${x} ${y})`)}
+  else if(key==='pieOutLabel'){
+    // 只存状态，引线和标签在 renderGalleryStudioCanvas() 里按固定起点 + 新坐标重算，
+    // 所以不需要在这里改 DOM；段1（含圆弧上的起点）自动保持不动。
+    state.gallery.pieOutLabelPos=state.gallery.pieOutLabelPos||{};
+    state.gallery.pieOutLabelPos[el.dataset.gseries]={lx:x,ly:y};
+  }
   else if(key==='xTitle'){s.xTitleX=x;s.xTitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else{s.yTitleX=x;s.yTitleY=y;el.setAttribute('transform',`translate(${x} ${y}) rotate(-90)`)}
 }
@@ -2670,6 +2684,8 @@ function gallerySpecificPropertyHtml(type,id){
       gSelect('pieLabelMode','标签方式',[['inside','扇区内百分比（可拖动）'],['outside','外部引线标签'],['none','不显示标签']]),
       gCheck('donut','圆环图'),gCheck('pie3d','3D 立体饼图'),
       gRange('pie3dDepth','立体厚度',0,80,1),gRange('pie3dTilt','立体倾斜（越小越扁）',.25,.8,.01),
+      // v1.9.117：一键改所有扇区边框粗细。用户调一下就全部同步，省得一个个点。
+      gRange('pieBorderWidth','边框粗细（全部系列）',0,5,.1),
       gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色'),
       ...outsidePanel
     ])+(mode==='outside'?'':`<div class="hint">要显示圆环外的引线标签，请先把「标签方式」改为「外部引线标签」；扇区内百分比可直接在图上拖动。</div>`);
@@ -2949,6 +2965,8 @@ function bindGalleryStudioPropertyInputs(){
     // 点大小，渲染时读的是“每系列”的值。如果只改全局设置，控件看起来就是没反应，
     // 所以这里一次性同步到全部系列。
     if(['lineWidth','opacity','pointSize'].includes(key)){const n=galleryStudioSeriesNames().length;for(let i=0;i<n;i++){const st=getGallerySeriesStyle(i);st[key]=v}}
+    // v1.9.117：饼图全局「边框粗细（全部系列）」，一键同步到所有扇区
+    if(key==='pieBorderWidth'){const n=galleryStudioSeriesNames().length;for(let i=0;i<n;i++){const st=getGallerySeriesStyle(i);st.lineWidth=v}}
     analyzeGalleryData();renderGalleryStudioCanvas();syncGalleryQuickControls();
     $$(`[data-gsetting="${key}"]`).forEach(peer=>{if(peer!==el&&peer.type!=='checkbox')peer.value=state.gallery.settings[key]});
     $$(`[data-gout="${key}"]`).forEach(out=>out.textContent=state.gallery.settings[key]);
@@ -5091,7 +5109,7 @@ function resetGallerySettings(){
   // 之后反复导入数据都沿用点线，柱状/饼图图例看起来就是错的。
   s.legendSymbol='auto';
   // 饼图默认不加描边：旧版渲染把未设置的边框画成白色分隔线，会和用户自己设置的边框冲突。
-  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;state.gallery.pieLabelPos={};state.gallery.pieOutLabelPos={};}
+  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;s.pieBorderWidth=0;state.gallery.pieLabelPos={};state.gallery.pieOutLabelPos={};}
   if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
@@ -5814,34 +5832,42 @@ function galleryPie(W,H){
   const slices=[];let a=-Math.PI/2;
   rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0;slices.push({i,r,st,a1:a,a2:a+da,da,large:da>Math.PI?1:0});a+=da});
   let walls='',wallsInner='',faces='',lead='';const labels=[];
+  // 3D 底部椭圆可见轮廓（下半圈）：当用户设置了边框时需要和顶面/侧壁保持一致粗细。
+  let bottomRimOuter='',bottomRimInner='';
   slices.forEach(sl=>{
     const {i,r,st,a1,a2,da,large}=sl,mid=a1+da/2,c1=Math.cos(a1),s1=Math.sin(a1),c2=Math.cos(a2),s2=Math.sin(a2);
-    const bw=Math.max(0,Number(st.lineWidth)||0);
+    const bw=Math.max(0,Number(st.lineWidth)||0),bc=st.borderColor||st.color;
     let d;
     if(depth>0){
       const t1=[cx+R*c1,cy+ry*s1],t2=[cx+R*c2,cy+ry*s2];
       d=r0?`M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${cx+r0*c2},${cy+iry*s2} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1} Z`:`M${cx},${cy} L${t1} A${R},${ry} 0 ${large} 1 ${t2} Z`;
       // 3D 侧壁按“圆弧是否位于下半圈”分段绘制，而不是整圈画完再裁。
       // 跨过半圈的扇区被整圈裁剪时会出现缺口；分段后只会保留真正可见的前半圈。
-      // ov：把侧壁顶边向上多探出 1.2px，塞到顶面下面（侧壁先画、顶面后画），
-      // 避免顶面与侧壁拼缝处出现抗锯齿白缝；侧壁本身带细描边，相邻侧壁之间也不留缝。
+      // ov：侧壁顶边向上多探出 1.2px 塞进顶面下面（侧壁先画、顶面后画），避免拼缝处抗锯齿白缝。
       const ov=1.2;
+      // 默认用户没设边框时，3D 侧壁完全不带描边（不再偷偷给默认描边），
+      // 只靠侧壁自身的扇区描边和顶面描边来定义轮廓；用户设了边框则侧壁也用同样的描边。
+      const wallStroke=bw>0?`stroke="${bc}" stroke-width="${bw}" stroke-linejoin="round"`:'stroke="none"';
       pieArcSpans(a1,a2,true).forEach(sp=>{
         const ax=[cx+R*Math.cos(sp[0]),cy+ry*Math.sin(sp[0])-ov],bx=[cx+R*Math.cos(sp[1]),cy+ry*Math.sin(sp[1])-ov];
-        walls+=`<path d="M${ax} A${R},${ry} 0 0 1 ${bx} L${bx[0]},${bx[1]+depth+ov} A${R},${ry} 0 0 0 ${ax[0]},${ax[1]+depth+ov} Z" fill="${blendHex(st.color,'#000000',.26)}" fill-opacity="${st.opacity}" stroke="${blendHex(st.color,'#000000',.5)}" stroke-width=".9" stroke-opacity=".55" stroke-linejoin="round"/>`;
+        walls+=`<path d="M${ax} A${R},${ry} 0 0 1 ${bx} L${bx[0]},${bx[1]+depth+ov} A${R},${ry} 0 0 0 ${ax[0]},${ax[1]+depth+ov} Z" fill="${blendHex(st.color,'#000000',.26)}" fill-opacity="${st.opacity}" ${wallStroke}/>`;
+        if(bw>0){
+          // 把侧壁的底面弧段也拼成底部椭圆可见轮廓（下半圈），用用户设置的描边。
+          bottomRimOuter+=`<path d="M${ax[0]},${ax[1]+depth+ov} A${R},${ry} 0 0 1 ${bx[0]},${bx[1]+depth+ov}" fill="none" stroke="${bc}" stroke-width="${bw}" stroke-linejoin="round"/>`;
+        }
       });
-      // 圆环的内侧壁：透过中间的洞只能看到远侧（上半圈）的内壁。
       if(r0)pieArcSpans(a1,a2,false).forEach(sp=>{
         const ax=[cx+r0*Math.cos(sp[0]),cy+iry*Math.sin(sp[0])-ov],bx=[cx+r0*Math.cos(sp[1]),cy+iry*Math.sin(sp[1])-ov];
-        wallsInner+=`<path d="M${ax} A${r0},${iry} 0 0 1 ${bx} L${bx[0]},${bx[1]+depth+ov} A${r0},${iry} 0 0 0 ${ax[0]},${ax[1]+depth+ov} Z" fill="${blendHex(st.color,'#000000',.4)}" fill-opacity="${st.opacity}" stroke="${blendHex(st.color,'#000000',.55)}" stroke-width=".9" stroke-opacity=".55" stroke-linejoin="round"/>`;
+        wallsInner+=`<path d="M${ax} A${r0},${iry} 0 0 1 ${bx} L${bx[0]},${bx[1]+depth+ov} A${r0},${iry} 0 0 0 ${ax[0]},${ax[1]+depth+ov} Z" fill="${blendHex(st.color,'#000000',.4)}" fill-opacity="${st.opacity}" ${wallStroke}/>`;
+        if(bw>0)bottomRimInner+=`<path d="M${ax[0]},${ax[1]+depth+ov} A${r0},${iry} 0 0 1 ${bx[0]},${bx[1]+depth+ov}" fill="none" stroke="${bc}" stroke-width="${bw}" stroke-linejoin="round"/>`;
       });
     }else{
       const p1=[cx+R*c1,cy+R*s1],p2=[cx+R*c2,cy+R*s2],q1=[cx+r0*c2,cy+r0*s2],q2=[cx+r0*c1,cy+r0*s1];
       d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;
     }
-    // 描边：用户把「边框粗细」调到 0 以上才画，颜色默认跟随扇区色；
-    // 3D 顶面用一条同色系细描边分隔（与参考图一致），同时盖住相邻扇区在圆心处的抗锯齿细缝。
-    const edge=bw>0?`stroke="${st.borderColor||st.color}" stroke-width="${bw}" stroke-linejoin="round"`:depth>0?`stroke="${blendHex(st.color,'#000000',.55)}" stroke-width="1" stroke-opacity=".8" stroke-linejoin="round"`:'stroke="none"';
+    // 描边：只有用户把「边框粗细」调到 0 以上才画，颜色默认跟随扇区色（边框颜色可单独设）。
+    // 不再给 3D 顶面偷偷加默认描边——用户自己加才加。
+    const edge=bw>0?`stroke="${bc}" stroke-width="${bw}" stroke-linejoin="round"`:'stroke="none"';
     let face=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" ${edge}/>`;
     if(mode==='inside'&&da>.12){
       const lr=r0?(r0+R)/2:R*.6,off=(state.gallery.pieLabelPos||{})[i]||{};
@@ -5854,16 +5880,39 @@ function galleryPie(W,H){
       if(parts.length)labels.push({i,mid,text:parts.join(' ')});
     }
   });
+  // 外部引线：起点固定在扇区圆弧中点；段1沿 mid 方向固定长度，段2连接段1终点到标签。
+  // 用户拖动标签只改变段2，段1（含圆弧上的起点）保持不动——这是常识。
+  let leadLen=14; // 段1固定长度（沿 mid 方向），引用图4 lessR 的短引线
+  // 如果用户设置的 pieLeaderLength 存在（旧版用作水平段长度），兼容一下：取 max(10, 旧值*0.6) 作为段1长度
+  if(Number(s.pieLeaderLength)||0)leadLen=Math.max(10,Math.round(Number(s.pieLeaderLength)*.6));
   if(labels.length){
-    const size=Number(s.pieOutsideSize)||12,gap=size+4,color=s.pieOutsideColor||'#20262b',weight=Number(s.pieOutsideWeight??400),len=Number(s.pieLeaderLength??18);
-    const items=labels.map(L=>{const right=Math.cos(L.mid)>=0,ey=cy+(R+12)*tilt*Math.sin(L.mid);return{i:L.i,right,sx:cx+R*Math.cos(L.mid),sy:cy+ry*Math.sin(L.mid),ex:cx+(R+12)*Math.cos(L.mid),ey,ly:ey,text:L.text}});
-    ['right','left'].forEach(side=>{const arr=items.filter(p=>p.right===(side==='right')).sort((p,q)=>p.ly-q.ly),bottom=H-28;arr.forEach((p,k)=>{p.ly=Math.max(28,p.ly);if(k&&p.ly-arr[k-1].ly<gap)p.ly=arr[k-1].ly+gap});for(let k=arr.length-1;k>=0;k--){if(arr[k].ly>bottom)arr[k].ly=bottom;if(k<arr.length-1&&arr[k+1].ly-arr[k].ly<gap)arr[k].ly=arr[k+1].ly-gap}});
-    items.forEach(p=>{const lx=p.right?cx+R+12+len:cx-R-12-len,off=(state.gallery.pieOutLabelPos||{})[p.i]||{};
-      // 引线从扇区圆弧的中点沿半径引出，再折向标签；整组可拖动。
-      lead+=`<g data-gobject="series" data-gdrag="pieOutLabel" data-gseries="${p.i}" class="chart-object" transform="translate(${Number(off.dx)||0} ${Number(off.dy)||0})"><path d="M${p.sx},${p.sy} L${p.ex},${p.ey} L${lx},${p.ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/><text x="${lx+(p.right?5:-5)}" y="${p.ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text></g>`;
+    const size=Number(s.pieOutsideSize)||12,gap=size+4,color=s.pieOutsideColor||'#20262b',weight=Number(s.pieOutsideWeight??400);
+    // 第一步：计算每个标签的自动位置（不包含用户覆盖）和圆弧起点
+    const rawItems=labels.map(L=>{
+      const right=Math.cos(L.mid)>=0;
+      const sx=cx+R*Math.cos(L.mid), sy=cy+ry*Math.sin(L.mid); // 固定起点：圆弧中点
+      const p1x=sx+leadLen*Math.cos(L.mid), p1y=sy+leadLen*tilt*Math.sin(L.mid); // 段1终点
+      // 自动默认：标签 y = 段1终点 y，标签 x 尽量远
+      const autoLy=p1y;
+      const autoLx=right?Math.min(W-24,Math.max(sx+R*0.3+30,cx+R+44)):Math.max(24,Math.min(sx-R*0.3-30,cx-R-44));
+      return{i:L.i,mid:L.mid,right,sx,sy,p1x,p1y,text:L.text,autoLx,autoLy};
+    });
+    // 第二步：防重叠——按左右两侧分别排序、挤压
+    ['right','left'].forEach(side=>{
+      const arr=rawItems.filter(p=>p.right===(side==='right')).sort((p,q)=>p.autoLy-q.autoLy);
+      const bottom=H-28,top=28;
+      arr.forEach((p,k)=>{p.autoLy=Math.max(top,p.autoLy);if(k&&p.autoLy-arr[k-1].autoLy<gap)p.autoLy=arr[k-1].autoLy+gap});
+      for(let k=arr.length-1;k>=0;k--){if(arr[k].autoLy>bottom)arr[k].autoLy=bottom;if(k<arr.length-1&&arr[k+1].autoLy-arr[k].autoLy<gap)arr[k].autoLy=arr[k+1].autoLy-gap}
+    });
+    // 第三步：渲染引线 + 标签
+    rawItems.forEach(p=>{
+      const pos=(state.gallery.pieOutLabelPos||{})[p.i];
+      const lx=Number(pos?.lx)||p.autoLx, ly=Number(pos?.ly)||p.autoLy;
+      // 引线：段1 = 固定起点 → 段1终点；段2 = 段1终点 → 标签位置
+      lead+=`<g data-gobject="series" data-gdrag="pieOutLabel" data-gseries="${p.i}" class="chart-object"><path d="M${p.sx},${p.sy} L${p.p1x},${p.p1y} L${lx},${ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/><text x="${lx+(p.right?5:-5)}" y="${ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text></g>`;
     });
   }
-  return `${walls}${wallsInner}${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
+  return `${walls}${wallsInner}${bottomRimInner}${bottomRimOuter}${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
 }
 function hexRgb(hex){const h=String(hex||'#000000').replace('#','');if(!/^[0-9a-f]{6}$/i.test(h))return[0,0,0];const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
 function rgbHex(rgb){return'#'+rgb.map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('')}
