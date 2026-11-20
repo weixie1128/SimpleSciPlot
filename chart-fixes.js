@@ -52,8 +52,8 @@
     if (typeof s.scatterStatsFrame !== 'boolean') s.scatterStatsFrame = false;
     if (typeof s.scatterStatsColor !== 'string' || !s.scatterStatsColor.trim()) s.scatterStatsColor = '#263238';
     if (typeof s.legendColor !== 'string' || !s.legendColor.trim()) s.legendColor = '#263238';
-    // 图例符号沿用原有四档：自动 / 点线 / 线条 / 色块；旧版“仅组名”状态回退到点线。
-    if (!['auto', 'marker-line', 'line', 'swatch'].includes(s.legendSymbol)) s.legendSymbol = 'marker-line';
+    // 图例符号沿用原有四档：自动 / 点线 / 线条 / 色块；旧版“仅组名”状态回退到自动（按图型决定）。
+    if (!['auto', 'marker-line', 'line', 'swatch'].includes(s.legendSymbol)) s.legendSymbol = 'auto';
     if (!['r-r2', 'r-r2-p', 'r2-p', 'equation-r2', 'equation-r2-p'].includes(s.scatterStatsContent)) s.scatterStatsContent = 'r-r2';
     if (!Number.isFinite(Number(s.histFacetGap))) s.histFacetGap = 14;
     if (!['compact', 'standard', 'relaxed', 'manual'].includes(s.histXRangePreset)) s.histXRangePreset = 'standard';

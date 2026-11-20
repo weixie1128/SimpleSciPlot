@@ -158,6 +158,9 @@ button,input,select,textarea{font:inherit}button{transition:.16s ease}.app-shell
 /* v0.8.0 annotation and compose tools */
 .chart-object[data-object="annotation"],
 .chart-object[data-gobject^="annotation:"]{cursor:move}
+/* v1.9.113 拖动图表对象（坐标轴标题、图例等）时禁止文字选中与触摸滚动，
+   否则按住标题拖动会触发浏览器原生文本选择/滚动，整页跟着一起动。 */
+.chart-object[data-gdrag]{cursor:move;user-select:none;-webkit-user-select:none;touch-action:none}
 .compose-annotation{cursor:move}
 .compose-annotation-selected>*{filter:drop-shadow(0 0 2px rgba(19,117,91,.55))}
 .compose-ann-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}

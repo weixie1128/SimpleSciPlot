@@ -373,7 +373,7 @@ const defaultChartSettings = {
   barGap:3, categoryWidth:.72, barOpacity:.96, barBorderWidth:.55, barBorderColorMode:'auto', barBorderColor:'#000000', barLineMode:false,barLineWidth:1.8,barLineMarker:true,
   seriesSubEnabled:false, seriesSubGap:10, seriesSubAutoSize:6,
   errorWidth:1.15, errorCap:10, errorColorMode:'series', errorXOffset:0, errorCustomValue:0.3, customPointErrors:{},
-  legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3, legendSymbol:'marker-line', legendSwatchRatio:1.6, legendColor:'#263238',
+  legendSize:12, legendVisible:true, legendOrientation:'horizontal', legendColumns:3, legendSymbol:'auto', legendSwatchRatio:1.6, legendColor:'#263238',
   legendFrameStyle:'solid', legendFrameWidth:1, legendFrameColor:'#7d898f', legendFrameRadius:2, legendFrameFill:'#ffffff',
   legendShadow:true, legendShadowX:2, legendShadowY:3, legendShadowBlur:3, legendShadowOpacity:.28,
   letters:true, letterScheme:'within', postHoc:'duncan', letterSize:11, letterWeight:400, letterOffset:10,
@@ -401,7 +401,7 @@ const defaultGallerySettings = {
   axisWidth:1.35,axisColor:'#20262b',tickLength:6,showXTicks:true,showYTicks:true,
   frameMode:'box',frameWidth:1.15,frameColor:'#20262b',background:'#ffffff',
   plotBgVisible:false,plotBg:'#f5f7f8',gridEnabled:false,gridVertical:false,gridColor:'#e3e7eb',gridWidth:1,
-  legend:true,legendX:120,legendY:62,legendFontSize:12,legendWeight:400,legendOrientation:'horizontal',legendColumns:3,legendSymbol:'marker-line',legendSwatchRatio:1.6,legendColor:'#263238',
+  legend:true,legendX:120,legendY:62,legendFontSize:12,legendWeight:400,legendOrientation:'horizontal',legendColumns:3,legendSymbol:'auto',legendSwatchRatio:1.6,legendColor:'#263238',
   legendFrameStyle:'none',legendFrameX:108,legendFrameY:50,legendFrameWidthBox:260,legendFrameHeightBox:62,legendFrameAutoSize:true,
   legendFrameWidth:1,legendFrameColor:'#7d898f',legendFrameFill:'#ffffff',legendFrameRadius:3,
   legendShadow:true,legendShadowX:2,legendShadowY:3,legendShadowBlur:3,legendShadowOpacity:.25,
@@ -3904,7 +3904,7 @@ function legendLayout(gs,colors){
   let content='';
   gs.forEach((g,i)=>{
     const col=horizontal?i%cols:0,row=horizontal?Math.floor(i/cols):i,ox=colX[col],oy=row*rowH+rowH*.52,c=colors[i%colors.length],st=getSeriesStyle(i);
-    if(!['auto','marker-line','line','swatch'].includes(s.legendSymbol))s.legendSymbol='marker-line';
+    if(!['auto','marker-line','line','swatch'].includes(s.legendSymbol))s.legendSymbol='auto';
     const _sym=s.legendSymbol;
     // 自动：柱状/3D 柱用色块，折线/曲线/瀑布图用线条。
     const _useSwatch=_sym==='swatch'||(_sym==='auto'&&(state.chart.type==='bar'||state.chart.type==='bar3d'));
@@ -5059,7 +5059,10 @@ function renderGallery(){
 function resetGallerySettings(){
   const def=galleryDef(),s=state.gallery.settings;
   s.title=def.name;s.titleVisible=true;s.subtitle='';s.subtitleEnabled=false;s.xTitle=def.schema==='xy'?'X':def.schema==='composition'?'Category':'';s.yTitle=def.schema==='xy'?'Y':def.schema==='univariate'?'Value':def.id==='stacked'?'Value':'';
-  s.normalize=false;s.donut=false;s.orientation='vertical';s.showRegression=true;s.showCorrelation=true;s.heatmapShowValues=true;if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
+  s.normalize=false;s.donut=false;s.orientation='vertical';s.showRegression=true;s.showCorrelation=true;s.heatmapShowValues=true;
+  // v1.9.113：切换图形时图例符号回到“自动”。旧默认值会把“点线”存进项目，
+  // 之后反复导入数据都沿用点线，柱状/饼图图例看起来就是错的。
+  s.legendSymbol='auto';if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
 function galleryTemplateRows(type=state.gallery.type){
@@ -5479,6 +5482,8 @@ function legendUsesLineSymbol(){
   // v1.9.67：图例符号与主图共用同一组选项，可强制线条/色块
   if(s.legendSymbol==='line')return true;
   if(s.legendSymbol==='swatch')return false;
+  // 自动模式下：散点/雷达/未填充密度图用点线，柱状、饼图、箱线等用色块。
+  if(t==='scatter')return true;
   if(t==='radar')return true;
   if(t==='kde')return !s.kdeFillEnabled;
   if(t==='hist'){
