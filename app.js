@@ -642,6 +642,7 @@ function normalizeTextSettings(){
   g.pieLeaderColor=g.pieLeaderColor||'#9aa5ab';g.pieLeaderWidth=Number(g.pieLeaderWidth??1);g.pieLeaderLength=Number(g.pieLeaderLength??18);
   g.pie3d=g.pie3d===true;g.pie3dDepth=Number(g.pie3dDepth??28);g.pie3dTilt=Number(g.pie3dTilt??.55);
   g.pieBorderWidth=Number(g.pieBorderWidth??0); // v1.9.117：全局一键改所有扇区边框粗细
+  g.pieBorderColor=g.pieBorderColor||''; // v1.9.117：全局一键改所有扇区边框颜色（空=跟随扇区色）
   // 饼图标签拖动偏移单独存放，避免换配色/模板时 seriesStyles 被清空导致标签弹回原位。
   if(!state.gallery.pieLabelPos||typeof state.gallery.pieLabelPos!=='object')state.gallery.pieLabelPos={};
   if(!state.gallery.pieOutLabelPos||typeof state.gallery.pieOutLabelPos!=='object')state.gallery.pieOutLabelPos={};
@@ -2675,20 +2676,38 @@ function gallerySpecificPropertyHtml(type,id){
   if(id==='stacked-error')return gallerySection('误差棒与数值标注',[gCheck('stackedShowError','显示误差棒（读取 Error 列）'),gRange('stackedErrorWidth','误差棒粗细',.5,4,.1),gRange('stackedErrorCapWidth','误差棒端线宽',1,10,.5),gColor('stackedErrorColor','误差棒颜色'),gCheck('stackedShowValue','在每段内标注数值'),gRange('stackedValueSize','数值字号',8,24,1),gSelect('stackedValueWeight','数值字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gSelect('stackedValueColorMode','数值颜色',[['auto','自动黑白对比'],['custom','统一自定义']]),...(s.stackedValueColorMode==='custom'?[gColor('stackedValueColor','自定义数值颜色')]:[]),gRange('stackedValueDecimals','数值小数位',0,4,1)])+`<div class="method-badge">误差棒按整柱合计（各段误差平方和开根）画在柱顶；数值标注在每段中心。</div>`;
   if(id==='pie-label'){
     const mode=s.pieLabelMode||'inside';
-    const outsidePanel=mode==='outside'?[
-      gCheck('pieOutsideShowName','外部标签显示类别名'),gCheck('pieOutsideShowPercent','外部标签显示百分比'),
-      gRange('pieOutsideSize','外部标签字号',8,24,1),gColor('pieOutsideColor','外部标签颜色'),
-      gColor('pieLeaderColor','引线颜色'),gRange('pieLeaderWidth','引线粗细',.5,3,.1),gRange('pieLeaderLength','引线水平长度',0,60,1)
-    ]:[];
-    return gallerySection('饼图标签',[
-      gSelect('pieLabelMode','标签方式',[['inside','扇区内百分比（可拖动）'],['outside','外部引线标签'],['none','不显示标签']]),
-      gCheck('donut','圆环图'),gCheck('pie3d','3D 立体饼图'),
-      gRange('pie3dDepth','立体厚度',0,80,1),gRange('pie3dTilt','立体倾斜（越小越扁）',.25,.8,.01),
-      // v1.9.117：一键改所有扇区边框粗细。用户调一下就全部同步，省得一个个点。
-      gRange('pieBorderWidth','边框粗细（全部系列）',0,5,.1),
-      gRange('pieLabelSize','百分比字号',8,28,1),gSelect('pieLabelWeight','百分比字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('pieLabelColor','百分比颜色'),
-      ...outsidePanel
-    ])+(mode==='outside'?'':`<div class="hint">要显示圆环外的引线标签，请先把「标签方式」改为「外部引线标签」；扇区内百分比可直接在图上拖动。</div>`);
+    const sections=[
+      gallerySection('基础',[
+        gSelect('pieLabelMode','标签方式',[['inside','扇区内百分比（可拖动）'],['outside','外部引线标签'],['none','不显示标签']]),
+        gCheck('donut','圆环图')
+      ]),
+      gallerySection('立体 3D',[
+        gCheck('pie3d','启用 3D 立体饼图'),
+        ...(s.pie3d?[gRange('pie3dDepth','立体厚度',0,80,1),gRange('pie3dTilt','立体倾斜（越小越扁）',.25,.8,.01)]:[])
+      ]),
+      // 边框：独立 section，一键调全部扇区；不需要的用户就直接关，不会找不到
+      gallerySection('边框（全部系列）',[
+        gRange('pieBorderWidth','边框粗细',0,5,.1),
+        `<div class="field"><label><span>边框颜色</span><span style="color:#8a969c;font-size:11px;margin-left:4px">留空=跟随扇区色</span></label><div class="color-pair"><input data-gsetting="pieBorderColor" type="color" value="${s.pieBorderColor||'#333333'}"><input data-gsetting="pieBorderColor" data-color-text="pieBorderColor" type="text" value="${escAttr(s.pieBorderColor||'')}" placeholder="留空=跟随扇区色" maxlength="7" spellcheck="false" style="width:84px"></div></div>`
+      ])
+    ];
+    if(mode==='inside'){
+      sections.push(gallerySection('扇区内百分比',[
+        gRange('pieLabelSize','字号',8,28,1),
+        gSelect('pieLabelWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+        gColor('pieLabelColor','颜色')
+      ])+`<div class="hint">百分比默认位于对应扇区内部，可直接在图上拖动调整位置。</div>`);
+    }else if(mode==='outside'){
+      sections.push(gallerySection('外部引线标签',[
+        gCheck('pieOutsideShowName','显示类别名'),
+        gCheck('pieOutsideShowPercent','显示百分比'),
+        gRange('pieOutsideSize','标签字号',8,24,1),
+        gColor('pieOutsideColor','标签颜色'),
+        gColor('pieLeaderColor','引线颜色'),
+        gRange('pieLeaderWidth','引线粗细',.5,3,.1)
+      ])+`<div class="hint">引线起点固定在扇区圆弧中点；拖动标签时起点不动，只有线条跟着转方向。</div>`);
+    }
+    return sections.join('');
   }
   if(id==='significance'){
     // v1.9.88: 原来「怎么标」（brackets/perbox/letters）+「括号上写什么」（星号/p 值）两个下拉
@@ -2953,7 +2972,8 @@ function bindGalleryStudioPropertyInputs(){
     let v=el.type==='checkbox'?el.checked:el.value;if(['range','number'].includes(el.type))v=Number(v);
     // v0.19.0: KDE 的这几个开关是“是/否”下拉，需要把字符串转成真正的布尔值。
     if(['kdeFillEnabled','kdeShowRug','kdeHistAutoBins'].includes(key))v=(v===true||v==='true'||v==='1');
-    if(el.dataset.colorText&& !/^#[0-9a-f]{6}$/i.test(String(v)))return;
+    // pieBorderColor 允许留空（留空=跟随扇区色），所以 data-color-text 校验放行空值
+    if(el.dataset.colorText && !/^#[0-9a-f]{6}$/i.test(String(v)) && !(key==='pieBorderColor' && String(v).trim()===''))return;
     state.gallery.settings[key]=v;
     if(key==='colorScheme'){state.gallery.palette=[...(templates[v]?.colors||templates.foodchem.colors)];state.gallery.seriesStyles={}}
     if(key==='heatmapPalette')applyHeatmapPalette(v);
@@ -2967,8 +2987,15 @@ function bindGalleryStudioPropertyInputs(){
     if(['lineWidth','opacity','pointSize'].includes(key)){const n=galleryStudioSeriesNames().length;for(let i=0;i<n;i++){const st=getGallerySeriesStyle(i);st[key]=v}}
     // v1.9.117：饼图全局「边框粗细（全部系列）」，一键同步到所有扇区
     if(key==='pieBorderWidth'){const n=galleryStudioSeriesNames().length;for(let i=0;i<n;i++){const st=getGallerySeriesStyle(i);st.lineWidth=v}}
+    if(key==='pieBorderColor'){const n=galleryStudioSeriesNames().length;for(let i=0;i<n;i++){const st=getGallerySeriesStyle(i);st.borderColor=v||undefined}}
     analyzeGalleryData();renderGalleryStudioCanvas();syncGalleryQuickControls();
-    $$(`[data-gsetting="${key}"]`).forEach(peer=>{if(peer!==el&&peer.type!=='checkbox')peer.value=state.gallery.settings[key]});
+    $$(`[data-gsetting="${key}"]`).forEach(peer=>{
+      if(peer!==el&&peer.type!=='checkbox'){
+        // pieBorderColor 留空=跟随扇区色，但 type="color" 不接受空值，用占位色显示
+        if(key==='pieBorderColor' && peer.type==='color' && !state.gallery.settings[key])peer.value='#333333';
+        else peer.value=state.gallery.settings[key];
+      }
+    });
     $$(`[data-gout="${key}"]`).forEach(out=>out.textContent=state.gallery.settings[key]);
     if(['heatmapPalette','statMethod','boxQuartileMethod','boxWhiskerMethod','boxWhiskerPercentile','correlationMethod','kdeDisplayMode','kdeBandwidthMode','kdeFillEnabled','kdeShowRug','kdeHistAutoBins','kdeHistEnabled','kdeHistColorMode','scatterFitMode','showRegression','scatterFitBand','scatterStatsColorMode','stackedValueColorMode','heatmapValueColorMode','heatmapStarColorMode','heatmapGroupLabelColorMode','heatmapShowGroupNames','pieLabelMode'].includes(key))renderGalleryStudioProperties();
   };
@@ -5109,7 +5136,7 @@ function resetGallerySettings(){
   // 之后反复导入数据都沿用点线，柱状/饼图图例看起来就是错的。
   s.legendSymbol='auto';
   // 饼图默认不加描边：旧版渲染把未设置的边框画成白色分隔线，会和用户自己设置的边框冲突。
-  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;s.pieBorderWidth=0;state.gallery.pieLabelPos={};state.gallery.pieOutLabelPos={};}
+  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;s.pieBorderWidth=0;s.pieBorderColor='';state.gallery.pieLabelPos={};state.gallery.pieOutLabelPos={};}
   if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
@@ -5880,36 +5907,30 @@ function galleryPie(W,H){
       if(parts.length)labels.push({i,mid,text:parts.join(' ')});
     }
   });
-  // 外部引线：起点固定在扇区圆弧中点；段1沿 mid 方向固定长度，段2连接段1终点到标签。
-  // 用户拖动标签只改变段2，段1（含圆弧上的起点）保持不动——这是常识。
-  let leadLen=14; // 段1固定长度（沿 mid 方向），引用图4 lessR 的短引线
-  // 如果用户设置的 pieLeaderLength 存在（旧版用作水平段长度），兼容一下：取 max(10, 旧值*0.6) 作为段1长度
-  if(Number(s.pieLeaderLength)||0)leadLen=Math.max(10,Math.round(Number(s.pieLeaderLength)*.6));
+  // 外部引线：一段直线，起点固定在扇区圆弧中点，终点连到标签位置。
+  // 拖动标签时起点不动，只有终点跟着走（一条线整体转方向，这是常识）。
   if(labels.length){
     const size=Number(s.pieOutsideSize)||12,gap=size+4,color=s.pieOutsideColor||'#20262b',weight=Number(s.pieOutsideWeight??400);
-    // 第一步：计算每个标签的自动位置（不包含用户覆盖）和圆弧起点
     const rawItems=labels.map(L=>{
       const right=Math.cos(L.mid)>=0;
       const sx=cx+R*Math.cos(L.mid), sy=cy+ry*Math.sin(L.mid); // 固定起点：圆弧中点
-      const p1x=sx+leadLen*Math.cos(L.mid), p1y=sy+leadLen*tilt*Math.sin(L.mid); // 段1终点
-      // 自动默认：标签 y = 段1终点 y，标签 x 尽量远
-      const autoLy=p1y;
-      const autoLx=right?Math.min(W-24,Math.max(sx+R*0.3+30,cx+R+44)):Math.max(24,Math.min(sx-R*0.3-30,cx-R-44));
-      return{i:L.i,mid:L.mid,right,sx,sy,p1x,p1y,text:L.text,autoLx,autoLy};
+      // 自动标签位置：标签沿 mid 方向外推 38px，尽量贴边但不超画布
+      const dirX=Math.cos(L.mid), dirY=tilt*Math.sin(L.mid);
+      const autoLx=cx+(R+38)*dirX;
+      const autoLy=cy+(R+38)*dirY;
+      return{i:L.i,mid:L.mid,right,sx,sy,text:L.text,autoLx,autoLy};
     });
-    // 第二步：防重叠——按左右两侧分别排序、挤压
+    // 防重叠：按左右两侧分别排序、纵向挤压
     ['right','left'].forEach(side=>{
       const arr=rawItems.filter(p=>p.right===(side==='right')).sort((p,q)=>p.autoLy-q.autoLy);
       const bottom=H-28,top=28;
       arr.forEach((p,k)=>{p.autoLy=Math.max(top,p.autoLy);if(k&&p.autoLy-arr[k-1].autoLy<gap)p.autoLy=arr[k-1].autoLy+gap});
       for(let k=arr.length-1;k>=0;k--){if(arr[k].autoLy>bottom)arr[k].autoLy=bottom;if(k<arr.length-1&&arr[k+1].autoLy-arr[k].autoLy<gap)arr[k].autoLy=arr[k+1].autoLy-gap}
     });
-    // 第三步：渲染引线 + 标签
     rawItems.forEach(p=>{
       const pos=(state.gallery.pieOutLabelPos||{})[p.i];
       const lx=Number(pos?.lx)||p.autoLx, ly=Number(pos?.ly)||p.autoLy;
-      // 引线：段1 = 固定起点 → 段1终点；段2 = 段1终点 → 标签位置
-      lead+=`<g data-gobject="series" data-gdrag="pieOutLabel" data-gseries="${p.i}" class="chart-object"><path d="M${p.sx},${p.sy} L${p.p1x},${p.p1y} L${lx},${ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/><text x="${lx+(p.right?5:-5)}" y="${ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text></g>`;
+      lead+=`<g data-gobject="series" data-gdrag="pieOutLabel" data-gseries="${p.i}" class="chart-object"><path d="M${p.sx},${p.sy} L${lx},${ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/><text x="${lx+(p.right?5:-5)}" y="${ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text></g>`;
     });
   }
   return `${walls}${wallsInner}${bottomRimInner}${bottomRimOuter}${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
