@@ -641,6 +641,9 @@ function normalizeTextSettings(){
   g.pieOutsideShowName=g.pieOutsideShowName!==false;g.pieOutsideShowPercent=g.pieOutsideShowPercent===true;g.pieOutsideSize=Number(g.pieOutsideSize)||12;g.pieOutsideColor=g.pieOutsideColor||'#20262b';g.pieOutsideWeight=Number(g.pieOutsideWeight??400);
   g.pieLeaderColor=g.pieLeaderColor||'#9aa5ab';g.pieLeaderWidth=Number(g.pieLeaderWidth??1);g.pieLeaderLength=Number(g.pieLeaderLength??18);
   g.pie3d=g.pie3d===true;g.pie3dDepth=Number(g.pie3dDepth??28);g.pie3dTilt=Number(g.pie3dTilt??.55);
+  // 饼图标签拖动偏移单独存放，避免换配色/模板时 seriesStyles 被清空导致标签弹回原位。
+  if(!state.gallery.pieLabelPos||typeof state.gallery.pieLabelPos!=='object')state.gallery.pieLabelPos={};
+  if(!state.gallery.pieOutLabelPos||typeof state.gallery.pieOutLabelPos!=='object')state.gallery.pieOutLabelPos={};
   g.stackedValueWeight=Number(g.stackedValueWeight??600);g.stackedValueColorMode=g.stackedValueColorMode||'auto';g.stackedValueColor=g.stackedValueColor||'#ffffff';
   g.radarLabelColor=g.radarLabelColor||'#000000';g.radarLabelWeight=Number(g.radarLabelWeight??g.xTickWeight??400);g.radarTickLabelColor=g.radarTickLabelColor||g.yTickColor||'#20262b';g.radarTickLabelWeight=Number(g.radarTickLabelWeight??g.yTickWeight??400);
   g.heatmapValueWeight=Number(g.heatmapValueWeight??400);g.heatmapValueColorMode=g.heatmapValueColorMode||'auto';g.heatmapValueColor=g.heatmapValueColor||'#222222';g.heatmapStarWeight=g.heatmapStarWeight??'auto';g.heatmapStarColorMode=g.heatmapStarColorMode||'auto';g.heatmapStarColor=g.heatmapStarColor||'#333333';g.heatmapStarNoteColor=g.heatmapStarNoteColor||'#666666';g.heatmapStarNoteWeight=Number(g.heatmapStarNoteWeight??400);g.heatmapColorBarTextColor=g.heatmapColorBarTextColor||'#000000';g.heatmapColorBarTextWeight=Number(g.heatmapColorBarTextWeight??400);g.heatmapGroupLabelSize=Number(g.heatmapGroupLabelSize??10);g.heatmapGroupLabelWeight=Number(g.heatmapGroupLabelWeight??600);g.heatmapGroupLabelColorMode=g.heatmapGroupLabelColorMode||'series';g.heatmapGroupLabelColor=g.heatmapGroupLabelColor||'#333333';
@@ -2555,7 +2558,7 @@ function bindGalleryStudioDraggables(){
     if(e.target.closest('[data-annotation-handle]'))return;
     e.preventDefault();e.stopPropagation();const key=el.dataset.gdrag,start=svgPoint(svg,e),snap=galleryDragSnapshot(key,el);el.setPointerCapture(e.pointerId);
     if(el.dataset.gstatsSeries!=null){state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gstatsSeries)||0}
-    else if(key==='pieLabel'){state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gseries)||0}
+    else if(key==='pieLabel'||key==='pieOutLabel'){state.gallery.selected='series';state.gallery.selectedSeries=Number(el.dataset.gseries)||0}
     else state.gallery.selected=key==='annotation'?`annotation:${el.dataset.gannotationId}`:key==='xTitle'?'axis-x':key==='yTitle'?'axis-y':key==='legendFrame'?'legend-frame':key==='methodNote'?'method-note':key==='heatmapStarNote'?'heatmap-star-note':key;
     if(key==='annotation')state.gallery.selectedAnnotation=el.dataset.gannotationId;
     const move=ev=>{const p=svgPoint(svg,ev),dx=p.x-start.x,dy=p.y-start.y;if(key==='annotation')galleryApplyAnnotationDrag(el,snap,dx,dy);else galleryApplyDrag(key,snap.x+dx,snap.y+dy,el)};
@@ -2575,7 +2578,8 @@ function galleryDragSnapshot(key,el=null){
   if(key==='legendFrame')return galleryTransformXY(el,s.legendFrameX??108,s.legendFrameY??50);
   if(key==='methodNote')return{x:s.methodNoteX??s.width-24,y:s.methodNoteY??s.height-10};
   if(key==='heatmapStarNote')return{x:s.heatmapStarNoteX!=null?s.heatmapStarNoteX:(el?Number(el.getAttribute('x'))||0:0),y:s.heatmapStarNoteY!=null?s.heatmapStarNoteY:(el?Number(el.getAttribute('y'))||0:0)};
-  if(key==='pieLabel')return{x:el?Number(el.getAttribute('x'))||0:0,y:el?Number(el.getAttribute('y'))||0:0};
+  if(key==='pieLabel'){const p=(state.gallery.pieLabelPos||{})[el?.dataset.gseries];return{x:Number(p&&p.dx)||0,y:Number(p&&p.dy)||0}}
+  if(key==='pieOutLabel'){const p=(state.gallery.pieOutLabelPos||{})[el?.dataset.gseries];return{x:Number(p&&p.dx)||0,y:Number(p&&p.dy)||0}}
   if(key==='xTitle')return{x:s.xTitleX??s.width/2,y:s.xTitleY??s.height-24};return{x:s.yTitleX??28,y:s.yTitleY??s.height/2};
 }
 function galleryApplyAnnotationDrag(el,snap,dx,dy){
@@ -2594,7 +2598,8 @@ function galleryApplyDrag(key,x,y,el){
   else if(key==='legendFrame'){s.legendFrameX=x;s.legendFrameY=y;el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='methodNote'){s.methodNoteX=x;s.methodNoteY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else if(key==='heatmapStarNote'){s.heatmapStarNoteX=x;s.heatmapStarNoteY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
-  else if(key==='pieLabel'){const st=getGallerySeriesStyle(Number(el.dataset.gseries)||0);st.pieLabelX=x;st.pieLabelY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
+  else if(key==='pieLabel'){state.gallery.pieLabelPos=state.gallery.pieLabelPos||{};state.gallery.pieLabelPos[el.dataset.gseries]={dx:x,dy:y};el.setAttribute('transform',`translate(${x} ${y})`)}
+  else if(key==='pieOutLabel'){state.gallery.pieOutLabelPos=state.gallery.pieOutLabelPos||{};state.gallery.pieOutLabelPos[el.dataset.gseries]={dx:x,dy:y};el.setAttribute('transform',`translate(${x} ${y})`)}
   else if(key==='xTitle'){s.xTitleX=x;s.xTitleY=y;el.setAttribute('x',x);el.setAttribute('y',y)}
   else{s.yTitleX=x;s.yTitleY=y;el.setAttribute('transform',`translate(${x} ${y}) rotate(-90)`)}
 }
@@ -5086,7 +5091,7 @@ function resetGallerySettings(){
   // 之后反复导入数据都沿用点线，柱状/饼图图例看起来就是错的。
   s.legendSymbol='auto';
   // 饼图默认不加描边：旧版渲染把未设置的边框画成白色分隔线，会和用户自己设置的边框冲突。
-  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;}
+  if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;state.gallery.pieLabelPos={};state.gallery.pieOutLabelPos={};}
   if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=false;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals=0;s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
@@ -5791,62 +5796,74 @@ function galleryStacked(W,H){
   return out;
 }
 function hexLuminance(hex){const h=hexRgb(hex).map(v=>v/255);return .2126*h[0]+.7152*h[1]+.0722*h[2]}
-let galleryPieClipSeq=0;
+function pieArcSpans(a1,a2,front){
+  const out=[],TAU=Math.PI*2;
+  for(let k=-1;k<=1;k++){
+    const lo=front?k*TAU:k*TAU+Math.PI,hi=lo+Math.PI,s=Math.max(a1,lo),e=Math.min(a2,hi);
+    if(e-s>1e-4)out.push([s,e]);
+  }
+  return out;
+}
 function galleryPie(W,H){
   const s=state.gallery.settings,rows=state.gallery.rows.filter(r=>r.Category===state.gallery.rows[0].Category),total=rows.reduce((a,b)=>a+b.Value,0);
   const R=Math.min(W,H)*.3,r0=s.donut?R*.52:0,mode=s.pieLabelMode||'inside';
-  const depth=s.pie3d?Math.max(0,Number(s.pie3dDepth)||0):0,tilt=clamp(Number(s.pie3dTilt)||.55,.25,.8),ry=R*tilt,iry=r0*tilt;
+  // 2D 饼图是正圆（tilt=1），只有 3D 才把纵向压扁成椭圆。之前 2D 也乘了 0.55，
+  // 会把百分比数字和外部引线压向中轴，看起来不在对应扇区里。
+  const depth=s.pie3d?Math.max(0,Number(s.pie3dDepth)||0):0,tilt=s.pie3d?clamp(Number(s.pie3dTilt)||.55,.25,.8):1,ry=R*tilt,iry=r0*tilt;
   const cx=W*.42,cy=s.pie3d?H*.54-depth*.35:H*.54;
   const slices=[];let a=-Math.PI/2;
   rows.forEach((r,i)=>{const st=getGallerySeriesStyle(i),da=total?r.Value/total*Math.PI*2:0;slices.push({i,r,st,a1:a,a2:a+da,da,large:da>Math.PI?1:0});a+=da});
   let walls='',wallsInner='',faces='',lead='';const labels=[];
-  const clipId='galleryPieClip'+(++galleryPieClipSeq);
   slices.forEach(sl=>{
     const {i,r,st,a1,a2,da,large}=sl,mid=a1+da/2,c1=Math.cos(a1),s1=Math.sin(a1),c2=Math.cos(a2),s2=Math.sin(a2);
-    const bw=Math.max(0,Number(st.lineWidth)||0),edge=bw>0?`stroke="${st.borderColor||st.color}" stroke-width="${bw}"`:'stroke="none"';
+    const bw=Math.max(0,Number(st.lineWidth)||0);
     let d;
     if(depth>0){
-      const t1=[cx+R*c1,cy+ry*s1],t2=[cx+R*c2,cy+ry*s2],b1=[t1[0],t1[1]+depth],b2=[t2[0],t2[1]+depth];
+      const t1=[cx+R*c1,cy+ry*s1],t2=[cx+R*c2,cy+ry*s2];
       d=r0?`M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${cx+r0*c2},${cy+iry*s2} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1} Z`:`M${cx},${cy} L${t1} A${R},${ry} 0 ${large} 1 ${t2} Z`;
-      // 只保留前半圈（y>cy）的外侧壁：后半圈的侧壁在透视上应该被顶面挡住，
-      // 之前整圈都画出来，会露出一圈“底盘”，看着不像立体图。
-      walls+=`<path d="M${t1} A${R},${ry} 0 ${large} 1 ${t2} L${b2} A${R},${ry} 0 ${large} 0 ${b1} Z" fill="${blendHex(st.color,'#000000',.26)}" fill-opacity="${st.opacity}" stroke="none"/>`;
-      // 圆环的内侧壁：透过中间的洞只能看到远侧（y<cy）的内壁。
-      if(r0)wallsInner+=`<path d="M${cx+r0*c1},${cy+iry*s1} A${r0},${iry} 0 ${large} 1 ${cx+r0*c2},${cy+iry*s2} L${cx+r0*c2},${cy+iry*s2+depth} A${r0},${iry} 0 ${large} 0 ${cx+r0*c1},${cy+iry*s1+depth} Z" fill="${blendHex(st.color,'#000000',.4)}" fill-opacity="${st.opacity}" stroke="none"/>`;
+      // 3D 侧壁按“圆弧是否位于下半圈”分段绘制，而不是整圈画完再裁。
+      // 跨过半圈的扇区被整圈裁剪时会出现缺口；分段后只会保留真正可见的前半圈。
+      // ov：把侧壁顶边向上多探出 1.2px，塞到顶面下面（侧壁先画、顶面后画），
+      // 避免顶面与侧壁拼缝处出现抗锯齿白缝；侧壁本身带细描边，相邻侧壁之间也不留缝。
+      const ov=1.2;
+      pieArcSpans(a1,a2,true).forEach(sp=>{
+        const ax=[cx+R*Math.cos(sp[0]),cy+ry*Math.sin(sp[0])-ov],bx=[cx+R*Math.cos(sp[1]),cy+ry*Math.sin(sp[1])-ov];
+        walls+=`<path d="M${ax} A${R},${ry} 0 0 1 ${bx} L${bx[0]},${bx[1]+depth+ov} A${R},${ry} 0 0 0 ${ax[0]},${ax[1]+depth+ov} Z" fill="${blendHex(st.color,'#000000',.26)}" fill-opacity="${st.opacity}" stroke="${blendHex(st.color,'#000000',.5)}" stroke-width=".9" stroke-opacity=".55" stroke-linejoin="round"/>`;
+      });
+      // 圆环的内侧壁：透过中间的洞只能看到远侧（上半圈）的内壁。
+      if(r0)pieArcSpans(a1,a2,false).forEach(sp=>{
+        const ax=[cx+r0*Math.cos(sp[0]),cy+iry*Math.sin(sp[0])-ov],bx=[cx+r0*Math.cos(sp[1]),cy+iry*Math.sin(sp[1])-ov];
+        wallsInner+=`<path d="M${ax} A${r0},${iry} 0 0 1 ${bx} L${bx[0]},${bx[1]+depth+ov} A${r0},${iry} 0 0 0 ${ax[0]},${ax[1]+depth+ov} Z" fill="${blendHex(st.color,'#000000',.4)}" fill-opacity="${st.opacity}" stroke="${blendHex(st.color,'#000000',.55)}" stroke-width=".9" stroke-opacity=".55" stroke-linejoin="round"/>`;
+      });
     }else{
       const p1=[cx+R*c1,cy+R*s1],p2=[cx+R*c2,cy+R*s2],q1=[cx+r0*c2,cy+r0*s2],q2=[cx+r0*c1,cy+r0*s1];
       d=r0?`M${p1} A${R},${R} 0 ${large} 1 ${p2} L${q1} A${r0},${r0} 0 ${large} 0 ${q2} Z`:`M${cx},${cy} L${p1} A${R},${R} 0 ${large} 1 ${p2} Z`;
     }
-    // 旧版默认 stroke 为白色，等于给每个扇区加了白边，会和用户自己设置的边框冲突。
-    // 现在只有用户把「边框粗细」调到 0 以上才描边，颜色默认跟随扇区色。
+    // 描边：用户把「边框粗细」调到 0 以上才画，颜色默认跟随扇区色；
+    // 3D 顶面用一条同色系细描边分隔（与参考图一致），同时盖住相邻扇区在圆心处的抗锯齿细缝。
+    const edge=bw>0?`stroke="${st.borderColor||st.color}" stroke-width="${bw}" stroke-linejoin="round"`:depth>0?`stroke="${blendHex(st.color,'#000000',.55)}" stroke-width="1" stroke-opacity=".8" stroke-linejoin="round"`:'stroke="none"';
     let face=`<path d="${d}" fill="${st.color}" fill-opacity="${st.opacity}" ${edge}/>`;
     if(mode==='inside'&&da>.12){
-      // 标签放在扇区中间偏内（实心饼 0.6R，圆环取环带中线），并支持直接拖动。
-      const lr=r0?(r0+R)/2:R*.6;
-      const tx=st.pieLabelX!=null?Number(st.pieLabelX):cx+lr*Math.cos(mid),ty=st.pieLabelY!=null?Number(st.pieLabelY):cy+lr*tilt*Math.sin(mid);
-      face+=`<text data-gdrag="pieLabel" data-gseries="${i}" class="chart-object" x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text>`;
+      const lr=r0?(r0+R)/2:R*.6,off=(state.gallery.pieLabelPos||{})[i]||{};
+      const tx=cx+lr*Math.cos(mid),ty=cy+lr*tilt*Math.sin(mid);
+      face+=`<g data-gdrag="pieLabel" data-gseries="${i}" class="chart-object" transform="translate(${Number(off.dx)||0} ${Number(off.dy)||0})"><text x="${tx}" y="${ty}" text-anchor="middle" font-size="${s.pieLabelSize}" fill="${s.pieLabelColor||'#ffffff'}" font-weight="${s.pieLabelWeight||600}">${formatNumber(r.Value/total*100,1)}%</text></g>`;
     }
     faces+=`<g data-gobject="series" data-gseries="${i}" class="chart-object">${face}</g>`;
     if(mode==='outside'&&da>.06){
       const parts=[];if(s.pieOutsideShowName!==false)parts.push(esc(String(r.Component||'')));if(s.pieOutsideShowPercent&&total)parts.push(formatNumber(r.Value/total*100,1)+'%');
-      if(parts.length)labels.push({mid,text:parts.join(' ')});
+      if(parts.length)labels.push({i,mid,text:parts.join(' ')});
     }
   });
   if(labels.length){
     const size=Number(s.pieOutsideSize)||12,gap=size+4,color=s.pieOutsideColor||'#20262b',weight=Number(s.pieOutsideWeight??400),len=Number(s.pieLeaderLength??18);
-    const items=labels.map(L=>{const right=Math.cos(L.mid)>=0,ey=cy+(R+12)*tilt*Math.sin(L.mid);return{right,sx:cx+R*Math.cos(L.mid),sy:cy+ry*Math.sin(L.mid),ex:cx+(R+12)*Math.cos(L.mid),ey,ly:ey,text:L.text}});
-    ['right','left'].forEach(side=>{
-      const arr=items.filter(p=>p.right===(side==='right')).sort((p,q)=>p.ly-q.ly),bottom=H-28;
-      arr.forEach((p,k)=>{p.ly=Math.max(28,p.ly);if(k&&p.ly-arr[k-1].ly<gap)p.ly=arr[k-1].ly+gap});
-      for(let k=arr.length-1;k>=0;k--){if(arr[k].ly>bottom)arr[k].ly=bottom;if(k<arr.length-1&&arr[k+1].ly-arr[k].ly<gap)arr[k].ly=arr[k+1].ly-gap}
-    });
-    items.forEach(p=>{const lx=p.right?cx+R+12+len:cx-R-12-len;
-      lead+=`<path d="M${p.sx},${p.sy} L${p.ex},${p.ey} L${lx},${p.ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/>`;
-      lead+=`<text x="${lx+(p.right?5:-5)}" y="${p.ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text>`;
+    const items=labels.map(L=>{const right=Math.cos(L.mid)>=0,ey=cy+(R+12)*tilt*Math.sin(L.mid);return{i:L.i,right,sx:cx+R*Math.cos(L.mid),sy:cy+ry*Math.sin(L.mid),ex:cx+(R+12)*Math.cos(L.mid),ey,ly:ey,text:L.text}});
+    ['right','left'].forEach(side=>{const arr=items.filter(p=>p.right===(side==='right')).sort((p,q)=>p.ly-q.ly),bottom=H-28;arr.forEach((p,k)=>{p.ly=Math.max(28,p.ly);if(k&&p.ly-arr[k-1].ly<gap)p.ly=arr[k-1].ly+gap});for(let k=arr.length-1;k>=0;k--){if(arr[k].ly>bottom)arr[k].ly=bottom;if(k<arr.length-1&&arr[k+1].ly-arr[k].ly<gap)arr[k].ly=arr[k+1].ly-gap}});
+    items.forEach(p=>{const lx=p.right?cx+R+12+len:cx-R-12-len,off=(state.gallery.pieOutLabelPos||{})[p.i]||{};
+      // 引线从扇区圆弧的中点沿半径引出，再折向标签；整组可拖动。
+      lead+=`<g data-gobject="series" data-gdrag="pieOutLabel" data-gseries="${p.i}" class="chart-object" transform="translate(${Number(off.dx)||0} ${Number(off.dy)||0})"><path d="M${p.sx},${p.sy} L${p.ex},${p.ey} L${lx},${p.ly}" fill="none" stroke="${s.pieLeaderColor||'#9aa5ab'}" stroke-width="${Number(s.pieLeaderWidth)||1}"/><text x="${lx+(p.right?5:-5)}" y="${p.ly+4}" text-anchor="${p.right?'start':'end'}" font-size="${size}" font-weight="${weight}" fill="${color}">${p.text}</text></g>`;
     });
   }
-  const defs=depth>0?`<defs><clipPath id="${clipId}a"><rect x="0" y="${cy}" width="${W}" height="${Math.max(0,H-cy)+depth+40}"/></clipPath><clipPath id="${clipId}b"><rect x="0" y="0" width="${W}" height="${Math.max(0,cy)}"/></clipPath></defs>`:'';
-  return `${defs}${depth>0?`<g clip-path="url(#${clipId}a)">${walls}</g><g clip-path="url(#${clipId}b)">${wallsInner}</g>`:''}${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
+  return `${walls}${wallsInner}${faces}${lead}${galleryLegend(rows.map(r=>r.Component))}`;
 }
 function hexRgb(hex){const h=String(hex||'#000000').replace('#','');if(!/^[0-9a-f]{6}$/i.test(h))return[0,0,0];const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
 function rgbHex(rgb){return'#'+rgb.map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('')}
