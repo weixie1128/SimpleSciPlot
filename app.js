@@ -583,7 +583,7 @@ function setWorkflowChart(type,{keepData=false}={}){
   state.workflow.chartType=type;
   state.workflow.mode=nextMode;
   state.chart.mode=state.workflow.mode;
-  if(state.workflow.mode==='experiment'){state.chart.type=type;if((type==='line'||type==='curve')&&!keepData&&!unchanged)state.design.factorALevelMode='auto';}
+  if(state.workflow.mode==='experiment'){state.chart.type=type;if(type==='bar3d'&&!keepData&&!unchanged&&typeof applyChartStylePreset==='function')applyChartStylePreset('bar3d');if((type==='line'||type==='curve')&&!keepData&&!unchanged)state.design.factorALevelMode='auto';}
   else{state.gallery.type=type;if(!unchanged)resetGallerySettings()}
   if(!keepData&&!unchanged){
     if(state.workflow.mode==='experiment'){state.rawData=[];state.analysisRows=[];state.descriptive=[];state.analysis=null}
