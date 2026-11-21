@@ -521,6 +521,12 @@ const SSP_CHART_STYLE_PRESETS = {
   }
 };
 
+// v1.9.122：用户「图片参数库」导出的默认图参数（由 preset-library.js 在 app.js 之前注入）。
+if(window.FOODLAB_PRESET_LIB){
+  if(window.FOODLAB_PRESET_LIB.gallery)Object.assign(SSP_GALLERY_STYLE_PRESETS,window.FOODLAB_PRESET_LIB.gallery);
+  if(window.FOODLAB_PRESET_LIB.chart)Object.assign(SSP_CHART_STYLE_PRESETS,window.FOODLAB_PRESET_LIB.chart);
+}
+
 function applyGalleryStylePreset(type=state.gallery.type){
   const preset=SSP_GALLERY_STYLE_PRESETS[type];
   if(!preset)return false;
@@ -5161,7 +5167,7 @@ function resetGallerySettings(){
   s.legendSymbol='auto';
   // 饼图默认不加描边：旧版渲染把未设置的边框画成白色分隔线，会和用户自己设置的边框冲突。
   if(def.id==='pie'){s.lineWidth=0;s.pieLabelMode='inside';s.pie3d=false;s.pieBorderWidth=0;s.pieBorderColor='';state.gallery.pieLabelPos={};state.gallery.pieOutLabelPos={};}
-  if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=true;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals='auto';s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
+  if(def.id==='radar'){s.title='Radar chart';s.titleVisible=false;s.legendOrientation='horizontal';s.legendColumns=3;s.legendX=78;s.legendY=45;s.radarFill=true;s.radarShowMarkers=true;s.radarLevels=4;s.radarMin='auto';s.radarMax='auto';s.radarLabelOffset=32;s.radarShowTickLabels=true;s.radarTickDecimals='auto';s.radarTickLabelSize=11;s.radarTickLabelPosition='top';s.radarTickLabelOffset=10;s.radarTheme='rose';s.radarGradientMode='radial';s.radarGridColor='#c8aebc';s.radarSpokeColor='#9e8794';s.radarGridWidth=.9;s.radarSpokeWidth=1.15;s.radarBandMode='theme-gradient';s.radarSmartHighlight=true;s.radarHighlightThreshold=0;s.radarHighlightStrength=.24;}s.heatmapCluster='none';s.heatmapShowDendrogram=false;state.gallery.seriesStyles={};applyGalleryStylePreset(state.gallery.type||def.id);state.gallery.selected=def.id==='radar'?'radar-grid':'title';state.gallery.selectedSeries=0;
 }
 
 function galleryTemplateRows(type=state.gallery.type){

@@ -841,14 +841,28 @@
         const changed = heatmapMode() !== mode;
         state.gallery.settings.heatmapMode = mode;
         if (select.value === 'corrplot') {
-          state.gallery.settings.heatmapCellStyle = 'circle';
+          // v1.9.122：首次进入气泡热图时套用用户「气泡热图」参数库，之后保留用户微调。
+          if (!state.gallery.settings.heatmapCorrplotDefaultsApplied && typeof applyGalleryStylePreset === 'function') {
+            applyGalleryStylePreset('heatmap');
+            state.gallery.settings.heatmapMode = 'correlation';
+            state.gallery.settings.heatmapClusteredDefaultsApplied = false;
+            state.gallery.settings.heatmapCorrplotDefaultsApplied = true;
+          }
+          state.gallery.settings.heatmapCellStyle = 'lowerCircle';
           state.gallery.settings.heatmapShowStars = true;
         }
         if (mode === 'correlation' && state.gallery.settings.heatmapClusteredDefaultsApplied) {
-          // 从聚类热图切回相关热图：恢复 Corrplot 蓝红色阶 + 行列同步聚类排序，避免残留聚类色阶与单侧排序
-          state.gallery.settings.heatmapPalette = 'blueWhiteRed';
-          state.gallery.settings.heatmapScaleMode = 'auto';
-          state.gallery.settings.heatmapCluster = 'both';
+          // 从聚类热图切回相关热图：恢复用户「气泡热图」参数，避免残留聚类色阶与单侧排序
+          state.gallery.settings.heatmapClusteredDefaultsApplied = false;
+          if (!state.gallery.settings.heatmapCorrplotDefaultsApplied && typeof applyGalleryStylePreset === 'function') {
+            applyGalleryStylePreset('heatmap');
+            state.gallery.settings.heatmapMode = 'correlation';
+            state.gallery.settings.heatmapCorrplotDefaultsApplied = true;
+          } else {
+            state.gallery.settings.heatmapPalette = 'blueWhiteRed';
+            state.gallery.settings.heatmapScaleMode = 'auto';
+            state.gallery.settings.heatmapCluster = 'both';
+          }
         }
         if (changed) {
           state.gallery.rows = [];
@@ -857,23 +871,11 @@
           delete state.gallery.heatmapSourceMatrix;
         }
         if (select.value === 'clustered' && !state.gallery.settings.heatmapClusteredDefaultsApplied) {
-          state.gallery.settings.heatmapStandardize = 'rowZ';
-          state.gallery.settings.heatmapCluster = 'rows';
-          state.gallery.settings.heatmapDistance = 'euclidean';
-          state.gallery.settings.heatmapLinkage = 'ward';
-          state.gallery.settings.heatmapPalette = 'paperBlueYellowRed';
-          state.gallery.settings.heatmapScaleMode = 'p20';
-          state.gallery.settings.heatmapRowDendrogramSize = 112;
-          state.gallery.settings.heatmapColDendrogramSize = 38;
-          state.gallery.settings.heatmapDendrogramLineWidth = 0.68;
-          state.gallery.settings.heatmapDendrogramColor = '#333333';
-          state.gallery.settings.heatmapShowGroupNames = false;
-          state.gallery.settings.heatmapAutoRowLabelFit = false;
-          state.gallery.settings.heatmapAutoColLabelFit = false;
-          state.gallery.settings.heatmapYLabelSize = 7;
-          state.gallery.settings.heatmapXLabelSize = 11;
-          state.gallery.settings.heatmapColumnLabelAngle = 45;
+          // v1.9.122：套用用户「聚类热图」参数库
+          if (typeof applyGalleryStylePreset === 'function') applyGalleryStylePreset('heatmapClustered');
+          state.gallery.settings.heatmapMode = 'clustered';
           state.gallery.settings.heatmapClusteredDefaultsApplied = true;
+          state.gallery.settings.heatmapCorrplotDefaultsApplied = false;
         }
         if (originalSyncWorkflowControls) originalSyncWorkflowControls();
         renderFriendlyGalleryPreview();
@@ -881,7 +883,7 @@
       });
     }
     const select = box.querySelector('#heatmapTemplateModeSelect');
-    if (select) select.value = (heatmapMode() === 'correlation' && state.gallery.settings.heatmapCellStyle === 'circle' && state.gallery.settings.heatmapShowStars) ? 'corrplot' : heatmapMode();
+    if (select) select.value = (heatmapMode() === 'correlation' && (state.gallery.settings.heatmapCellStyle === 'circle' || state.gallery.settings.heatmapCellStyle === 'lowerCircle') && state.gallery.settings.heatmapShowStars) ? 'corrplot' : heatmapMode();
   }
 
   if (originalSyncWorkflowControls) {
