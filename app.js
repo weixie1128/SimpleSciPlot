@@ -4889,7 +4889,7 @@ async function importPalette(file){try{var obj=JSON.parse(await readAsText(file)
 function applyHexString(txt){if(!txt||!txt.trim())return;var m=txt.match(/#[0-9a-fA-F]{3,8}/g)||[];var colors=m.map(function(h){h=h.toLowerCase();return h.length===4?'#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]:h});
   if(colors.length<2){toast('没识别到颜色，示例：#7B95C6,#49C2D9');return}
   state.chart.palette=colors;ensurePalette(chartGroups().length);rememberPalette(colors);renderProperties();renderChart();toast('已应用 '+colors.length+' 个颜色')}
-function exportStyle(){var s=state.chart.settings||{};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&(/^#/.test(c)||isGradientPaint(c))}),settings:Object.assign({},s),seriesStyles:Object.assign({},state.chart.seriesStyles||{}),legend:Object.assign({},state.chart.legend||{}),legendFrame:Object.assign({},state.chart.legendFrame||{})};
+function exportStyle(){var s=state.chart.settings||{};var deep=function(x){return x?JSON.parse(JSON.stringify(x)):{}};var payload={type:'foodlab-style',version:2,palette:state.chart.palette.filter(function(c){return typeof c==='string'&&(/^#/.test(c)||isGradientPaint(c))}),settings:deep(s),seriesStyles:deep(state.chart.seriesStyles),legend:deep(state.chart.legend),legendFrame:deep(state.chart.legendFrame)};
   download(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),'SimpleSciPlot_图参数.json');toast('图参数已导出（风格类设置，不含数据）')}
 async function importStyle(file){try{var obj=JSON.parse(await readAsText(file));
     if(obj.protocol==='sp1'||(obj.meta&&obj.meta.chartType&&obj.colors&&Array.isArray(obj.colors.series))){
