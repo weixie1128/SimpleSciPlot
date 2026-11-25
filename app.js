@@ -6038,7 +6038,8 @@ function galleryRadar(W,H){
   // Draw polygon grids over the background so every ring stays crisp.
   for(let k=1;k<=levelCount;k++){
     const pts=polygonPoints(R*k/levelCount);
-    out+=`<polygon points="${pts}" fill="none" stroke="${s.radarGridColor}" stroke-width="${s.radarGridWidth}"/>`;
+    const gridW=Number(s.radarGridWidth)||0.6;
+    out+=`<polygon points="${pts}" fill="none" stroke="${s.radarGridColor}" stroke-width="${gridW}"${gridW<1?' class="radar-hairline"':''}/>`;
     if(s.radarShowTickLabels){
       const rv=rawMin+tickStep*k;let tx=cx+tickOffset,ty=cy-R*k/levelCount+4,anchor='start';
       if(s.radarTickLabelPosition==='left'){tx=cx-R*k/levelCount-tickOffset;ty=cy+4;anchor='end'}
@@ -6048,7 +6049,7 @@ function galleryRadar(W,H){
   }
   if(s.radarShowTickLabels){let tx=cx+tickOffset,ty=cy+4,anchor='start';if(s.radarTickLabelPosition==='left'){tx=cx-tickOffset;anchor='end'}else if(s.radarTickLabelPosition==='right'){tx=cx+tickOffset;anchor='start'}out+=`<text x="${tx}" y="${ty}" text-anchor="${anchor}" font-size="${tickSize}" font-weight="${s.radarTickLabelWeight||400}" fill="${s.radarTickLabelColor||s.yTickColor}">${formatNumber(rawMin,tickDec)}</text>`;}
   // Spokes use a separate, slightly stronger width for paper-style readability.
-  inds.forEach((ind,i)=>{const a=-Math.PI/2+i*2*Math.PI/n,x=cx+R*Math.cos(a),y=cy+R*Math.sin(a),lx=cx+(R+labelOffset)*Math.cos(a),ly=cy+(R+labelOffset)*Math.sin(a);const anchor=Math.cos(a)>0.28?'start':Math.cos(a)<-0.28?'end':'middle';out+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${s.radarSpokeColor}" stroke-width="${s.radarSpokeWidth||s.radarGridWidth}"/><text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="${s.radarLabelSize}" font-weight="${s.radarLabelWeight||400}" fill="${s.radarLabelColor||'#000000'}">${esc(ind)}</text>`});out+='</g>';
+  inds.forEach((ind,i)=>{const a=-Math.PI/2+i*2*Math.PI/n,x=cx+R*Math.cos(a),y=cy+R*Math.sin(a),lx=cx+(R+labelOffset)*Math.cos(a),ly=cy+(R+labelOffset)*Math.sin(a);const anchor=Math.cos(a)>0.28?'start':Math.cos(a)<-0.28?'end':'middle';out+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${s.radarSpokeColor}" stroke-width="${s.radarSpokeWidth||s.radarGridWidth||0.6}"${(Number(s.radarSpokeWidth||s.radarGridWidth)||0.6)<1?' class="radar-hairline"':''}/><text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="${s.radarLabelSize}" font-weight="${s.radarLabelWeight||400}" fill="${s.radarLabelColor||'#000000'}">${esc(ind)}</text>`});out+='</g>';
   groups.forEach((g,gi)=>{const st=getGallerySeriesStyle(gi),pts=inds.map((ind,i)=>{const row=rows.find(r=>r.Group===g&&r.Indicator===ind),v=row?row.Value:rawMin;let z;if(s.normalize){const mn=perInd[ind].min,mx=perInd[ind].max;z=(v-mn)/(mx-mn||1)}else z=(v-rawMin)/(rawMax-rawMin||1);z=clamp(z,0,1);const a=-Math.PI/2+i*2*Math.PI/n;return[cx+R*z*Math.cos(a),cy+R*z*Math.sin(a)]});const fillOpacity=Math.min(.35,Math.max(.08,(Number(st.opacity)||.65)*.3)),fillOn=s.radarFill!==false;let body=`<polygon points="${pts.map(q=>q.join(',')).join(' ')}" fill="${fillOn?st.color:'none'}"${fillOn?` fill-opacity="${fillOpacity.toFixed(2)}"`:''} stroke="${st.color}" stroke-width="${st.lineWidth}"/>`;if(s.radarShowMarkers)pts.forEach(q=>body+=markerShapeSvg(st.markerShape,q[0],q[1],s.radarPointSize||st.pointSize,`fill="${st.markerFill==='series'?st.color:'white'}" stroke="${st.color}" stroke-width="1.2"`));out+=`<g data-gobject="series" data-gseries="${gi}" class="chart-object">${body}</g>`});out+=galleryLegend(groups);return out;
 }
 
