@@ -472,7 +472,7 @@ const SSP_GALLERY_STYLE_PRESETS = {
   },
   volcano:{
     palette:["#E64B35","#4DBBD5","#C4C4C4"],
-    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:15,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:424,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
+    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:12,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:180,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
     series:[{color:"#E64B35",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#4DBBD5",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#C4C4C4",opacity:.65,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"}]
   }
 };;
@@ -2895,7 +2895,7 @@ function galleryStudioSeriesNames(){
   // 光谱图与热分析图各自持有曲线（series），配色面板要按真实曲线列出
   if(type==='spectrum'){const ser=state.spectrum?.data?.series;return ser&&ser.length?ser.map(x=>String(x.name)):[]}
   if(type==='thermal'){const all=[...(state.thermal?.data?.leftSeries||[]),...(state.thermal?.data?.importedDtgSeries||[]),...(state.thermal?.data?.rightSeries||[])];return [...new Set(all.map(x=>x.group||x.name).filter(Boolean))]}
-  if(type==='volcano')return ['上调','下调','不显著'];
+  if(type==='volcano')return ['Up-regulated','Down-regulated','Not significant'];
   if(['hist','kde','box','violin','scatter','radar'].includes(type))return [...new Set(rows.map(r=>r.Group||'Series'))];
   if(['stacked','pie'].includes(type))return [...new Set(rows.map(r=>r.Component||'Component'))];
   if(type==='heatmap')return [];return [];
@@ -5287,7 +5287,22 @@ function downloadGalleryCsv(){
   const csv='\ufeff'+[headers,...body].map(row=>row.map(csvCell).join(',')).join('\r\n');
   download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`SimpleSciPlot_${safeFile(workflowChartEnglishLabel(def.id))}_template.csv`);toast('CSV 模板已生成');
 }
-function loadGalleryDemo(){let rows=galleryTemplateRows();const sch=galleryDef().schema;if(sch==='radar')rows=normalizeGalleryRows(rows,'radar');if(sch==='volcano')rows=normalizeGalleryRows(rows,'volcano');state.gallery.rows=rows;state.gallery.sourceName='内置示例';renderGallery();toast('已载入示例数据')}
+function volcanoDemoRows(){
+  let seed=20251126;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+  const gauss=()=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+  const names=['Limonene','Linalool','Hexanal','Eugenol','Myrcene','Vanillin','Furfural','Acetoin','Nonanal','Ethyl acetate','1-Octen-3-ol','Acetaldehyde','Diacetyl','Dimethyl sulfide','Acetic acid','Maltol','Pyrazine','Octanoic acid','Geraniol','Nerol','Terpinen-4-ol','α-Terpineol','Citral','Decanal','Benzaldehyde','Phenylacetaldehyde','2-Phenylethanol','γ-Butyrolactone','δ-Decalactone','γ-Nonalactone','Methyl salicylate','Anethole','Carvacrol','Thymol','Camphor','β-Pinene','α-Pinene','Sabinene','Camphene','Limonene oxide','Hexyl acetate','Butyl acetate','Isoamyl acetate','Ethyl butyrate','Ethyl hexanoate','Methyl butyrate','Propyl acetate','Furan'];
+  const rows=[];
+  for(let i=0;i<240;i++){
+    let x=gauss()*1.05,y=Math.abs(x)*1.15+Math.abs(gauss())*.75-.12;
+    if(rnd()<.05)y+=1.6;
+    if(rnd()<.04)x*=.35;
+    y=Math.max(.02,Math.min(7.2,y));x=Math.max(-6,Math.min(6,x));
+    const base=names[i%names.length],round=Math.floor(i/names.length)+1;
+    rows.push({Feature:round>1?`${base} ${round}`:base,FC:Number(Math.pow(2,x).toFixed(3)),logFC:'',Pvalue:Number(Math.pow(10,-y).toPrecision(4)),Padj:Number(Math.min(1,Math.pow(10,-y)*2.4).toPrecision(4))});
+  }
+  return rows;
+}
+function loadGalleryDemo(){let rows=galleryDef().id==='volcano'?volcanoDemoRows():galleryTemplateRows();const sch=galleryDef().schema;if(sch==='radar')rows=normalizeGalleryRows(rows,'radar');if(sch==='volcano')rows=normalizeGalleryRows(rows,'volcano');state.gallery.rows=rows;state.gallery.sourceName='内置示例';renderGallery();toast('已载入示例数据')}
 
 async function handleGalleryFile(file){
   try{
@@ -5694,10 +5709,10 @@ function galleryLegend(groups){
   const s=state.gallery.settings;if(!s.legend||!groups.length)return'';const l=galleryLegendLayout(groups),fx=s.legendFrameX??108,fy=s.legendFrameY??50,lx=s.legendX??120,ly=s.legendY??62;
   const fw=s.legendFrameAutoSize?l.width:s.legendFrameWidthBox,fh=s.legendFrameAutoSize?l.height:s.legendFrameHeightBox,style=s.legendFrameStyle||'none',dash=style==='dashed'?'8 5':style==='dotted'?'2 4':'',dbl=style==='double';
   let frame='';if(style!=='none'){frame=`<g data-gobject="legend-frame" data-gdrag="legendFrame" class="chart-object draggable" transform="translate(${fx} ${fy})"><rect width="${fw}" height="${fh}" rx="${s.legendFrameRadius}" fill="${s.legendFrameFill}" stroke="${s.legendFrameColor}" stroke-width="${s.legendFrameWidth}" ${dash?`stroke-dasharray="${dash}"`:''} ${s.legendShadow?'filter="url(#galleryLegendShadow)"':''}/>${dbl?`<rect x="4" y="4" width="${Math.max(0,fw-8)}" height="${Math.max(0,fh-8)}" rx="${Math.max(0,s.legendFrameRadius-2)}" fill="none" stroke="${s.legendFrameColor}" stroke-width="${Math.max(.5,s.legendFrameWidth*.7)}"/>`:''}</g>`}
-  const isRadar=state.gallery.type==='radar';
+  const isRadar=state.gallery.type==='radar',isVolcano=state.gallery.type==='volcano';
   const swRatio=clamp(Number(s.legendSwatchRatio)||1.6,.6,5),swH=Math.min(l.symbol/swRatio,Math.max(10,l.font*.9)),swW=swH*swRatio;
   const content=l.positions.map(({x,y,item,index})=>{
-    const symMode=s.legendSymbol||'auto',useLine=symMode==='marker-line'||legendUsesLineSymbol(),st=getGallerySeriesStyle(index),symbol=isRadar?(symMode==='marker-line'?`<line x1="${x}" y1="${y+10}" x2="${x+l.symbol}" y2="${y+10}" stroke="${item.color}" stroke-width="${Math.max(1.4,st.lineWidth)}"/>${markerShapeSvg(st.markerShape,x+l.symbol/2,y+10,Math.max(2.4,state.gallery.settings.radarPointSize||st.pointSize),`fill="${st.markerFill==='series'?item.color:'white'}" stroke="${item.color}" stroke-width="1.4"`)}`:`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" rx="1.5" fill="${item.color}" fill-opacity=".22" stroke="${item.color}" stroke-width="1.4"/>`):(useLine?`<line x1="${x}" y1="${y+l.font*.55}" x2="${x+l.symbol}" y2="${y+l.font*.55}" stroke="${item.color}" stroke-width="${Math.max(1.4,Number(st.lineWidth)||2)}"/>${symMode==='marker-line'?markerShapeSvg(st.markerShape,x+l.symbol/2,y+l.font*.55,Math.max(2.8,Math.min(6,Number(st.pointSize)||4)),`fill="${st.markerFill==='series'?item.color:'#ffffff'}" stroke="${item.color}" stroke-width="1.2"`):''}`:`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" fill="${item.color}"/>`);
+    const symMode=s.legendSymbol||'auto',useLine=symMode==='marker-line'||legendUsesLineSymbol(),st=getGallerySeriesStyle(index),symbol=isVolcano?markerShapeSvg('circle',x+l.symbol/2,y+l.font*.55,Math.max(3,Math.min(5.2,l.font*.4)),`fill="${item.color}"`):isRadar?(symMode==='marker-line'?`<line x1="${x}" y1="${y+10}" x2="${x+l.symbol}" y2="${y+10}" stroke="${item.color}" stroke-width="${Math.max(1.4,st.lineWidth)}"/>${markerShapeSvg(st.markerShape,x+l.symbol/2,y+10,Math.max(2.4,state.gallery.settings.radarPointSize||st.pointSize),`fill="${st.markerFill==='series'?item.color:'white'}" stroke="${item.color}" stroke-width="1.4"`)}`:`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" rx="1.5" fill="${item.color}" fill-opacity=".22" stroke="${item.color}" stroke-width="1.4"/>`):(useLine?`<line x1="${x}" y1="${y+l.font*.55}" x2="${x+l.symbol}" y2="${y+l.font*.55}" stroke="${item.color}" stroke-width="${Math.max(1.4,Number(st.lineWidth)||2)}"/>${symMode==='marker-line'?markerShapeSvg(st.markerShape,x+l.symbol/2,y+l.font*.55,Math.max(2.8,Math.min(6,Number(st.pointSize)||4)),`fill="${st.markerFill==='series'?item.color:'#ffffff'}" stroke="${item.color}" stroke-width="1.2"`):''}`:`<rect x="${x+(l.symbol-swW)/2}" y="${y+l.font*.55-swH/2}" width="${swW}" height="${swH}" fill="${item.color}"/>`);
     const textX=x+l.symbol+8,textFill=s.legendColor||'#263238';
     return `<g data-gobject="series" data-gseries="${index}" class="chart-object">${symbol}<text x="${textX}" y="${y+l.font}" font-size="${l.font}" font-weight="${s.legendWeight}" fill="${textFill}">${esc(item.name)}</text></g>`
   }).join('');
@@ -6073,7 +6088,7 @@ function galleryVolcano(W,H){
   const my=Math.max(cut+1,...items.map(d=>d.y))*1.08;
   const xMap=scaleLinear(-mx,mx,p.l,p.l+p.w),yMap=scaleLinear(0,my,p.t+p.h,p.t);
   const xTicks=makeTicks(-mx,mx,null,7),yTicks=makeTicks(0,my,null,6);
-  let out=commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,null)+galleryLegend(['上调','下调','不显著']);
+  let out=commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,null)+galleryLegend(['Up-regulated','Down-regulated','Not significant']);
   if(s.volcanoShowThreshold!==false){
     const c=s.volcanoThresholdColor||'#9aa5ab';
     out+=`<g data-gobject="threshold" class="chart-object" stroke="${c}" stroke-width="1" stroke-dasharray="5 4">`;
@@ -6090,8 +6105,8 @@ function galleryVolcano(W,H){
   if(s.volcanoShowLabels!==false){
     const topN=Math.max(0,Math.round(Number(s.volcanoTopN)||0));
     const pool=(s.volcanoLabelOnlySig===false?items:sigItems).slice().sort((a,b)=>b.y-a.y).slice(0,topN);
-    const fs=Number(s.volcanoLabelSize)||11,fill=s.volcanoLabelColor||'#263238',used={start:[],end:[]};
-    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{const side=d.x>=0?'start':'end';let y=yMap(d.y)-5;while(used[side].some(v=>Math.abs(v-y)<fs*1.08))y-=fs*1.08;used[side].push(y);return `<text x="${xMap(d.x)+(d.x>=0?5:-5)}" y="${y}" text-anchor="${side}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
+    const fs=Number(s.volcanoLabelSize)||11,fill=s.volcanoLabelColor||'#263238',used=[];
+    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{let anchor=d.x>=0?'start':'end';const px=xMap(d.x);if(anchor==='end'&&px-p.l<95)anchor='start';if(anchor==='start'&&p.l+p.w-px<95)anchor='end';let y=clamp(yMap(d.y)-5,p.t+fs,p.t+p.h-2);while(used.some(v=>Math.abs(v-y)<fs*1.15))y-=fs*1.15;used.push(y);return `<text x="${px+(anchor==='start'?5:-5)}" y="${y}" text-anchor="${anchor}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
   }
   return out;
 }
