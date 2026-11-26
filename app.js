@@ -472,7 +472,7 @@ const SSP_GALLERY_STYLE_PRESETS = {
   },
   volcano:{
     palette:["#E64B35","#4DBBD5","#C4C4C4"],
-    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:12,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:180,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
+    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoBgGradient:true,volcanoBgDownColor:"#F8DCE9",volcanoBgUpColor:"#D8ECFA",volcanoBgOpacity:.9,volcanoBgDivider:true,volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:12,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:180,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
     series:[{color:"#E64B35",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#4DBBD5",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#C4C4C4",opacity:.65,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"}]
   }
 };;
@@ -2769,6 +2769,12 @@ function gallerySpecificPropertyHtml(type,id){
     gNumber('volcanoPThreshold','P / FDR 阈值 α',.000001,1,.001),
     gCheck('volcanoShowThreshold','显示阈值虚线'),
     gColor('volcanoThresholdColor','阈值虚线颜色')
+  ])+gallerySection('左右渐变背景',[
+    gCheck('volcanoBgGradient','显示左右渐变背景'),
+    gColor('volcanoBgDownColor','下调侧背景（左）'),
+    gColor('volcanoBgUpColor','上调侧背景（右）'),
+    gRange('volcanoBgOpacity','背景不透明度',.1,1,.05),
+    gCheck('volcanoBgDivider','在 log₂FC=0 处画分割虚线')
   ])+gallerySection('点的颜色与大小',[
     gSeriesColor(0,'显著上调点'),gSeriesColor(1,'显著下调点'),gSeriesColor(2,'不显著点'),
     gRange('volcanoPointSize','点大小',1,10,.5),
@@ -5292,7 +5298,7 @@ function volcanoDemoRows(){
   const gauss=()=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
   const names=['Limonene','Linalool','Hexanal','Eugenol','Myrcene','Vanillin','Furfural','Acetoin','Nonanal','Ethyl acetate','1-Octen-3-ol','Acetaldehyde','Diacetyl','Dimethyl sulfide','Acetic acid','Maltol','Pyrazine','Octanoic acid','Geraniol','Nerol','Terpinen-4-ol','α-Terpineol','Citral','Decanal','Benzaldehyde','Phenylacetaldehyde','2-Phenylethanol','γ-Butyrolactone','δ-Decalactone','γ-Nonalactone','Methyl salicylate','Anethole','Carvacrol','Thymol','Camphor','β-Pinene','α-Pinene','Sabinene','Camphene','Limonene oxide','Hexyl acetate','Butyl acetate','Isoamyl acetate','Ethyl butyrate','Ethyl hexanoate','Methyl butyrate','Propyl acetate','Furan'];
   const rows=[];
-  for(let i=0;i<240;i++){
+  for(let i=0;i<1200;i++){
     let x=gauss()*1.05,y=Math.abs(x)*1.15+Math.abs(gauss())*.75-.12;
     if(rnd()<.05)y+=1.6;
     if(rnd()<.04)x*=.35;
@@ -6089,6 +6095,11 @@ function galleryVolcano(W,H){
   const xMap=scaleLinear(-mx,mx,p.l,p.l+p.w),yMap=scaleLinear(0,my,p.t+p.h,p.t);
   const xTicks=makeTicks(-mx,mx,null,7),yTicks=makeTicks(0,my,null,6);
   let out=commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,null)+galleryLegend(['Up-regulated','Down-regulated','Not significant']);
+  if(s.volcanoBgGradient!==false){
+    const cx=xMap(0),down=s.volcanoBgDownColor||'#F8DCE9',up=s.volcanoBgUpColor||'#D8ECFA',op=clamp(Number(s.volcanoBgOpacity)||.9,.05,1),uid='vb'+Math.random().toString(36).slice(2,7);
+    const bg=`<defs><linearGradient id="${uid}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${down}" stop-opacity="${op}"/><stop offset="1" stop-color="${down}" stop-opacity="${Math.max(.12,op*.5)}"/></linearGradient><linearGradient id="${uid}u" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up}" stop-opacity="${op}"/><stop offset="1" stop-color="${up}" stop-opacity="${Math.max(.12,op*.5)}"/></linearGradient></defs><g data-gobject="volcano-bg" class="chart-object"><rect x="${p.l}" y="${p.t}" width="${Math.max(0,cx-p.l)}" height="${p.h}" fill="url(#${uid}d)"/><rect x="${cx}" y="${p.t}" width="${Math.max(0,p.l+p.w-cx)}" height="${p.h}" fill="url(#${uid}u)"/>${s.volcanoBgDivider!==false?`<line x1="${cx}" y1="${p.t}" x2="${cx}" y2="${p.t+p.h}" stroke="${s.volcanoThresholdColor||'#9aa5ab'}" stroke-width="1" stroke-dasharray="5 4"/>`:''}</g>`;
+    out=bg+out;
+  }
   if(s.volcanoShowThreshold!==false){
     const c=s.volcanoThresholdColor||'#9aa5ab';
     out+=`<g data-gobject="threshold" class="chart-object" stroke="${c}" stroke-width="1" stroke-dasharray="5 4">`;
@@ -6106,7 +6117,7 @@ function galleryVolcano(W,H){
     const topN=Math.max(0,Math.round(Number(s.volcanoTopN)||0));
     const pool=(s.volcanoLabelOnlySig===false?items:sigItems).slice().sort((a,b)=>b.y-a.y).slice(0,topN);
     const fs=Number(s.volcanoLabelSize)||11,fill=s.volcanoLabelColor||'#263238',used=[];
-    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{let anchor=d.x>=0?'start':'end';const px=xMap(d.x);if(anchor==='end'&&px-p.l<95)anchor='start';if(anchor==='start'&&p.l+p.w-px<95)anchor='end';let y=clamp(yMap(d.y)-5,p.t+fs,p.t+p.h-2);while(used.some(v=>Math.abs(v-y)<fs*1.15))y-=fs*1.15;used.push(y);return `<text x="${px+(anchor==='start'?5:-5)}" y="${y}" text-anchor="${anchor}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
+    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{let anchor=d.x>=0?'start':'end';const px=xMap(d.x);if(anchor==='end'&&px-p.l<95)anchor='start';if(anchor==='start'&&p.l+p.w-px<95)anchor='end';let y=clamp(yMap(d.y)-5,p.t+fs,p.t+p.h-2);const hit=v=>used.some(u=>Math.abs(u-v)<fs*1.15);if(hit(y)){let found=null;for(let k=1;k<=40;k++){const up=y-k*fs*1.15;if(up>=p.t+fs&&!hit(up)){found=up;break}}if(found==null)for(let k=1;k<=40;k++){const dn=y+k*fs*1.15;if(dn<=p.t+p.h-2&&!hit(dn)){found=dn;break}}if(found!=null)y=found}used.push(y);return `<text x="${px+(anchor==='start'?5:-5)}" y="${y}" text-anchor="${anchor}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
   }
   return out;
 }
