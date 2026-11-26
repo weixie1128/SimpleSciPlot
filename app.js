@@ -469,6 +469,11 @@ const SSP_GALLERY_STYLE_PRESETS = {
     palette:["#E64B35","#4DBBD5","#00A087"],
     settings:{bandwidth:0,bins:10,boxWidth:0.26,colorScheme:"npg",heatmapAutoColLabelFit:false,heatmapAutoRowLabelFit:false,heatmapCellGap:1,heatmapCellStyle:"circle",heatmapCluster:"none",heatmapColDendrogramSize:38,heatmapColorBar:true,heatmapColorBarLength:150,heatmapColorBarOrientation:"horizontal",heatmapColorBarStep:0.2,heatmapColorBarTextColor:"#000000",heatmapColorBarTextWeight:400,heatmapColorBarThickness:12,heatmapColumnLabelAngle:45,heatmapColumnLabelSide:"bottom",heatmapCorrelationGroup:"__all__",heatmapDendrogramColor:"#3f474b",heatmapDendrogramLabelGap:10,heatmapDendrogramLineWidth:0.85,heatmapDendrogramScale:"sqrt",heatmapDendrogramSize:82,heatmapDiagonalColor:"#8B0000",heatmapDistance:"correlation",heatmapGridStroke:"#ffffff",heatmapGridStrokeWidth:0.8,heatmapGroupLabelColor:"#333333",heatmapGroupLabelColorMode:"series",heatmapGroupLabelSize:10,heatmapGroupLabelWeight:600,heatmapHighColor:"#B2182B",heatmapLinkage:"average",heatmapLowColor:"#2166AC",heatmapLowerCircleNumber:false,heatmapMidColor:"#F7F7F7",heatmapMode:"correlation",heatmapPalette:"blueWhiteRed",heatmapRowDendrogramSize:112,heatmapRowLabelSide:"left",heatmapScaleCenter:0,heatmapScaleMax:2,heatmapScaleMin:-2,heatmapScaleMode:"auto",heatmapShowDendrogram:false,heatmapShowGrid:true,heatmapShowGroupAnnotation:false,heatmapShowGroupNames:false,heatmapShowStars:true,heatmapShowValues:true,heatmapStandardize:"rowZ",heatmapStarColor:"#333333",heatmapStarColorMode:"auto",heatmapStarNote:true,heatmapStarNoteColor:"#666666",heatmapStarNoteSize:9,heatmapStarNoteWeight:400,heatmapStarPosition:"below",heatmapStarSize:9.5,heatmapStarWeight:"auto",heatmapTriangle:"full",heatmapUpperNumberStar:false,heatmapValueColor:"#222222",heatmapValueColorMode:"auto",heatmapValueMode:"auto",heatmapValueSize:10,heatmapValueWeight:400,heatmapXLabelSize:11,heatmapYLabelSize:11,histAutoBins:true,histAxisMode:"auto",histDisplayMode:"facet",histFacetGap:14,histHighlight:false,histHighlightColor:"#E8A13C",histHlMax:null,histHlMin:null,histManualXMax:null,histManualXMin:null,histMirror:false,histXPaddingPct:6,histXRangePreset:"standard",histogramScale:"frequency",kdeBandwidthMode:"manual",kdeBandwidthScale:1,kdeDisplayMode:"curve",kdeFacetGap:22,kdeFillEnabled:true,kdeFillOpacity:0.73,kdeHistAutoBins:true,kdeHistBins:8,kdeHistColor:"#b8b8b8",kdeHistColorMode:"series",kdeHistEnabled:false,kdeHistOpacity:0.24,kdeLineOpacity:0.8,kdeLineStyle:"solid",kdeLineWidth:1.8,kdeRidgeHeight:0.78,kdeRidgeOverlap:0.55,kdeRugHeight:8,kdeShowRug:false,legendColor:"#263238",legendFontSize:16,legendFrameAutoSize:true,legendFrameHeightBox:62,legendFrameWidthBox:260,legendFrameX:108,legendFrameY:50,legendSwatchRatio:1.1,legendSymbol:"marker-line",legendX:434.4129333496094,legendY:75.19752502441406,methodNoteWeight:400,methodNoteX:616,methodNoteY:690,opacity:0.72,pieLabelColor:"#ffffff",pieLabelWeight:600,plotRangeType:"scatter",plotXMax:null,plotXMin:null,plotXRangeMode:"auto",plotXScale:"linear",plotXTickStep:null,plotYMax:null,plotYMin:null,plotYRangeMode:"auto",plotYScale:"linear",plotYTickStep:null,radarBandMode:"theme-gradient",radarFill:false,radarGradientMode:"radial",radarGridColor:"#c8aebc",radarGridWidth:0.9,radarHighlightStrength:0.24,radarHighlightThreshold:0,radarLabelColor:"#000000",radarLabelOffset:30,radarLabelWeight:400,radarLevels:4,radarMax:"auto",radarMin:"auto",radarPointSize:3,radarShowMarkers:true,radarShowTickLabels:true,radarSmartHighlight:true,radarSpokeColor:"#9e8794",radarSpokeWidth:1.15,radarTheme:"rose",radarTickDecimals:0,radarTickLabelColor:"#20262b",radarTickLabelOffset:10,radarTickLabelPosition:"top",radarTickLabelSize:11,radarTickLabelWeight:400,scatterBandOpacity:0.18,scatterFitBand:true,scatterFitMode:"group",scatterRegressionLineStyle:"solid",scatterRegressionLineWidth:1.8,scatterStatsColor:"#263238",scatterStatsColorMode:"neutral",scatterStatsContent:"equation-r2-p",scatterStatsFrame:false,scatterStatsPosition:"auto",scatterStatsWeight:400,scatterStatsX:120,scatterStatsY:90,showMean:false,significanceFontSize:12,significanceFontWeight:"auto",stackedErrorCapWidth:2.4,stackedErrorColor:"#263238",stackedErrorWidth:1,stackedShowError:false,stackedShowValue:false,stackedValueColor:"#ffffff",stackedValueColorMode:"auto",stackedValueDecimals:1,stackedValueSize:12,stackedValueWeight:600,subtitleX:320,subtitleY:58,titleX:320,titleY:38,violinBoxCaps:false,violinLayout:"overlay",width:610,xTickSize:18,xTitleX:320,xTitleY:676,yTickSize:18,yTitleX:45.8554573059082,yTitleY:273.9198913574219},
     series:[{"color":"#E64B35","opacity":0.72,"lineWidth":2,"borderWidth":1.2,"pointSize":3,"markerShape":"circle","markerFill":"series","whiskerLineStyle":"solid","boxFill":"#ffffff","boxBorderColor":"#222222","boxBorderWidth":1.1,"statsColor":"#bb3a3a","fitLineWidth":2},{"color":"#4DBBD5","opacity":0.72,"lineWidth":1.8,"borderWidth":1.2,"pointSize":3,"markerShape":"circle","markerFill":"series","whiskerLineStyle":"solid","boxFill":"#ffffff","boxBorderColor":"#222222","boxBorderWidth":1.1,"statsColor":"#3aa8df","fitLineWidth":1.8},{"color":"#00A087","opacity":0.72,"lineWidth":2,"borderWidth":1.2,"pointSize":3,"markerShape":"circle","markerFill":"series","whiskerLineStyle":"solid","boxFill":"#ffffff","boxBorderColor":"#222222","boxBorderWidth":1.1,"statsColor":"#74d89a","fitLineWidth":2}]
+  },
+  volcano:{
+    palette:["#E64B35","#4DBBD5","#C4C4C4"],
+    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:15,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:424,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
+    series:[{color:"#E64B35",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#4DBBD5",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#C4C4C4",opacity:.65,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"}]
   }
 };;
 const SSP_CHART_PRESET_BASE = {
@@ -574,7 +579,7 @@ const RADAR_THEMES={
 };
 
 const EXPERIMENT_CHARTS=['bar','line','curve','waterfall','bar3d'];
-const WORKFLOW_GOAL_DEFAULTS={compare:'bar',trend:'line',dist:'box',relation:'scatter',multi:'radar',composition:'stacked'};
+const WORKFLOW_GOAL_DEFAULTS={compare:'bar',trend:'line',dist:'box',relation:'scatter',multi:'radar',composition:'stacked',diff:'volcano'};
 function isExperimentChart(type){return EXPERIMENT_CHARTS.includes(type)}
 function setWorkflowChart(type,{keepData=false}={}){
   const nextMode=isExperimentChart(type)?'experiment':'gallery';
@@ -838,7 +843,8 @@ const PLAN_CHART_META={
   heatmap:{group:'变量关系',icon:'▦',purpose:'查看多个理化指标之间的相关矩阵',analysis:'Pearson 相关矩阵与指标数量摘要',advice:'相关不等于因果，正式论文应结合显著性和样本量',schema:'多指标矩阵'},
   stacked:{group:'组成与综合评价',icon:'▤',purpose:'比较不同类别内部的组分构成',analysis:'类别总量、组分值与百分比',advice:'组分构成优先使用堆叠或百分比堆叠柱状图',schema:'组成数据长表'},
   pie:{group:'组成与综合评价',icon:'◔',purpose:'展示少量类别在总体中的构成占比',analysis:'总量与各组分百分比',advice:'学术论文谨慎使用；精确比较优先选条形图',schema:'组成数据长表'},
-  radar:{group:'组成与综合评价',icon:'✦',purpose:'同步比较多个感官或理化指标的综合表现',analysis:'组别、指标数、组均值和可选 0–1 归一化',advice:'不同量纲指标必须先标准化再比较形状',schema:'雷达图长表'}
+  radar:{group:'组成与综合评价',icon:'✦',purpose:'同步比较多个感官或理化指标的综合表现',analysis:'组别、指标数、组均值和可选 0–1 归一化',advice:'不同量纲指标必须先标准化再比较形状',schema:'雷达图长表'},
+  volcano:{group:'差异分析',icon:'✧',purpose:'用变化幅度与显著性快速筛选组间差异特征',analysis:'显著上调 / 下调 / 不显著计数与阈值判定',advice:'适合转录组、蛋白组、代谢组的差异分析结果；直接导入 logFC 与 P/FDR 表即可',schema:'差异分析长表'}
 };
 // v1.5.0-preview：选图卡片与已选面板改用真实图形 mini 缩略图（替代 ▥ 字符图标），
 // 既提升信息密度与专业观感，又让用户在点选前就能预判图形长相。全部用 currentColor，由 CSS 控制色调。
@@ -856,10 +862,11 @@ scatter:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke
 heatmap:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="currentColor" fill-opacity=".15"><rect x="3.5" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="12" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="20.5" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="29" y="7" width="7.5" height="6.5" rx="1.2"/><rect x="3.5" y="15" width="7.5" height="6.5" rx="1.2"/><rect x="20.5" y="15" width="7.5" height="6.5" rx="1.2"/><rect x="29" y="15" width="7.5" height="6.5" rx="1.2"/><rect x="3.5" y="23" width="7.5" height="6.5" rx="1.2"/><rect x="12" y="23" width="7.5" height="6.5" rx="1.2"/><rect x="29" y="23" width="7.5" height="6.5" rx="1.2"/></g><g fill="currentColor"><rect x="12" y="15" width="7.5" height="6.5" rx="1.2" opacity=".85"/><rect x="20.5" y="23" width="7.5" height="6.5" rx="1.2" opacity=".62"/><rect x="29" y="7" width="7.5" height="6.5" rx="1.2" opacity=".45"/></g></svg>`,
 stacked:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M2 28.5h36" stroke="currentColor" stroke-opacity=".3" stroke-width="1.4" fill="none"/><g fill="currentColor"><rect x="5" y="7.5" width="12" height="6.5" rx="1.4"/><rect x="5" y="14" width="12" height="7" rx="1.4" opacity=".7"/><rect x="5" y="21" width="12" height="7.5" rx="1.4" opacity=".45"/><rect x="23" y="11.5" width="12" height="5.5" rx="1.4"/><rect x="23" y="17" width="12" height="6" rx="1.4" opacity=".7"/><rect x="23" y="23" width="12" height="5.5" rx="1.4" opacity=".45"/></g></svg>`,
 pie:`<svg viewBox="0 0 40 32" aria-hidden="true"><circle cx="20" cy="16" r="11" fill="currentColor" fill-opacity=".16"/><path d="M20 16V5a11 11 0 0 1 8.6 17.9z" fill="currentColor"/><circle cx="20" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-opacity=".45"/></svg>`,
-radar:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-opacity=".32"><path d="M20 5L31.4 13.3L27.1 26.7L12.9 26.7L8.6 13.3z"/><path d="M20 11L25.7 14.1L23.5 20.4L16.5 20.4L14.3 14.1z"/><path d="M20 16v-11M20 16l11.4-2.7M20 16l7.1 10.7M20 16l-7.1 10.7M20 16l-11.4-2.7"/></g><path d="M20 8L28.5 14.6L23.8 22.6L15.2 23.6L11.5 14.8z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`
+radar:`<svg viewBox="0 0 40 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-opacity=".32"><path d="M20 5L31.4 13.3L27.1 26.7L12.9 26.7L8.6 13.3z"/><path d="M20 11L25.7 14.1L23.5 20.4L16.5 20.4L14.3 14.1z"/><path d="M20 16v-11M20 16l11.4-2.7M20 16l7.1 10.7M20 16l-7.1 10.7M20 16l-11.4-2.7"/></g><path d="M20 8L28.5 14.6L23.8 22.6L15.2 23.6L11.5 14.8z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+volcano:`<svg viewBox="0 0 40 32" aria-hidden="true"><path d="M20 3.5v25" stroke="currentColor" stroke-opacity=".3" stroke-width="1" stroke-dasharray="2 2"/><path d="M2.5 24.5h35" stroke="currentColor" stroke-opacity=".3" stroke-width="1" stroke-dasharray="2 2"/><g fill="currentColor"><circle cx="7" cy="10" r="1.7"/><circle cx="11" cy="17" r="1.7"/><circle cx="31.5" cy="6.5" r="1.7"/><circle cx="27.5" cy="13" r="1.7"/><circle cx="35" cy="15" r="1.7"/></g><g fill="currentColor" fill-opacity=".3"><circle cx="17" cy="25" r="1.5"/><circle cx="20" cy="27" r="1.5"/><circle cx="23.5" cy="22.5" r="1.5"/><circle cx="24" cy="26" r="1.5"/></g></svg>`
 };
 function chartThumb(id){return CHART_THUMB[id]||''}
-const PLAN_GROUP_ORDER=['趋势与组间差异','3维','单变量分布','变量关系','组成与综合评价'];
+const PLAN_GROUP_ORDER=['趋势与组间差异','3维','单变量分布','变量关系','组成与综合评价','差异分析'];
 function goalRecommendedIds(goal){
   const map={compare:['box','bar','violin','line'],trend:['line','curve','bar'],dist:['box','violin','hist','kde'],relation:['scatter','heatmap'],multi:['radar','heatmap'],composition:['stacked','pie']};
   return map[goal]||[];
@@ -874,7 +881,7 @@ function syncStepLabels(){
 function renderPlanSelector(){
   const holder=$('#planChartGroups');if(!holder)return;
   const goals=[
-    ['compare','比较处理组'],['trend','时间 / 浓度趋势'],['dist','数据分布'],['relation','变量关系'],['multi','综合评价'],['composition','组分构成']
+    ['compare','比较处理组'],['trend','时间 / 浓度趋势'],['dist','数据分布'],['relation','变量关系'],['multi','综合评价'],['composition','组分构成'],['diff','差异分析']
   ];
   const tabs=$('#goalTabs');
   if(tabs){
@@ -2526,7 +2533,7 @@ function gallerySpecificLayerIds(type=state.gallery.type){
   const map={
     hist:[['histogram','柱体与分箱']],kde:[['density','密度曲线']],box:[['box-elements','箱体 / 中位线 / 须线 / 散点'],['significance','显著性比较'],['method-note','方法说明']],violin:[['violin-elements','小提琴 / 箱线 / 散点'],['significance','显著性比较'],['method-note','方法说明']],
     scatter:[['regression','拟合线与相关系数'],['method-note','方法说明']],stacked:[['stack-mode','堆叠方式'],['stacked-error','误差棒与数值标注']],pie:[['pie-label','比例标签']],
-    heatmap:[['heatmap-algorithm','算法与聚类'],['heatmap-colors','色阶配色'],['heatmap-cells','格子与数值'],['heatmap-labels','行列标签'],['legend','色带图例'],['heatmap-star-note','星号说明'],['method-note','方法说明']],radar:[['radar-grid','数据方向与网格'],['radar-ticks','刻度数值'],['radar-labels','轴标签'],['radar-bg','背景渐变'],['radar-series','数据呈现']]
+    heatmap:[['heatmap-algorithm','算法与聚类'],['heatmap-colors','色阶配色'],['heatmap-cells','格子与数值'],['heatmap-labels','行列标签'],['legend','色带图例'],['heatmap-star-note','星号说明'],['method-note','方法说明']],radar:[['radar-grid','数据方向与网格'],['radar-ticks','刻度数值'],['radar-labels','轴标签'],['radar-bg','背景渐变'],['radar-series','数据呈现']],volcano:[['volcano-threshold','阈值与着色'],['volcano-labels','特征名标注'],['method-note','方法说明']]
   };return map[type]||[];
 }
 function galleryStudioLayers(){
@@ -2757,6 +2764,24 @@ function gallerySpecificPropertyHtml(type,id){
   if(id==='radar-labels')return gallerySection('轴标签（指标名称）',[gRange('radarLabelSize','字号',8,28,1),gSelect('radarLabelWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),gColor('radarLabelColor','颜色'),gRange('radarLabelOffset','与网格的距离',8,70,1)])+`<div class="hint">轴标签是围绕雷达图外圈的指标名称，与内侧的刻度数值分开设置。</div>`;
   if(id==='radar-bg')return gallerySection('渐变背景',[gSelect('radarTheme','渐变色系',Object.entries(RADAR_THEMES).map(([k,v])=>[k,v.name])),gSelect('radarGradientMode','渐变方向',[['radial','中心 → 外圈'],['left-right','左 → 右'],['right-left','右 → 左'],['top-bottom','上 → 下'],['bottom-top','下 → 上'],['diag-down','左上 → 右下'],['diag-up','左下 → 右上']]),gCheck('radarSmartHighlight','显示整张雷达图渐变背景')])+`<div class="hint">关闭渐变后使用纯白背景，网格与放射线仍然保留。</div>`;
   if(id==='radar-series')return gallerySection('数据呈现',[gCheck('radarFill','数据多边形半透明填充'),gCheck('radarShowMarkers','显示形状标记'),gRange('radarPointSize','节点大小',0,10,.5)])+`<div class="method-badge"><b>默认论文模式：</b>数据多边形使用同系列半透明填充，节点为同系列实心色；每个系列的颜色、线宽和标记可在「数据对象」中单独调整。</div>`;
+  if(id==='volcano-threshold')return gallerySection('差异阈值',[
+    gNumber('volcanoFcThreshold','log₂FC 阈值（两侧对称）',0,20,.1),
+    gNumber('volcanoPThreshold','P / FDR 阈值 α',.000001,1,.001),
+    gCheck('volcanoShowThreshold','显示阈值虚线'),
+    gColor('volcanoThresholdColor','阈值虚线颜色')
+  ])+gallerySection('点的颜色与大小',[
+    gSeriesColor(0,'显著上调点'),gSeriesColor(1,'显著下调点'),gSeriesColor(2,'不显著点'),
+    gRange('volcanoPointSize','点大小',1,10,.5),
+    gRange('volcanoPointOpacity','点不透明度',.1,1,.05)
+  ])+`<div class="hint">判定规则：|log₂FC| ≥ 阈值且 P（或 FDR）< α 时算显著；上调为红、下调为蓝，其余为灰。改颜色会同步到图例。</div>`;
+  if(id==='volcano-labels')return gallerySection('特征名标注',[
+    gCheck('volcanoShowLabels','显示特征名'),
+    gNumber('volcanoTopN','最多标注多少个（按显著性排序）',0,50,1),
+    gCheck('volcanoLabelOnlySig','只标注显著点'),
+    gRange('volcanoLabelSize','字号',7,20,1),
+    gSelect('volcanoLabelWeight','字重',[[300,'细体'],[400,'常规'],[500,'中等'],[600,'半粗'],[700,'粗体']]),
+    gColor('volcanoLabelColor','文字颜色')
+  ])+`<div class="hint">标注默认只取显著的 Top N；取消「只标注显著点」后按 −log₁₀P 从大到小标注全部特征。</div>`;
   return gallerySeriesPropertyHtml(type,state.gallery.selectedSeries);
 }
 function gallerySeriesPropertyHtml(type,index=0){
@@ -2870,6 +2895,7 @@ function galleryStudioSeriesNames(){
   // 光谱图与热分析图各自持有曲线（series），配色面板要按真实曲线列出
   if(type==='spectrum'){const ser=state.spectrum?.data?.series;return ser&&ser.length?ser.map(x=>String(x.name)):[]}
   if(type==='thermal'){const all=[...(state.thermal?.data?.leftSeries||[]),...(state.thermal?.data?.importedDtgSeries||[]),...(state.thermal?.data?.rightSeries||[])];return [...new Set(all.map(x=>x.group||x.name).filter(Boolean))]}
+  if(type==='volcano')return ['上调','下调','不显著'];
   if(['hist','kde','box','violin','scatter','radar'].includes(type))return [...new Set(rows.map(r=>r.Group||'Series'))];
   if(['stacked','pie'].includes(type))return [...new Set(rows.map(r=>r.Component||'Component'))];
   if(type==='heatmap')return [];return [];
@@ -2885,6 +2911,7 @@ function galleryBuildMethodNote(){
   const type=state.gallery.type;
   const mvs=(typeof state.multivar!=='undefined'&&state.multivar&&state.multivar.settings)?state.multivar.settings:{};
   const texts={hist:'直方图用于展示数据的分布形态，分箱数量与柱体样式可在「图形专属」面板中调整。',kde:'核密度估计（KDE）用于展示数据的平滑分布形态；带宽、曲线填充与 rug 设置见「图形专属」面板。',stacked:'堆叠图展示各成分的构成与总量，堆叠方式、误差棒与数值标注设置见「图形专属」面板。',pie:'饼图（圆环图）展示各成分的构成占比，比例标签设置见「图形专属」面板。',radar:'雷达图用于多指标综合比较，数据按指标归一化后绘制；网格、刻度与主题背景设置见「图形专属」面板。',
+  volcano:'火山图同时展示变化幅度（log₂FC）与统计显著性（−log₁₀P）：显著上调为红点、显著下调为蓝点、其余为灰点；阈值、配色与特征名标注见「图形专属」面板。',
   spectrum:'光谱图用于绘制原始仪器曲线，每条曲线来自一对 X/Y 或同一 X 下的一个 Y 列；仪器类型、X 轴方向与曲线样式设置见「图形专属」面板。',
   thermal:'热分析曲线（TGA/DSC/DTA）用于展示质量或热流随温度/时间的变化过程；仪器类型、曲线方向与样式设置见「图形专属」面板。',
   waterfall:'光谱瀑布图将多条曲线沿纵深分层堆叠，用于展示信号随时间或条件的演化；层间距、视角方向与配色设置见「图形专属」面板。',
@@ -5063,7 +5090,8 @@ const GALLERY_SCHEMAS={
   xy:{name:'XY 关系长表',columns:['Group','X','Y','Size'],description:'X、Y 为两个连续变量；Size 仅气泡图使用，普通散点图可以留空。'},
   composition:{name:'组成数据长表',columns:['Category','Component','Value','Error'],description:'Category 为横坐标类别，Component 为类别内部组成；Error 为误差（SD/SE），用于堆叠图的误差棒，可留空；饼图可将 Category 全部填写为 Overall。'},
   matrix:{name:'多指标矩阵',columns:['Group','Moisture','pH','TBARS','Color_a','Texture'],description:'每行一个样本，每个数值指标占一列。用于相关性热图，并为后续 PCA、HCA 共用。'},
-  radar:{name:'雷达图宽表',columns:['Group','Indicator 1','Indicator 2','Indicator 3','…'],description:'第一列始终是分组名 / 样品名，第一行其余列都是测得指标。导入时会自动把宽表转为雷达图数据；也兼容旧版 Group-Indicator-Value 长表。'}
+  radar:{name:'雷达图宽表',columns:['Group','Indicator 1','Indicator 2','Indicator 3','…'],description:'第一列始终是分组名 / 样品名，第一行其余列都是测得指标。导入时会自动把宽表转为雷达图数据；也兼容旧版 Group-Indicator-Value 长表。'},
+  volcano:{name:'差异分析长表',columns:['Feature','FC','logFC','Pvalue','Padj'],description:'每行一个特征（基因、代谢物、蛋白或指标）。Feature 为名称；FC 为原始差异倍数，logFC 为已取 log₂ 的值（二选一，只填 FC 会自动计算 log₂）；Pvalue 为原始 P 值；Padj 为校正 P 值 / FDR（可留空，留空时使用 Pvalue）。'}
 };
 
 const GALLERY_CHARTS=[
@@ -5075,12 +5103,14 @@ const GALLERY_CHARTS=[
   {id:'stacked',category:'组间比较',name:'堆叠条形图',schema:'composition',desc:'展示各类别内部组分构成，可切换原始值或百分比。'},
   {id:'pie',category:'组成比例',name:'饼图 / 圆环图',schema:'composition',desc:'展示少量组分占比。学术论文中应谨慎使用。'},
   {id:'heatmap',category:'多指标关系',name:'相关性热力图',schema:'matrix',desc:'计算数值指标的 Pearson 相关矩阵，并用色阶展示。'},
-  {id:'radar',category:'综合评价',name:'雷达图',schema:'radar',desc:'同步比较多项感官或理化指标，可进行组内归一化。'}
+  {id:'radar',category:'综合评价',name:'雷达图',schema:'radar',desc:'同步比较多项感官或理化指标，可进行组内归一化。'},
+  {id:'volcano',category:'差异分析',name:'火山图',schema:'volcano',desc:'同时展示变化幅度（log₂FC）与统计显著性（−log₁₀P），快速筛选组间差异显著的特征。'}
 ];
 const GALLERY_GOALS=[
   {id:'dist',name:'看一组数据的分布',desc:'查看偏态、多峰、离群值或分布宽窄。',recommend:[{kind:'gallery',id:'box',reason:'最适合查看中位数、四分位数和异常值。'},{kind:'gallery',id:'violin',reason:'样本量较多时同时展示密度与分位数。'},{kind:'gallery',id:'hist',reason:'需要看频数分布和分箱时使用。'},{kind:'gallery',id:'kde',reason:'需要更平滑地观察分布形态时使用。'}]},
   {id:'compare',name:'比较不同处理组',desc:'看组间差异、离散程度和均值比较。',recommend:[{kind:'gallery',id:'box',reason:'优先推荐，信息量比柱状图更高。'},{kind:'gallery',id:'violin',reason:'适合样本量较多或想看分布形态时使用。'},{kind:'route',id:'bar',name:'分组柱状图',schema:'3平行×技术重复模板',reason:'均值±SD/SE 与显著性字母的常规论文图。'}]},
   {id:'trend',name:'看时间/浓度变化趋势',desc:'适用于储藏时间、处理浓度、温度变化等连续趋势。',recommend:[{kind:'route',id:'line',name:'折线图 / 误差棒折线图',schema:'3平行×技术重复模板',reason:'食品论文中最常见的动态变化图。'},{kind:'route',id:'curve',name:'平滑曲线图',schema:'连续趋势数据',reason:'数据点较密时用平滑曲线表达整体趋势。'},{kind:'route',id:'bar',name:'分组柱状图',schema:'3平行×技术重复模板',reason:'如果更想强调离散时点比较，也可用柱状图。'}]},
+  {id:'diff',name:'筛选差异指标',desc:'从大量特征中挑出组间变化显著的目标。',recommend:[{kind:'gallery',id:'volcano',reason:'差异分析结果的标准图：横轴看变化幅度，纵轴看显著性。'},{kind:'route',id:'bar',name:'分组柱状图',schema:'3平行×技术重复模板',reason:'已选定少数指标后，再用柱状图展示均值±误差。'}]},
   {id:'relation',name:'分析变量之间的关系',desc:'看两个或多个指标是否相关。',recommend:[{kind:'gallery',id:'scatter',reason:'两个连续变量关系的首选图。'},{kind:'gallery',id:'heatmap',reason:'要同时查看多个指标相关性矩阵时使用。'}]},
   {id:'multi',name:'做综合评价或样本区分',desc:'多个指标共同分析样本差异与综合表现。',recommend:[{kind:'gallery',id:'radar',reason:'多指标综合展示，适合感官或理化综合评价。'},{kind:'gallery',id:'heatmap',reason:'多个指标的高低模式与相关关系。'},{kind:'view',id:'multivar',name:'PCA / PLS-DA',schema:'多指标矩阵',reason:'需要更正式的多元统计区分样本时进入高级分析。'},{kind:'view',id:'cluster',name:'HCA / 热图',schema:'多指标矩阵',reason:'查看样品或指标的聚类关系。'}]},
   {id:'composition',name:'看组分构成或占比',desc:'比较配方、组分或构成比例。',recommend:[{kind:'gallery',id:'stacked',reason:'论文中优先使用堆叠条形图展示组分构成。'},{kind:'gallery',id:'pie',reason:'仅类别较少时可用，学术论文谨慎使用。'}]}
@@ -5189,6 +5219,26 @@ function galleryTemplateRows(type=state.gallery.type){
     {Group:'Treatment A',Color:7.5,Aroma:7.2,Taste:7.0,Tenderness:7.8,Juiciness:7.4,'Overall acceptability':7.6},
     {Group:'Treatment B',Color:8.1,Aroma:7.9,Taste:7.7,Tenderness:8.3,Juiciness:8.0,'Overall acceptability':8.2}
   ];
+  if(type==='volcano')return [
+    {Feature:'Limonene',FC:6.2,logFC:'',Pvalue:0.00004,Padj:0.0003},
+    {Feature:'Linalool',FC:4.8,logFC:'',Pvalue:0.0002,Padj:0.0012},
+    {Feature:'Hexanal',FC:3.1,logFC:'',Pvalue:0.0011,Padj:0.006},
+    {Feature:'Eugenol',FC:2.6,logFC:'',Pvalue:0.0035,Padj:0.014},
+    {Feature:'Myrcene',FC:2.2,logFC:'',Pvalue:0.008,Padj:0.03},
+    {Feature:'Vanillin',FC:1.7,logFC:'',Pvalue:0.021,Padj:0.06},
+    {Feature:'Furfural',FC:1.3,logFC:'',Pvalue:0.11,Padj:0.18},
+    {Feature:'Acetoin',FC:1.1,logFC:'',Pvalue:0.42,Padj:0.51},
+    {Feature:'Nonanal',FC:0.95,logFC:'',Pvalue:0.63,Padj:0.7},
+    {Feature:'Ethyl acetate',FC:0.42,logFC:'',Pvalue:0.0009,Padj:0.005},
+    {Feature:'1-Octen-3-ol',FC:0.33,logFC:'',Pvalue:0.00003,Padj:0.0002},
+    {Feature:'Acetaldehyde',FC:0.27,logFC:'',Pvalue:0.0006,Padj:0.0035},
+    {Feature:'Diacetyl',FC:0.22,logFC:'',Pvalue:0.004,Padj:0.016},
+    {Feature:'Dimethyl sulfide',FC:0.18,logFC:'',Pvalue:0.017,Padj:0.05},
+    {Feature:'Acetic acid',FC:0.5,logFC:'',Pvalue:0.07,Padj:0.12},
+    {Feature:'Maltol',FC:0.72,logFC:'',Pvalue:0.24,Padj:0.32},
+    {Feature:'Pyrazine',FC:1.05,logFC:'',Pvalue:0.55,Padj:0.62},
+    {Feature:'Octanoic acid',FC:0.88,logFC:'',Pvalue:0.78,Padj:0.82}
+  ];
   return [];
 }
 
@@ -5237,7 +5287,7 @@ function downloadGalleryCsv(){
   const csv='\ufeff'+[headers,...body].map(row=>row.map(csvCell).join(',')).join('\r\n');
   download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`SimpleSciPlot_${safeFile(workflowChartEnglishLabel(def.id))}_template.csv`);toast('CSV 模板已生成');
 }
-function loadGalleryDemo(){let rows=galleryTemplateRows();if(galleryDef().schema==='radar')rows=normalizeGalleryRows(rows,'radar');state.gallery.rows=rows;state.gallery.sourceName='内置示例';renderGallery();toast('已载入示例数据')}
+function loadGalleryDemo(){let rows=galleryTemplateRows();const sch=galleryDef().schema;if(sch==='radar')rows=normalizeGalleryRows(rows,'radar');if(sch==='volcano')rows=normalizeGalleryRows(rows,'volcano');state.gallery.rows=rows;state.gallery.sourceName='内置示例';renderGallery();toast('已载入示例数据')}
 
 async function handleGalleryFile(file){
   try{
@@ -5270,6 +5320,19 @@ function normalizeGalleryRows(rows,schema){
       rows.forEach((r,i)=>{const gKey=keys.find(k=>['group','sample','sample name','treatment','condition','组别','处理','分组','样品','样品名','样本','样本名'].includes(textKey(k).toLowerCase()))||firstKey(r);const gName=String(r[gKey]??`Group ${i+1}`).trim();keys.forEach(k=>{if(k===gKey)return;const v=numOrNull(r[k]);if(v!=null)out.push({Group:gName,Indicator:textKey(k),Value:v})})});
     }
     return out.filter(r=>r.Group&&r.Indicator&&r.Value!=null);
+  }
+  if(schema==='volcano'){
+    const out=[];
+    rows.forEach((r,i)=>{
+      const feature=String(pickAlias(r,['Feature','Gene','Symbol','Name','ID','Metabolite','Protein','特征','名称','基因','代谢物','蛋白','指标'])||'').trim()||`Feature ${i+1}`;
+      const fc=numOrNull(pickAlias(r,['FC','FoldChange','Fold Change','Fold change','Ratio','倍数','差异倍数','变化倍数']));
+      let logfc=numOrNull(pickAlias(r,['logFC','Log2FC','log2FC','log2FC值','log2(FC)','log2FC (log2)']));
+      if(logfc==null&&fc!=null&&fc>0)logfc=Math.log2(fc);
+      const p=numOrNull(pickAlias(r,['Pvalue','P-value','pvalue','p-value','P','rawP','原始p值','P值']));
+      const padj=numOrNull(pickAlias(r,['Padj','AdjP','Adjusted P','FDR','qvalue','q-value','q值','校正p值','校正P值']));
+      if(logfc!=null&&p!=null)out.push({Feature:feature,logFC:logfc,Pvalue:p,Padj:padj});
+    });
+    return out.filter(r=>Number.isFinite(r.logFC)&&Number.isFinite(r.Pvalue));
   }
   if(schema==='univariate'){
     const out=[];
@@ -5308,9 +5371,11 @@ function normalizeGalleryRows(rows,schema){
   }).filter(r=>Object.keys(r).some(k=>!['SampleID','Group'].includes(k)&&Number.isFinite(r[k])));
 }
 
+function analyzeVolcano(rows){return {hasPadj:rows.some(r=>r.Padj!=null),total:rows.length}}
 function analyzeGalleryData(){
   const rows=state.gallery.rows,def=galleryDef();if(!rows.length){state.gallery.analysis=null;return}
-  if(def.schema==='univariate')state.gallery.analysis=analyzeUnivariate(rows);
+  if(def.schema==='volcano')state.gallery.analysis=analyzeVolcano(rows);
+  else if(def.schema==='univariate')state.gallery.analysis=analyzeUnivariate(rows);
   else if(def.schema==='xy')state.gallery.analysis=analyzeXY(rows);
   else if(def.schema==='composition')state.gallery.analysis=analyzeComposition(rows);
   else if(def.schema==='matrix')state.gallery.analysis=analyzeMatrix(rows);
@@ -5474,7 +5539,7 @@ function gallerySvgMarkup(svgId='gallerySvg',interactive=false){
   let body='';
   if(def.id==='hist')body=galleryHistogram(W,H);else if(def.id==='kde')body=galleryKde(W,H);else if(def.id==='box')body=galleryBox(W,H,false);else if(def.id==='violin')body=galleryBox(W,H,true);
   else if(def.id==='scatter')body=galleryScatter(W,H);else if(def.id==='stacked')body=galleryStacked(W,H);else if(def.id==='pie')body=galleryPie(W,H);
-  else if(def.id==='heatmap')body=galleryHeatmap(W,H);else if(def.id==='radar')body=galleryRadar(W,H);
+  else if(def.id==='heatmap')body=galleryHeatmap(W,H);else if(def.id==='radar')body=galleryRadar(W,H);else if(def.id==='volcano')body=galleryVolcano(W,H);
   const cls=interactive?'chart-object':'';
   const shadow=`<filter id="galleryLegendShadow" x="-40%" y="-40%" width="190%" height="200%"><feDropShadow dx="${s.legendShadowX}" dy="${s.legendShadowY}" stdDeviation="${s.legendShadowBlur}" flood-color="#263238" flood-opacity="${s.legendShadowOpacity}"/></filter><marker id="chartAnnotationArrow" markerWidth="9" markerHeight="9" refX="7.2" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,7 L8,3.5 z" fill="context-stroke"/></marker>`;
   const title=s.titleVisible&&s.title?`<text data-gobject="title" data-gdrag="title" class="${cls} draggable" x="${titleX}" y="${titleY}" text-anchor="middle" font-size="${s.titleSize}" font-weight="${s.titleWeight}" fill="${s.titleColor}">${esc(s.title)}</text>`:'';
@@ -5488,6 +5553,7 @@ function galleryMethodNoteText(){
   if(['box','violin'].includes(type)){const m=boxMethodLabels();return `四分位：${m.quartile}；须线：${m.whisker}；检验：${statisticalMethodLabel(s.statMethod)}`}
   if(type==='scatter')return `相关：${correlationMethodLabel(s.correlationMethod)}；拟合：普通最小二乘线性回归`;
   if(type==='heatmap')return `相关矩阵：${correlationMethodLabel(s.correlationMethod)}`;
+  if(type==='volcano'){const hasPadj=!!state.gallery.rows.some(r=>r.Padj!=null);return `差异阈值：|log₂FC| ≥ ${Number(s.volcanoFcThreshold)||1}，${hasPadj?'FDR':'P'} < ${Number(s.volcanoPThreshold)||.05}；Y 轴为 −log₁₀(${hasPadj?'校正 P':'P'})`}
   return '';
 }
 function galleryMethodNoteSvg(W,H,interactive=false){
@@ -5993,6 +6059,42 @@ function galleryHeatmap(W,H){
   return `<g data-gobject="heatmap-scale" class="chart-object">${body}</g>${heatmapColorBar(W,H)}`
 }
 
+function galleryVolcano(W,H){
+  const s=state.gallery.settings,rows=state.gallery.rows,p=galleryPlotBox(W,H);
+  const fcT=Math.max(0,Number(s.volcanoFcThreshold)||1),pT=clamp(Number(s.volcanoPThreshold)||.05,1e-6,1),cut=-Math.log10(pT);
+  const items=[];
+  rows.forEach(r=>{
+    const pv=Number(r.Padj!=null?r.Padj:r.Pvalue);
+    if(!Number.isFinite(r.logFC)||!Number.isFinite(pv))return;
+    const y=-Math.log10(clamp(pv,1e-300,1));
+    items.push({name:String(r.Feature||''),x:r.logFC,y,sig:Math.abs(r.logFC)>=fcT&&y>=cut,dir:r.logFC>0?0:1});
+  });
+  const mx=Math.max(1,fcT+.5,...items.map(d=>Math.abs(d.x)))*1.1;
+  const my=Math.max(cut+1,...items.map(d=>d.y))*1.08;
+  const xMap=scaleLinear(-mx,mx,p.l,p.l+p.w),yMap=scaleLinear(0,my,p.t+p.h,p.t);
+  const xTicks=makeTicks(-mx,mx,null,7),yTicks=makeTicks(0,my,null,6);
+  let out=commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,null)+galleryLegend(['上调','下调','不显著']);
+  if(s.volcanoShowThreshold!==false){
+    const c=s.volcanoThresholdColor||'#9aa5ab';
+    out+=`<g data-gobject="threshold" class="chart-object" stroke="${c}" stroke-width="1" stroke-dasharray="5 4">`;
+    [-fcT,fcT].forEach(v=>{const x=xMap(v);out+=`<line x1="${x}" y1="${p.t}" x2="${x}" y2="${p.t+p.h}"/>`});
+    const yy=yMap(cut);out+=`<line x1="${p.l}" y1="${yy}" x2="${p.l+p.w}" y2="${yy}"/></g>`;
+  }
+  const radius=Math.max(1.5,Number(s.volcanoPointSize)||3.5),baseOp=clamp(Number(s.volcanoPointOpacity)||.9,0,1);
+  const draw=(list,idx)=>{const st=getGallerySeriesStyle(idx);return list.map(d=>markerShapeSvg(st.markerShape||'circle',xMap(d.x),yMap(d.y),radius,`fill="${st.color}" fill-opacity="${idx===2?Math.min(baseOp,.65):baseOp}" stroke="${st.color}" stroke-width=".6"`)).join('')};
+  let ns=items.filter(d=>!d.sig);const sigItems=items.filter(d=>d.sig);
+  if(ns.length>4500){const step=Math.ceil(ns.length/4500);ns=ns.filter((_,i)=>i%step===0)}
+  out+=`<g data-gobject="series" data-gseries="2" class="chart-object">${draw(ns,2)}</g>`;
+  out+=`<g data-gobject="series" data-gseries="0" class="chart-object">${draw(sigItems.filter(d=>d.dir===0),0)}</g>`;
+  out+=`<g data-gobject="series" data-gseries="1" class="chart-object">${draw(sigItems.filter(d=>d.dir===1),1)}</g>`;
+  if(s.volcanoShowLabels!==false){
+    const topN=Math.max(0,Math.round(Number(s.volcanoTopN)||0));
+    const pool=(s.volcanoLabelOnlySig===false?items:sigItems).slice().sort((a,b)=>b.y-a.y).slice(0,topN);
+    const fs=Number(s.volcanoLabelSize)||11,fill=s.volcanoLabelColor||'#263238',used={start:[],end:[]};
+    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{const side=d.x>=0?'start':'end';let y=yMap(d.y)-5;while(used[side].some(v=>Math.abs(v-y)<fs*1.08))y-=fs*1.08;used[side].push(y);return `<text x="${xMap(d.x)+(d.x>=0?5:-5)}" y="${y}" text-anchor="${side}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
+  }
+  return out;
+}
 function galleryRadar(W,H){
   const s=state.gallery.settings,rows=(state.gallery.rows||[]).filter(r=>r&&r.Group&&r.Indicator&&Number.isFinite(r.Value)),groups=[...new Set(rows.map(r=>r.Group))],inds=[...new Set(rows.map(r=>r.Indicator))],cx=W*.5,cy=H*.52,R=Math.min(W,H)*.34,n=Math.max(inds.length,3);
   const perInd=Object.fromEntries(inds.map(ind=>{const vals=rows.filter(r=>r.Indicator===ind).map(r=>r.Value).filter(Number.isFinite);return[ind,{min:Math.min(...vals),max:Math.max(...vals)}]}));
