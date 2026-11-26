@@ -472,7 +472,7 @@ const SSP_GALLERY_STYLE_PRESETS = {
   },
   volcano:{
     palette:["#E64B35","#4DBBD5","#C4C4C4"],
-    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoBgGradient:true,volcanoBgDownColor:"#F8DCE9",volcanoBgUpColor:"#D8ECFA",volcanoBgOpacity:.9,volcanoBgDivider:true,volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:12,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:180,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
+    settings:{colorScheme:"npg",width:700,height:520,dpi:300,panelPreset:"square",frameMode:"box",xTitle:"log₂(FC)",yTitle:"−log₁₀(P)",xTitleVisible:true,yTitleVisible:true,xTitleSize:19,yTitleSize:19,xTickSize:14,yTickSize:14,xTickAutoRotate:false,volcanoFcThreshold:1,volcanoPThreshold:.05,volcanoShowThreshold:true,volcanoThresholdColor:"#9aa5ab",volcanoThresholdWidth:1,volcanoBgGradient:true,volcanoBgDirection:"vertical",volcanoBgOpacity:.9,volcanoPointSize:3.5,volcanoPointOpacity:.9,volcanoShowLabels:true,volcanoTopN:12,volcanoLabelOnlySig:true,volcanoLabelSize:11,volcanoLabelWeight:400,volcanoLabelColor:"#263238",legend:true,legendFontSize:11,legendOrientation:"horizontal",legendColumns:3,legendX:180,legendY:10,legendFrameAutoSize:true,methodNoteVisible:false},
     series:[{color:"#E64B35",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#4DBBD5",opacity:.9,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"},{color:"#C4C4C4",opacity:.65,lineWidth:0,pointSize:3.5,markerShape:"circle",markerFill:"series"}]
   }
 };;
@@ -2768,14 +2768,13 @@ function gallerySpecificPropertyHtml(type,id){
     gNumber('volcanoFcThreshold','log₂FC 阈值（两侧对称）',0,20,.1),
     gNumber('volcanoPThreshold','P / FDR 阈值 α',.000001,1,.001),
     gCheck('volcanoShowThreshold','显示阈值虚线'),
-    gColor('volcanoThresholdColor','阈值虚线颜色')
+    gColor('volcanoThresholdColor','阈值虚线颜色'),
+    gRange('volcanoThresholdWidth','虚线粗细',.5,4,.25)
   ])+gallerySection('左右渐变背景',[
-    gCheck('volcanoBgGradient','显示左右渐变背景'),
-    gColor('volcanoBgDownColor','下调侧背景（左）'),
-    gColor('volcanoBgUpColor','上调侧背景（右）'),
-    gRange('volcanoBgOpacity','背景不透明度',.1,1,.05),
-    gCheck('volcanoBgDivider','在 log₂FC=0 处画分割虚线')
-  ])+gallerySection('点的颜色与大小',[
+    gCheck('volcanoBgGradient','显示阈值外侧渐变背景'),
+    gSelect('volcanoBgDirection','渐变方向',[['vertical','从上到下'],['horizontal','由外向内'],['diagonal','对角渐变']]),
+    gRange('volcanoBgOpacity','背景不透明度',.1,1,.05)
+  ])+`<div class="hint">渐变只出现在两条竖向阈值虚线外侧，中间保持无色；颜色自动取上调 / 下调点颜色的浅色版本。</div>`+gallerySection('点的颜色与大小',[
     gSeriesColor(0,'显著上调点'),gSeriesColor(1,'显著下调点'),gSeriesColor(2,'不显著点'),
     gRange('volcanoPointSize','点大小',1,10,.5),
     gRange('volcanoPointOpacity','点不透明度',.1,1,.05)
@@ -6091,25 +6090,30 @@ function galleryVolcano(W,H){
     items.push({name:String(r.Feature||''),x:r.logFC,y,sig:Math.abs(r.logFC)>=fcT&&y>=cut,dir:r.logFC>0?0:1});
   });
   const mx=Math.max(1,fcT+.5,...items.map(d=>Math.abs(d.x)))*1.1;
-  const my=Math.max(cut+1,...items.map(d=>d.y))*1.08;
+  const ys=items.map(d=>d.y).sort((a,b)=>a-b);
+  const q99=ys.length?ys[Math.min(ys.length-1,Math.floor(ys.length*.995))]:0;
+  const my=Math.max(cut+1,q99*1.15,1);
   const xMap=scaleLinear(-mx,mx,p.l,p.l+p.w),yMap=scaleLinear(0,my,p.t+p.h,p.t);
   const xTicks=makeTicks(-mx,mx,null,7),yTicks=makeTicks(0,my,null,6);
   let out=commonAxes(W,H,p,xTicks,yTicks,xMap,yMap,null)+galleryLegend(['Up-regulated','Down-regulated','Not significant']);
   if(s.volcanoBgGradient!==false){
-    const cx=xMap(0),down=s.volcanoBgDownColor||'#F8DCE9',up=s.volcanoBgUpColor||'#D8ECFA',op=clamp(Number(s.volcanoBgOpacity)||.9,.05,1),uid='vb'+Math.random().toString(36).slice(2,7);
-    const bg=`<defs><linearGradient id="${uid}d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${down}" stop-opacity="${op}"/><stop offset="1" stop-color="${down}" stop-opacity="${Math.max(.12,op*.5)}"/></linearGradient><linearGradient id="${uid}u" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up}" stop-opacity="${op}"/><stop offset="1" stop-color="${up}" stop-opacity="${Math.max(.12,op*.5)}"/></linearGradient></defs><g data-gobject="volcano-bg" class="chart-object"><rect x="${p.l}" y="${p.t}" width="${Math.max(0,cx-p.l)}" height="${p.h}" fill="url(#${uid}d)"/><rect x="${cx}" y="${p.t}" width="${Math.max(0,p.l+p.w-cx)}" height="${p.h}" fill="url(#${uid}u)"/>${s.volcanoBgDivider!==false?`<line x1="${cx}" y1="${p.t}" x2="${cx}" y2="${p.t+p.h}" stroke="${s.volcanoThresholdColor||'#9aa5ab'}" stroke-width="1" stroke-dasharray="5 4"/>`:''}</g>`;
+    const mixW=(hex,t)=>{const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex||'').trim());if(!m)return '#eef2f5';return '#'+[1,2,3].map(i=>Math.round(parseInt(m[i],16)+(255-parseInt(m[i],16))*t).toString(16).padStart(2,'0')).join('')};
+    const down=mixW(getGallerySeriesStyle(1).color,.78),up=mixW(getGallerySeriesStyle(0).color,.78);
+    const dir=s.volcanoBgDirection||'vertical',xL=xMap(-fcT),xR=xMap(fcT),op=clamp(Number(s.volcanoBgOpacity)||.9,.05,1),uid='vb'+Math.random().toString(36).slice(2,7);
+    const dl=dir==='vertical'?['0','0','0','1']:dir==='horizontal'?['0','0','1','0']:['0','0','1','1'];
+    const du=dir==='vertical'?['0','0','0','1']:dir==='horizontal'?['1','0','0','0']:['1','0','0','1'];
+    const bg=`<defs><linearGradient id="${uid}d" x1="${dl[0]}" y1="${dl[1]}" x2="${dl[2]}" y2="${dl[3]}"><stop offset="0" stop-color="${down}" stop-opacity="${op}"/><stop offset="1" stop-color="${down}" stop-opacity="${Math.max(.1,op*.25)}"/></linearGradient><linearGradient id="${uid}u" x1="${du[0]}" y1="${du[1]}" x2="${du[2]}" y2="${du[3]}"><stop offset="0" stop-color="${up}" stop-opacity="${op}"/><stop offset="1" stop-color="${up}" stop-opacity="${Math.max(.1,op*.25)}"/></linearGradient></defs><g data-gobject="volcano-bg" class="chart-object"><rect x="${p.l}" y="${p.t}" width="${Math.max(0,xL-p.l)}" height="${p.h}" fill="url(#${uid}d)"/><rect x="${xR}" y="${p.t}" width="${Math.max(0,p.l+p.w-xR)}" height="${p.h}" fill="url(#${uid}u)"/></g>`;
     out=bg+out;
   }
   if(s.volcanoShowThreshold!==false){
-    const c=s.volcanoThresholdColor||'#9aa5ab';
-    out+=`<g data-gobject="threshold" class="chart-object" stroke="${c}" stroke-width="1" stroke-dasharray="5 4">`;
+    const c=s.volcanoThresholdColor||'#9aa5ab',tw=Math.max(.4,Number(s.volcanoThresholdWidth)||1);
+    out+=`<g data-gobject="threshold" class="chart-object" stroke="${c}" stroke-width="${tw}" stroke-dasharray="5 4">`;
     [-fcT,fcT].forEach(v=>{const x=xMap(v);out+=`<line x1="${x}" y1="${p.t}" x2="${x}" y2="${p.t+p.h}"/>`});
     const yy=yMap(cut);out+=`<line x1="${p.l}" y1="${yy}" x2="${p.l+p.w}" y2="${yy}"/></g>`;
   }
   const radius=Math.max(1.5,Number(s.volcanoPointSize)||3.5),baseOp=clamp(Number(s.volcanoPointOpacity)||.9,0,1);
-  const draw=(list,idx)=>{const st=getGallerySeriesStyle(idx);return list.map(d=>markerShapeSvg(st.markerShape||'circle',xMap(d.x),yMap(d.y),radius,`fill="${st.color}" fill-opacity="${idx===2?Math.min(baseOp,.65):baseOp}" stroke="${st.color}" stroke-width=".6"`)).join('')};
-  let ns=items.filter(d=>!d.sig);const sigItems=items.filter(d=>d.sig);
-  if(ns.length>4500){const step=Math.ceil(ns.length/4500);ns=ns.filter((_,i)=>i%step===0)}
+  const draw=(list,idx)=>{const st=getGallerySeriesStyle(idx);return list.map(d=>markerShapeSvg(st.markerShape||'circle',clamp(xMap(d.x),p.l+2,p.l+p.w-2),clamp(yMap(Math.min(d.y,my)),p.t+2,p.t+p.h-2),radius,`fill="${st.color}" fill-opacity="${idx===2?Math.min(baseOp,.65):baseOp}" stroke="${st.color}" stroke-width=".6"`)).join('')};
+  const ns=items.filter(d=>!d.sig),sigItems=items.filter(d=>d.sig);
   out+=`<g data-gobject="series" data-gseries="2" class="chart-object">${draw(ns,2)}</g>`;
   out+=`<g data-gobject="series" data-gseries="0" class="chart-object">${draw(sigItems.filter(d=>d.dir===0),0)}</g>`;
   out+=`<g data-gobject="series" data-gseries="1" class="chart-object">${draw(sigItems.filter(d=>d.dir===1),1)}</g>`;
@@ -6117,7 +6121,7 @@ function galleryVolcano(W,H){
     const topN=Math.max(0,Math.round(Number(s.volcanoTopN)||0));
     const pool=(s.volcanoLabelOnlySig===false?items:sigItems).slice().sort((a,b)=>b.y-a.y).slice(0,topN);
     const fs=Number(s.volcanoLabelSize)||11,fill=s.volcanoLabelColor||'#263238',used=[];
-    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{let anchor=d.x>=0?'start':'end';const px=xMap(d.x);if(anchor==='end'&&px-p.l<95)anchor='start';if(anchor==='start'&&p.l+p.w-px<95)anchor='end';let y=clamp(yMap(d.y)-5,p.t+fs,p.t+p.h-2);const hit=v=>used.some(u=>Math.abs(u-v)<fs*1.15);if(hit(y)){let found=null;for(let k=1;k<=40;k++){const up=y-k*fs*1.15;if(up>=p.t+fs&&!hit(up)){found=up;break}}if(found==null)for(let k=1;k<=40;k++){const dn=y+k*fs*1.15;if(dn<=p.t+p.h-2&&!hit(dn)){found=dn;break}}if(found!=null)y=found}used.push(y);return `<text x="${px+(anchor==='start'?5:-5)}" y="${y}" text-anchor="${anchor}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
+    out+=`<g data-gobject="volcano-labels" class="chart-object">${pool.map(d=>{const px=xMap(d.x),tw=Math.max(30,d.name.length*fs*.56);let anchor=px+8+tw<=p.l+p.w?'start':'end';if(anchor==='end'&&px-8-tw<p.l)anchor='start';let y=clamp(yMap(Math.min(d.y,my))-5,p.t+fs,p.t+p.h-2);const hit=v=>used.some(u=>Math.abs(u-v)<fs*1.15);if(hit(y)){let found=null;for(let k=1;k<=40;k++){const up=y-k*fs*1.15;if(up>=p.t+fs&&!hit(up)){found=up;break}}if(found==null)for(let k=1;k<=40;k++){const dn=y+k*fs*1.15;if(dn<=p.t+p.h-2&&!hit(dn)){found=dn;break}}if(found!=null)y=found}used.push(y);return `<text x="${px+(anchor==='start'?5:-5)}" y="${y}" text-anchor="${anchor}" font-size="${fs}" font-weight="${s.volcanoLabelWeight||400}" fill="${fill}">${esc(d.name)}</text>`}).join('')}</g>`;
   }
   return out;
 }
